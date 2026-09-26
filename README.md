@@ -18,3 +18,4 @@ v0.1 原型，單一 HTML 檔，直接用瀏覽器打開 `index.html` 就能用�
 ## 開啟 GitHub Pages
 
 Settings → Pages → Source 選 `main` 分支、根目錄，存檔後即可用網址瀏覽。
+https://claude.ai/artifact/VFL7tWEVfhgyhZcQUm1ESU
