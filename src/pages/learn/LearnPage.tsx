@@ -40,7 +40,7 @@ export function LearnPage() {
       <div className="head">
         <div>
           <h1 id="t-learn">實機資料教學</h1>
-          <p className="lead">調參建議需要好的實機資料，而資料要安全地錄。先完成單元零的檢查，才能進入後面的單元。</p>
+          <p className="lead">調參建議需要好的實機資料，而資料要安全地錄。單元一、二隨時可以先讀；但要上機錄日誌或跑 SysId 之前，一定要先完成單元零的檢查。</p>
         </div>
       </div>
 
@@ -48,7 +48,7 @@ export function LearnPage() {
         <b>網站不能當急停。</b>急停一律用 Driver Station：Enter 是 Disable，空白鍵是 E-Stop（E-Stop 後要重開機器人）。
       </div>
 
-      <details className="unit" open>
+      <details className="unit" open id="unit0">
         <summary>
           <h2 style={{ margin: 0 }}>單元零：上機前的準備</h2>
           <span className={'tag ' + (unlocked ? 'done' : 'must')}>
@@ -87,7 +87,7 @@ export function LearnPage() {
           {unlocked && (
             <div className="row" style={{ marginTop: 10 }}>
               <span className="ok" style={{ marginTop: 0 }}>
-                單元零完成，單元一、二已開放。
+                單元零完成，可以照單元一、二上機操作。
               </span>
               <button className="btn small" type="button" onClick={() => setUnit0(Array(UNIT0_ITEMS).fill(false))}>
                 下次上機前清除勾選
@@ -97,21 +97,35 @@ export function LearnPage() {
         </div>
       </details>
 
-      <details className={'unit' + (unlocked ? '' : ' locked')} onToggle={(e) => !unlocked && ((e.currentTarget as HTMLDetailsElement).open = false)}>
-        <summary aria-disabled={!unlocked}>
+      <details className="unit">
+        <summary>
           <h2 style={{ margin: 0 }}>單元一：用 AdvantageKit 錄日誌</h2>
-          <span className={'tag' + (lessonsDone['unit1'] ? ' done' : '')}>{unlocked ? (lessonsDone['unit1'] ? '已完成' : '可以開始') : '完成單元零後開放'}</span>
+          <span className={'tag' + (lessonsDone['unit1'] ? ' done' : '')}>{lessonsDone['unit1'] ? '已完成' : unlocked ? '可以開始' : '可以先讀；上機前先完成單元零'}</span>
         </summary>
-        {unlocked && <Unit1 />}
+        {!unlocked && <LockNote onGo={() => document.getElementById('unit0')?.scrollIntoView({ behavior: 'smooth' })} />}
+        <Unit1 />
       </details>
 
-      <details className={'unit' + (unlocked ? '' : ' locked')} onToggle={(e) => !unlocked && ((e.currentTarget as HTMLDetailsElement).open = false)}>
-        <summary aria-disabled={!unlocked}>
+      <details className="unit">
+        <summary>
           <h2 style={{ margin: 0 }}>單元二：用 SysId 量測參數</h2>
-          <span className={'tag' + (lessonsDone['unit2'] ? ' done' : '')}>{unlocked ? (lessonsDone['unit2'] ? '已完成' : '選用，可以開始') : '選用，完成單元零後開放'}</span>
+          <span className={'tag' + (lessonsDone['unit2'] ? ' done' : '')}>{lessonsDone['unit2'] ? '已完成' : unlocked ? '選用，可以開始' : '選用；上機前先完成單元零'}</span>
         </summary>
-        {unlocked && <Unit2 />}
+        {!unlocked && <LockNote onGo={() => document.getElementById('unit0')?.scrollIntoView({ behavior: 'smooth' })} />}
+        <Unit2 />
       </details>
     </section>
+  )
+}
+
+/** 單元零沒完成時：內容可以讀，但提醒上機前一定要先做完單元零 */
+function LockNote({ onGo }: { onGo: () => void }) {
+  return (
+    <div className="note lock-note">
+      <b>先讀沒關係，上機前一定要完成單元零。</b>這個單元的操作（錄日誌、跑 SysId）會讓電梯動起來。
+      <button className="linkbtn" type="button" onClick={onGo}>
+        到單元零
+      </button>
+    </div>
   )
 }
