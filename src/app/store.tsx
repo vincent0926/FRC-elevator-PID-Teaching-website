@@ -4,6 +4,7 @@ import type { AlignedLog, FieldMapping } from '../core/log/fieldMap'
 import { DEFAULT_MECHANISM, ElevatorMechanismSchema, ParameterSetSchema, type ElevatorMechanism, type ParameterSet } from '../schema/parameterSet'
 import { DEFAULT_SPEC, isSpec, type Spec } from '../core/physics/spec'
 import { loadJson, saveJson } from '../storage/local'
+import { decodeMechanism, SHARE_PARAM } from '../core/shareLink'
 
 /**
  * 全站共用狀態。參數組只有一種格式（ParameterSet），三個來源：
@@ -81,6 +82,9 @@ interface Store {
   /** 參數庫選來在 3F 疊圖比較的參數組（只在記憶體） */
   compareSet: { label: string; params: ParameterSet } | null
   setCompareSet: (c: { label: string; params: ParameterSet } | null) => void
+  /** 從分享連結打開時的結果；prev 是被取代的機構資料（可以復原） */
+  shared: { ok: boolean; text: string; prev?: ElevatorMechanism } | null
+  dismissShared: (undo: boolean) => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -147,6 +151,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [pendingScenario, setPendingScenario] = useState<string | null>(null)
   const [spec, setSpec] = usePersisted<Spec>('spec', DEFAULT_SPEC, isSpec)
   const [compareSet, setCompareSet] = useState<{ label: string; params: ParameterSet } | null>(null)
+  const [shared, setShared] = useState<Store['shared']>(null)
+
+  // 分享連結（?m=）：載入機構資料後把查詢字串拿掉，重新整理才不會又蓋掉一次
+  useEffect(() => {
+    const code = new URLSearchParams(location.search).get(SHARE_PARAM)
+    if (!code) return
+    const url = new URL(location.href)
+    url.searchParams.delete(SHARE_PARAM)
+    history.replaceState(null, '', url.toString())
+    const r = decodeMechanism(code)
+    if (r.ok) {
+      setShared({ ok: true, text: `已載入分享連結的機構資料「${r.value.name}」。`, prev: mechanism })
+      setMechanism(r.value)
+    } else setShared({ ok: false, text: `分享連結沒有載入：${r.error}。` })
+    // 只在打開網頁時做一次
+  }, [])
+  const dismissShared = useCallback(
+    (undo: boolean) => {
+      if (undo && shared?.prev) setMechanism(shared.prev)
+      setShared(null)
+    },
+    [shared, setMechanism],
+  )
 
   useEffect(() => {
     const on = () => setPage(pageFromHash())
@@ -206,6 +233,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     openScenario,
     compareSet,
     setCompareSet,
+    shared,
+    dismissShared,
     spec,
     setSpec,
   }
