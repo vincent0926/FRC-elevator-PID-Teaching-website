@@ -50,18 +50,29 @@ export interface RoleMapping {
 
 export type FieldMapping = Record<RoleKey, RoleMapping>
 
+/** 手臂（robot-example 的 ArmIO）欄位名稱，優先於通用的關鍵字 */
+const ARM_PATTERNS: Partial<Record<RoleKey, RegExp[]>> = {
+  position: [/\/PositionRad$/i, /arm.*\/(position|angle)/i],
+  velocity: [/\/VelocityRadPerSec$/i, /arm.*\/velocity/i],
+  reference: [/\/ClosedLoopReferenceRad$/i],
+  referenceSlope: [/\/ClosedLoopReferenceSlopeRadPerSec$/i],
+}
+
+export type LogMechanism = 'elevator' | 'arm'
+
 export function emptyMapping(): FieldMapping {
   return Object.fromEntries(ROLES.map((r) => [r.key, { entry: null, scale: 1 }])) as FieldMapping
 }
 
-function score(role: RoleDef, e: WpilogEntryInfo): number {
+function score(role: RoleDef, e: WpilogEntryInfo, mech: LogMechanism): number {
   if (!NUMERIC_TYPES.has(e.type) || e.count === 0) return 0
   if (role.key === 'enabled' && e.type !== 'boolean') return 0
   if (role.key !== 'enabled' && e.type === 'boolean') return 0
-  for (let i = 0; i < role.patterns.length; i++) {
-    if (role.patterns[i].test(e.name)) {
+  const patterns = mech === 'arm' ? [...(ARM_PATTERNS[role.key] ?? []), ...role.patterns] : role.patterns
+  for (let i = 0; i < patterns.length; i++) {
+    if (patterns[i].test(e.name)) {
       let s = 100 - i * 10
-      if (/elevator/i.test(e.name)) s += 5
+      if ((mech === 'arm' ? /\barm\b|\/Arm\//i : /elevator/i).test(e.name)) s += 5
       if (/RealOutputs|ReplayOutputs/i.test(e.name) && role.key !== 'reference') s -= 3
       return s
     }
@@ -70,7 +81,7 @@ function score(role: RoleDef, e: WpilogEntryInfo): number {
 }
 
 /** 自動猜欄位；同一個欄位不會被兩個角色搶走。 */
-export function suggestMapping(entries: WpilogEntryInfo[], previous?: Partial<FieldMapping>): FieldMapping {
+export function suggestMapping(entries: WpilogEntryInfo[], previous?: Partial<FieldMapping>, mech: LogMechanism = 'elevator'): FieldMapping {
   const map = emptyMapping()
   const names = new Set(entries.map((e) => e.name))
   const taken = new Set<string>()
@@ -90,7 +101,7 @@ export function suggestMapping(entries: WpilogEntryInfo[], previous?: Partial<Fi
     let bestScore = 0
     for (const e of entries) {
       if (taken.has(e.name)) continue
-      const s = score(r, e)
+      const s = score(r, e, mech)
       if (s > bestScore) {
         bestScore = s
         best = e

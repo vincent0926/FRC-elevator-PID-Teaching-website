@@ -35,3 +35,27 @@ export const RobotConfigSchema = z.object({
 
 export type RobotConfig = z.infer<typeof RobotConfigSchema>
 export type RobotSlot = z.infer<typeof Slot>
+
+/**
+ * 手臂的 deploy 設定檔（src/main/deploy/arm-gains.json）。位置單位是「手臂轉幾圈」，0 = 水平。
+ * 齒比與角度感測器跟程式碼不同時，機器人端要忽略整個檔案（機構改了要重新產生 Java）。
+ */
+export const ArmRobotConfigSchema = z.object({
+  schemaVersion: z.literal(1),
+  generator: z.string(),
+  generatedAt: z.string(),
+  source: z.enum(['theory', 'tuning', 'custom', 'measured']),
+  mechanism: z.literal('arm'),
+  units: z.literal('phoenix6-rotations'),
+  /** 馬達圈數 : 手臂 1 圈 */
+  gearRatio: z.number().positive(),
+  encoder: z.enum(['internal', 'cancoder']),
+  cancoderToArmRatio: z.number().positive(),
+  slot0: Slot,
+  motionMagic: z.object({
+    cruiseVelocity: z.number().positive(), // 手臂 rps
+    acceleration: z.number().positive(), // 手臂 rps/s
+  }),
+})
+
+export type ArmRobotConfig = z.infer<typeof ArmRobotConfigSchema>

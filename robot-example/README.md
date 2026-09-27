@@ -44,3 +44,16 @@ AdvantageKit 會把 `Logger.processInputs("Elevator", inputs)` 記成 `/Elevator
 
 > 注意：`ElevatorGains.java` 和 `elevator-gains.json` 由網站的程式碼範本產生，網站的單元測試會檢查兩者一致。
 > 改範本後執行 `UPDATE_ROBOT_EXAMPLE=1 npm test` 重新產生。
+
+## 手臂（`subsystems/arm/`）
+
+| 檔案 | 用途 |
+|---|---|
+| `ArmIO.java` | 硬體介面，角度一律是弧度、0 = 水平。欄位名稱（`/Arm/PositionRad`…）網站 2F 會自動認得 |
+| `ArmIOTalonFX.java` | TalonFX 實作：MotionMagicVoltage + Arm_Cosine；`ArmGains.USE_CANCODER` 切換內建編碼器（開機位置 = `BOOT_ANGLE_DEG`）或 CANcoder（RemoteCANcoder、`MAGNET_OFFSET_ROT` 要自己量） |
+| `Arm.java` | 子系統：跟隨誤差、失速、CANcoder 斷線保護；`tuningRoutine()` 錄日誌用；SysId（`SYSID_MIN_DEG`、`SYSID_MAX_DEG` 之間） |
+| `ArmGains.java` | **由網站產生**（手臂 1F「下載 ArmGains.java」），是參數的最終依據 |
+| `ArmGainsLoader.java` | 讀 `deploy/arm-gains.json`；齒比或感測器跟程式碼不同時忽略整個檔案 |
+| `deploy/arm-gains.json` | **由網站產生**（手臂 1F「下載 JSON 設定檔」） |
+
+手臂斷電或保護觸發時會因重力往下掉，測試時人不可以站在手臂掃過的範圍。

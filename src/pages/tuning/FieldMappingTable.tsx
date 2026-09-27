@@ -14,13 +14,17 @@ interface Props {
   entries: WpilogEntryInfo[]
   mapping: FieldMapping
   onChange: (m: FieldMapping) => void
-  mechanism: ElevatorMechanism
+  /** 電梯：倍率按鈕用鼓輪半徑換算；沒給就是手臂（角度，rad） */
+  mechanism?: ElevatorMechanism
 }
+
+const armUnit = (u: string) => u.replace(/^m/, 'rad')
 
 export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Props) {
   const numeric = entries.filter((e) => NUMERIC_TYPES.has(e.type) && e.count > 0)
-  const drum = metersPerRotation(mechanism.drumRadius)
-  const kTop = mechanism.stages[mechanism.stages.length - 1].speedRatio
+  const arm = !mechanism
+  const drum = mechanism ? metersPerRotation(mechanism.drumRadius) : 1
+  const kTop = mechanism ? mechanism.stages[mechanism.stages.length - 1].speedRatio : 1
   const set = (k: RoleKey, patch: Partial<FieldMapping[RoleKey]>) => onChange({ ...mapping, [k]: { ...mapping[k], ...patch } })
 
   return (
@@ -42,7 +46,7 @@ export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Pro
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {r.label}
                   {r.required && <span className="fail"> *</span>}
-                  {r.unit && <div className="small muted">{r.unit}</div>}
+                  {r.unit && <div className="small muted">{arm && r.lengthUnit ? armUnit(r.unit) : r.unit}</div>}
                 </td>
                 <td style={{ minWidth: 200 }}>
                   <span className="inp">
@@ -60,6 +64,19 @@ export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Pro
                   {r.lengthUnit ? (
                     <>
                       <NumberField hideLabel label={`${r.label}倍率`} value={m.scale} onChange={(v) => set(r.key, { scale: v })} />
+                      {arm ? (
+                        <div className="row" style={{ gap: 6, marginTop: 4 }}>
+                          <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 1 })}>
+                            已是 rad
+                          </button>
+                          <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 2 * Math.PI })} title="日誌存的是手臂圈數（Phoenix 6 的 rot、rps）">
+                            轉 → rad
+                          </button>
+                          <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: Math.PI / 180 })} title="日誌存的是度">
+                            度 → rad
+                          </button>
+                        </div>
+                      ) : (
                       <div className="row" style={{ gap: 6, marginTop: 4 }}>
                         <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 1 })}>
                           已是公尺
@@ -67,12 +84,13 @@ export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Pro
                         <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: drum })} title="日誌存的是機構圈數（鼓輪座標）">
                           轉 → m
                         </button>
-                        {mechanism.controlTop && kTop !== 1 && (
+                        {mechanism?.controlTop && kTop !== 1 && (
                           <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 1 / kTop })} title="日誌存的是最上層高度（公尺）">
                             最上層 → 鼓輪
                           </button>
                         )}
                       </div>
+                      )}
                     </>
                   ) : (
                     <span className="muted small">—</span>
@@ -84,7 +102,9 @@ export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Pro
         </tbody>
       </table>
       <p className="small muted" style={{ margin: '6px 0 0' }}>
-        * 必填。網站內部以鼓輪線位移（公尺）計算；範例機器人程式記錄的就是這個單位，倍率保持 1。
+        {arm
+          ? '* 必填。手臂的角度以弧度計算，0 = 水平、往上為正；範例機器人程式（ArmIO）記錄的就是這個單位，倍率保持 1。'
+          : '* 必填。網站內部以鼓輪線位移（公尺）計算；範例機器人程式記錄的就是這個單位，倍率保持 1。'}
       </p>
     </div>
   )

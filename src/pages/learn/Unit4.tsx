@@ -11,7 +11,7 @@ import { CASES, CHANGES, COMPONENTS, EVIDENCE, EXPECTS, PASS_SCORE, SAFETY, SYMP
 
 const EMPTY: Answers = { symptom: null, evidence: [], component: null, change: null, why: '', expect: null, safety: [] }
 
-function Radio({ name, options, value, onChange, disabled }: { name: string; options: Option[]; value: string | null; onChange: (v: string) => void; disabled: boolean }) {
+export function Radio({ name, options, value, onChange, disabled }: { name: string; options: Option[]; value: string | null; onChange: (v: string) => void; disabled: boolean }) {
   return (
     <div className="choices">
       {options.map((o) => (
@@ -24,7 +24,7 @@ function Radio({ name, options, value, onChange, disabled }: { name: string; opt
   )
 }
 
-function Multi({ options, value, onChange, disabled }: { options: Option[]; value: string[]; onChange: (v: string[]) => void; disabled: boolean }) {
+export function Multi({ options, value, onChange, disabled }: { options: Option[]; value: string[]; onChange: (v: string[]) => void; disabled: boolean }) {
   return (
     <div className="choices">
       {options.map((o) => (
