@@ -152,6 +152,8 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .checks .st { font-weight: 700; text-align: center }
 .st.pass { color: var(--green) } .st.warn { color: var(--amber) } .st.fail { color: var(--red) } .st.skip { color: var(--ink-3) }
 .checks button.linkbtn { font-size: 12.5px }
+.issue { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; margin-top: 10px; background: var(--panel-2) }
+.issue.primary { border-left: 4px solid var(--yellow) }
 
 /* 模擬 */
 .bar { min-width: 0; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 16px }

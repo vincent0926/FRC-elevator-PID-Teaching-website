@@ -748,5 +748,5 @@ export function describeChange(c: ParamChange): string {
   if (c.kind === 'motionMagic') {
     return `Motion Magic 巡航速度 ${c.cruiseVelocity.from.toFixed(2)} → ${c.cruiseVelocity.to.toFixed(2)} m/s，加速度 ${c.acceleration.from.toFixed(2)} → ${c.acceleration.to.toFixed(2)} m/s²`
   }
-  return `${c.param} ${c.from} → ${c.to}`
+  return `${c.param} ${round3(c.from)} → ${round3(c.to)}`
 }

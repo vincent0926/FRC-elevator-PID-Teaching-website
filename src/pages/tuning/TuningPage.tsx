@@ -1,18 +1,22 @@
 import { useMemo, useState } from 'react'
 import { downloadBlob } from '../../app/download'
 import { useStore } from '../../app/store'
+import { gainsOf } from '../../core/analysis/apply'
 import { runDataChecks, type CheckReport } from '../../core/analysis/checks'
+import { oscillationBehindRefusal } from '../../core/analysis/diagnose'
 import { alignSeries, missingRequired, suggestMapping, type AlignedLog, type FieldMapping } from '../../core/log/fieldMap'
 import type { ScanResult } from '../../core/log/reader'
 import { makeSampleLog } from '../../core/log/sampleLog'
 import { extractLog, scanLog } from '../../workers/client'
+import { DiagnosisPanel } from './DiagnosisPanel'
 import { FieldMappingTable } from './FieldMappingTable'
 import { LogCharts } from './LogCharts'
 import { SCENARIOS } from './sampleScenarios'
 
 /**
- * 2F 調參建議。Phase 1 先做到「步驟 0：匯入並檢查」：
- * 串流解析 → 欄位對應 → 對齊 → 資料檢查 → 看圖。找問題與建議在 Phase 2。
+ * 2F 調參建議。
+ * 步驟 0：串流解析 → 欄位對應 → 對齊 → 資料檢查 → 看圖
+ * 步驟 1–3：DiagnosisPanel（找問題、處理一個、上機驗證）
  */
 
 type Stage = 'idle' | 'scanning' | 'mapping' | 'reading' | 'done'
@@ -20,7 +24,7 @@ type Stage = 'idle' | 'scanning' | 'mapping' | 'reading' | 'done'
 const STATUS_MARK = { pass: '✓', warn: '!', fail: '✕', skip: '–' } as const
 
 export function TuningPage() {
-  const { mechanism, ff, theory, fieldMapping, setFieldMapping } = useStore()
+  const { mechanism, ff, theory, custom, tuning, fieldMapping, setFieldMapping } = useStore()
   const [stage, setStage] = useState<Stage>('idle')
   const [file, setFile] = useState<{ blob: Blob; name: string; scenario?: string } | null>(null)
   const [scan, setScan] = useState<ScanResult | null>(null)
@@ -30,6 +34,8 @@ export function TuningPage() {
   const [log, setLog] = useState<AlignedLog | null>(null)
   const [report, setReport] = useState<CheckReport | null>(null)
   const [highlight, setHighlight] = useState<string | null>(null)
+  const [diagBands, setDiagBands] = useState<[number, number][] | null>(null)
+  const [logSeq, setLogSeq] = useState(0)
   const [over, setOver] = useState(false)
   const [scenarioId, setScenarioId] = useState(SCENARIOS[0].id)
 
@@ -67,6 +73,8 @@ export function TuningPage() {
       const series = await extractLog(blob, names, setProgress)
       const aligned = alignSeries(series, m)
       setLog(aligned)
+      setLogSeq((k) => k + 1)
+      setDiagBands(null)
       setReport(runDataChecks(aligned, { statorCurrentLimit: mechanism.statorCurrentLimit }))
       setFieldMapping(m)
       setStage('done')
@@ -82,7 +90,9 @@ export function TuningPage() {
     return { blob: new Blob([bytes as BlobPart], { type: 'application/octet-stream' }), name: `sample-${sc.id}.wpilog`, sc }
   }
 
-  const bands = useMemo(() => report?.items.find((i) => i.key === highlight)?.spans ?? undefined, [report, highlight])
+  const bands = useMemo(() => diagBands ?? report?.items.find((i) => i.key === highlight)?.spans ?? undefined, [report, highlight, diagBands])
+  // 步驟 0 沒過時，看是不是振盪造成的（振盪常直接飽和，只說「放慢」會誤導）
+  const refusalOsc = useMemo(() => (log && report && !report.ok ? oscillationBehindRefusal(log, gainsOf(tuning ?? custom ?? theory)) : null), [log, report, tuning, custom, theory])
   const scenario = file?.scenario ? SCENARIOS.find((s) => s.id === file.scenario) : undefined
   const busy = stage === 'scanning' || stage === 'reading'
 
@@ -93,16 +103,18 @@ export function TuningPage() {
           <h1 id="t-tune">調參建議</h1>
           <p className="lead">匯入實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。</p>
         </div>
-        <span className="phase">Phase 1：匯入、欄位對應、資料檢查</span>
+        <span className="phase">Phase 2：資料檢查、找問題、建議、驗證</span>
       </div>
 
       <ol className="steps" aria-label="目前步驟">
-        <li className="cur" aria-current="step">
+        <li className={!report?.ok ? 'cur' : undefined} aria-current={!report?.ok ? 'step' : undefined}>
           0 匯入並檢查
         </li>
-        <li>1 找出問題</li>
-        <li>2 處理問題</li>
-        <li>3 驗證</li>
+        <li className={report?.ok ? 'cur' : undefined} aria-current={report?.ok ? 'step' : undefined}>
+          1 找出問題
+        </li>
+        <li>2 處理一個問題</li>
+        <li>3 上機驗證</li>
       </ol>
 
       <div className="grid2">
@@ -191,7 +203,10 @@ export function TuningPage() {
                       <b>{it.label}</b>
                       <div className="small">{it.detail}</div>
                       {it.spans && it.spans.length > 0 && (
-                        <button type="button" className="linkbtn" onClick={() => setHighlight(highlight === it.key ? null : it.key)}>
+                        <button type="button" className="linkbtn" onClick={() => {
+                            setDiagBands(null)
+                            setHighlight(highlight === it.key ? null : it.key)
+                          }}>
                           {highlight === it.key ? '取消標示' : `在圖上標示（${it.spans.length} 段）`}
                         </button>
                       )}
@@ -202,47 +217,27 @@ export function TuningPage() {
               <div className={report.ok ? 'ok' : 'warn'}>
                 {report.ok ? '資料可以用。' : '資料檢查沒過，這份日誌不能拿來算建議，照上面說明處理後重錄。'}
               </div>
+              {refusalOsc && (
+                <div className="note">
+                  <b>但是：</b>
+                  {refusalOsc.summary}（{refusalOsc.evidence[0]}）
+                  {refusalOsc.change?.kind === 'gain' && `建議先把 kP 從 ${refusalOsc.change.from} 降到 ${refusalOsc.change.to} 左右。`}
+                </div>
+              )}
             </div>
           )}
 
-          {report?.ok && (
-            <div className="panel">
-              <h2>先自己看看</h2>
-              <p className="small">自動找問題、給建議（步驟 1–3）在 Phase 2 開放。現在先練習自己讀圖，照這個順序：</p>
-              <ol className="small" style={{ paddingLeft: 18, margin: 0 }}>
-                <li>
-                  <b>物理限制</b>：輸出電壓有沒有貼到電池電壓？電流有沒有頂到限制？
-                </li>
-                <li>
-                  <b>振盪</b>：位置或電壓有沒有來回抖？
-                </li>
-                <li>
-                  <b>kG</b>：停著的時候，回授輸出是不是一直偏同一邊？偏正代表 kG 太小。
-                </li>
-                <li>
-                  <b>kS</b>：往上時回授偏正、往下時偏負、大小差不多？那是摩擦。
-                </li>
-                <li>
-                  <b>kV</b>：等速段一直落後或超前？
-                </li>
-                <li>
-                  <b>kA</b>：只有加速、減速段對不上？
-                </li>
-                <li>
-                  <b>kP / kD</b>：前饋都準了，到位還是慢或會晃，才動 PID。
-                </li>
-              </ol>
-              {scenario && (
-                <details style={{ marginTop: 10 }}>
-                  <summary className="small" style={{ cursor: 'pointer' }}>
-                    看答案：這份範例日誌是「{scenario.label}」
-                  </summary>
-                  <p className="small" style={{ marginTop: 6 }}>
-                    {scenario.lookFor}
-                  </p>
-                </details>
-              )}
-            </div>
+          {log && report?.ok && file && <DiagnosisPanel key={logSeq} log={log} report={report} logName={file.name} onHighlight={setDiagBands} />}
+
+          {report && scenario && (
+            <details className="panel">
+              <summary className="small" style={{ cursor: 'pointer' }}>
+                練習用：這份範例日誌是「{scenario.label}」（先自己判斷再打開）
+              </summary>
+              <p className="small" style={{ marginBottom: 0 }}>
+                {scenario.lookFor}
+              </p>
+            </details>
           )}
 
           <div className="panel">

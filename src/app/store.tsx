@@ -7,7 +7,7 @@ import { loadJson, saveJson } from '../storage/local'
 /**
  * 全站共用狀態。參數組只有一種格式（ParameterSet），三個來源：
  *   theory  由機構資料即時算出
- *   tuning  調參建議（Phase 2）
+ *   tuning  調參建議（2F 套用建議後產生，一次只改一個參數）
  *   custom  使用者自己改的
  */
 
@@ -16,6 +16,15 @@ export const PAGES: PageId[] = ['home', 'calc', 'tune', 'sim', 'learn']
 export type SimSource = 'theory' | 'tuning' | 'custom'
 
 export const UNIT0_ITEMS = 5
+
+/** 調參循環的一輪：看了哪份日誌、找到什麼問題、改了什麼 */
+export interface TuningRound {
+  at: string
+  logName: string
+  issue: string
+  change: string
+}
+export const ROUND_LIMIT = 30
 
 interface Store {
   mechanism: ElevatorMechanism
@@ -27,6 +36,10 @@ interface Store {
   custom: ParameterSet | null
   setCustom: (p: ParameterSet | null) => void
   tuning: ParameterSet | null
+  setTuning: (p: ParameterSet | null) => void
+  rounds: TuningRound[]
+  addRound: (r: TuningRound) => void
+  clearRounds: () => void
   simSource: SimSource
   setSimSource: (s: SimSource) => void
   lessonsDone: Record<string, boolean>
@@ -83,6 +96,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [mechanism, setMechanism] = usePersisted('mechanism', DEFAULT_MECHANISM, isMechanism)
   const [voltsPerCm, setVoltsPerCm] = usePersisted('voltsPerCm', 0.5)
   const [custom, setCustom] = usePersisted<ParameterSet | null>('custom', null, isParamsOrNull)
+  const [tuning, setTuning] = usePersisted<ParameterSet | null>('tuning', null, isParamsOrNull)
+  const [rounds, setRounds] = usePersisted<TuningRound[]>('tuningRounds', [], (v): v is TuningRound[] => Array.isArray(v))
+  const addRound = useCallback((r: TuningRound) => setRounds([...rounds, r].slice(-ROUND_LIMIT)), [rounds, setRounds])
+  const clearRounds = useCallback(() => setRounds([]), [setRounds])
   const [simSource, setSimSource] = usePersisted<SimSource>('simSource', 'theory')
   const [lessonsDone, setLessonsDone] = usePersisted<Record<string, boolean>>('lessons', {})
   const [unit0, setUnit0] = usePersisted<boolean[]>('unit0', Array(UNIT0_ITEMS).fill(false))
@@ -114,7 +131,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     theory,
     custom,
     setCustom,
-    tuning: null,
+    tuning,
+    setTuning,
+    rounds,
+    addRound,
+    clearRounds,
     simSource,
     setSimSource,
     lessonsDone,
