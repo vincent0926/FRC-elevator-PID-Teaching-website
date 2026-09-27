@@ -78,8 +78,7 @@ export function TuningPage() {
 
   const makeSample = () => {
     const sc = SCENARIOS.find((s) => s.id === scenarioId)!
-    const { gains, motionMagic } = sc.build(theory, ff)
-    const bytes = makeSampleLog({ mechanism, ff, gains, motionMagic })
+    const bytes = makeSampleLog({ mechanism, ff, ...sc.build(theory, ff) })
     return { blob: new Blob([bytes as BlobPart], { type: 'application/octet-stream' }), name: `sample-${sc.id}.wpilog`, sc }
   }
 

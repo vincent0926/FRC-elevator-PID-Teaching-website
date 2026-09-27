@@ -31,6 +31,8 @@ export interface SampleLogOptions {
   gains: Slot0Gains
   motionMagic: { cruiseVelocity: number; acceleration: number }
   plant?: PlantOptions
+  /** 閉迴路週期（s），預設 TalonFX 1 ms */
+  controlPeriod?: number
   moves?: Move[]
   duration?: number
   /** 量測雜訊標準差（m） */
@@ -61,7 +63,7 @@ export function makeSampleLog(o: SampleLogOptions): Uint8Array {
     plant: plantFromMechanism(o.mechanism, o.ff, o.plant ?? { realistic: true }),
     gains: o.gains,
     motionMagic: o.motionMagic,
-    controlPeriod: 0.001,
+    controlPeriod: o.controlPeriod ?? 0.001,
     initialPosition: 0,
     moves,
     duration,

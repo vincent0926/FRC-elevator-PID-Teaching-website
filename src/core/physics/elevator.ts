@@ -17,6 +17,10 @@ import type { FeedforwardResult } from '../feedforward'
 
 export interface PlantParams {
   kG: number
+  /** kG 隨高度變化（V/m）：拖鏈、線材重量轉移，或定力彈簧不定力。前饋的 kG 是常數，這部分只能靠回授 */
+  kGSlope?: number
+  /** kGSlope 的基準高度（這裡 kG 剛好等於 kG） */
+  kGRefPosition?: number
   kV: number
   kA: number
   /** 真實庫侖摩擦（V）；理想模型為 0 */
@@ -40,11 +44,15 @@ export interface PlantOptions {
   kAScale?: number
   frictionKs?: number
   batteryVoltage?: number
+  /** kG 在整個行程內的變化量（V，頂端比底端多多少），教學用 */
+  kGVariation?: number
 }
 
 export function plantFromMechanism(m: ElevatorMechanism, ff: FeedforwardResult, opt: PlantOptions): PlantParams {
   return {
     kG: ff.kG * (opt.kGScale ?? 1),
+    kGSlope: (opt.kGVariation ?? 0) / m.travel,
+    kGRefPosition: m.travel / 2,
     kV: ff.kV * (opt.kVScale ?? 1),
     kA: ff.kA * (opt.kAScale ?? 1),
     frictionKs: opt.realistic ? (opt.frictionKs ?? 0.15) : 0,
@@ -86,7 +94,7 @@ export function applyCurrentLimit(p: PlantParams, u: number, vel: number): Drive
 
 export function acceleration(p: PlantParams, s: PlantState, u: number): number {
   const { effectiveVoltage } = applyCurrentLimit(p, u, s.vel)
-  let net = effectiveVoltage - p.kV * s.vel - p.kG
+  let net = effectiveVoltage - p.kV * s.vel - p.kG - (p.kGSlope ?? 0) * (s.pos - (p.kGRefPosition ?? 0))
   if (p.frictionKs > 0) {
     if (Math.abs(s.vel) > STICK_VELOCITY) {
       net -= p.frictionKs * Math.sign(s.vel)

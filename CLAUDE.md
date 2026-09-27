@@ -20,7 +20,7 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
   - `profile.ts` Motion Magic 梯形軌跡；`controller/slot0.ts` Slot0 控制公式
   - `physics/` 受控體（伏特為力的單位）與 RK4 閉迴路模擬
   - `log/` .wpilog 串流解析、寫入器、欄位對應與對齊
-  - `analysis/` 步驟 0 資料檢查（之後放切段、迴歸、診斷規則）
+  - `analysis/` 步驟 0 資料檢查 `checks.ts`、切段 `segment.ts`、迴歸 `regression.ts`、診斷規則 `diagnose.ts`（決策 21–29）
   - `codegen/` Java 範本與 JSON 設定檔（**唯一做單位換算輸出的地方**）
 - `src/schema/`：zod。`ParameterSet` 是全站唯一的參數格式
 - `src/workers/`：`log.worker.ts`、`sim.worker.ts`，資料用 Transferable Float64Array 傳
