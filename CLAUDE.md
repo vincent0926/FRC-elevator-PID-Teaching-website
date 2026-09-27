@@ -24,7 +24,7 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
   - `codegen/` Java 範本與 JSON 設定檔（**唯一做單位換算輸出的地方**）
 - `src/schema/`：zod。`ParameterSet` 是全站唯一的參數格式
 - `src/workers/`：`log.worker.ts`、`sim.worker.ts`，資料用 Transferable Float64Array 傳
-- `src/pages/`：`home/`、`calculate/`（1F，含教學關卡 `lessons.tsx`）、`tuning/`（2F）、`simulate/`（3F）、`learn/`（4F）
+- `src/pages/`：`home/`、`calculate/`（1F，含教學關卡 `lessons.tsx`）、`tuning/`（2F）、`simulate/`（3F，受控體開關 `plantKnobs.ts`、教學情境 `simScenarios.ts`）、`learn/`（4F）
 - `src/components/`：Chart（uPlot）、NumberField、Quiz、ParamCard；`src/app/`：store、Shell（井道導覽）、更新提示
 - `robot-example/`：機器人端 Java 範例（AdvantageKit + Phoenix 6，隊上 IO 架構）
 - `prototype/v0.1.html`：舊的單檔原型，只當參考
