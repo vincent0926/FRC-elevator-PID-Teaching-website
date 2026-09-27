@@ -43,6 +43,12 @@ public final class ArmGainsLoader {
       }
       boolean cancoder = "cancoder".equals(root.path("encoder").asText());
       if (cancoder != ArmGains.USE_CANCODER) return reject("角度感測器跟程式碼不同（重新產生 Java）", fallback);
+      if (cancoder) {
+        double ccRatio = root.path("cancoderToArmRatio").asDouble(Double.NaN);
+        if (Double.isNaN(ccRatio) || Math.abs(ccRatio - ArmGains.CANCODER_TO_ARM_RATIO) > 1e-6) {
+          return reject("CANcoder 比例 " + ccRatio + " 跟程式碼的 " + ArmGains.CANCODER_TO_ARM_RATIO + " 不同（重新產生 Java）", fallback);
+        }
+      }
 
       List<String> missing = new ArrayList<>();
       Slot0Configs s0 = ArmGains.slot0();

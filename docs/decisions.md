@@ -142,7 +142,7 @@
 |---|---|---|
 | 77 | 手臂的 Java 範本另外一份（`codegen/arm.ts`），ArmGains 帶齒比、感測器種類、CANcoder 比例、角度範圍（度）；位置單位是手臂圈數，0 = 水平 | 電梯範本的 METERS_PER_ROTATION、Slot 1 對手臂沒有意義；感測器和角度範圍會影響 IO 設定，放在產生的檔案裡才不會跟網站不一致 |
 | 78 | 範例程式用同一份 ArmIOTalonFX 支援兩種感測器（`ArmGains.USE_CANCODER` 切換）；CANcoder 用 RemoteCANcoder（不需要 Phoenix Pro），SensorToMechanismRatio = CANcoder : 手臂、RotorToSensorRatio = 齒比 ÷ 那個比例；內建編碼器開機時把位置設成 BOOT_ANGLE_DEG | 使用者要求兩種都支援；一份程式只維護一次；FusedCANcoder 要授權，註解說明可以改 |
-| 79 | arm-gains.json 的齒比或感測器跟程式碼不同時，機器人端忽略整個檔案並警告 | 換了感測器或齒比，舊 JSON 的轉數制參數整個錯；不能部分套用 |
+| 79 | arm-gains.json 的齒比、感測器或 CANcoder 比例跟程式碼不同時，機器人端忽略整個檔案並警告 | 換了感測器或齒比，舊 JSON 的轉數制參數整個錯；不能部分套用 |
 | 80 | 診斷核心加 `mechanism: 'arm'`：重力欄位換成 cos θ（前饋誤差分析用參考角度，跟控制器算前饋一樣；機構特性量測用實際角度），文字單位換成度；電梯的結果不變 | 同一套規則、同一組驗證情境，手臂只差在重力項；分開維護兩份診斷容易不一致 |
 | 81 | 手臂日誌有前饋欄位時，先檢查前饋是不是跟著 cos θ 變；如果是常數（Elevator_Static），報 kG 類問題但不給數字建議，只給「改 Arm_Cosine」清單，並跳過後面的前饋分析 | GravityType 錯的時候，改 kG 大小只會讓另一個角度更糟；前饋模型不對，後面的迴歸也不可信 |
 | 82 | 手臂 2F 套用建議直接存成手臂的「自訂」（不另外做調參建議值），3F 選自訂就能預覽，1F 輸出可以選自訂 | 手臂線的參數來源只有理論值、自訂兩種，少一個狀態比較不會搞混 |
