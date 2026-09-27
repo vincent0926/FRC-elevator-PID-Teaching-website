@@ -109,7 +109,7 @@ export function LearnPage() {
         <MeasureKsKg />
       </details>
 
-      <details className="unit">
+      <details className="unit" id="unit1">
         <summary>
           <h2 style={{ margin: 0 }}>單元一：用 AdvantageKit 錄日誌</h2>
           <span className={'tag' + (lessonsDone['unit1'] ? ' done' : '')}>{(lessonsDone['unit1'] ? '已完成' : unlocked ? '可以開始' : '可以先讀') + (unlocked ? '' : '；上機前先完成單元零')}</span>
@@ -118,7 +118,7 @@ export function LearnPage() {
         <Unit1 />
       </details>
 
-      <details className="unit">
+      <details className="unit" id="unit2">
         <summary>
           <h2 style={{ margin: 0 }}>單元二：用 SysId 量測參數</h2>
           <span className={'tag' + (lessonsDone['unit2'] ? ' done' : '')}>{(lessonsDone['unit2'] ? '已完成' : unlocked ? '選用，可以開始' : '選用') + (unlocked ? '' : '；上機前先完成單元零')}</span>
@@ -127,7 +127,7 @@ export function LearnPage() {
         <Unit2 />
       </details>
 
-      <details className="unit">
+      <details className="unit" id="unit3">
         <summary>
           <h2 style={{ margin: 0 }}>單元三：常見的坑</h2>
           <span className={'tag' + (lessonsDone['unit3'] ? ' done' : '')}>{lessonsDone['unit3'] ? '已完成' : '可以先讀'}</span>
@@ -135,7 +135,7 @@ export function LearnPage() {
         <Unit3 />
       </details>
 
-      <details className="unit">
+      <details className="unit" id="unit4">
         <summary>
           <h2 style={{ margin: 0 }}>單元四：期末檢核（沒看過的日誌）</h2>
           <span className={'tag' + (lessonsDone['unit4'] ? ' done' : '')}>{lessonsDone['unit4'] ? '已通過' : '讀完 2F 與單元一到三再做'}</span>

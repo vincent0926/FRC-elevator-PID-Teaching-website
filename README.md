@@ -9,7 +9,7 @@ FRC 9427 的電梯與手臂調參教學工具。目標是讓隊員搞懂前饋�
 推到 `main` 後 GitHub Actions 會自動測試、建置，並把網站推到 `gh-pages` 分支，約 1–2 分鐘後網址就是最新版本（網頁上方會出現「有新版本」提示）。
 部署進度看 repo 的 Actions 分頁。
 
-## 目前進度：v0.11（電梯 1F～4F 完成；手臂 1F、3F 完成，2F、4F 製作中）
+## 目前進度：v0.12（電梯 1F～4F 完成；手臂 1F、3F 完成，2F、4F 製作中）
 
 | 樓層 | 功能 | 狀態 |
 |---|---|---|
@@ -33,6 +33,11 @@ FRC 9427 的電梯與手臂調參教學工具。目標是讓隊員搞懂前饋�
 
 ## 更新紀錄
 
+- **v0.12**：和 FRC 9427 程式課程（https://vincent0926.github.io/FRC9427teaching-website/）串接。
+  - 課程可以用網址直接進電梯或手臂、打開某個 3F 情境、捲到 4F 某個單元（見下方「從課程連進來」）。
+  - 從課程連進來時，畫面上方與側欄有「回到課程第幾章」。
+  - 手臂 3F 也能從連結載入情境；4F 各單元有固定 id（unit0～unit4、measure-ks）。
+
 - **v0.11**：
   - 進站先選電梯或手臂；導覽列可以換機構。
   - 手臂 1F 計算（kG·cos θ、轉動慣量、兩種角度感測器）與五個教學關卡。
@@ -55,6 +60,23 @@ FRC 9427 的電梯與手臂調參教學工具。目標是讓隊員搞懂前饋�
 - **v0.8**：
   - 馬達控制器限制：TalonFX／SPARK MAX、Stator／Supply 電流限制、軟體限位、輸出上限、Brake／Coast、電壓補償。
   - 參數來源對照表；近似模型標示；控制輸入以電壓表示的說明。
+
+## 從課程連進來（深層連結）
+
+| 參數 | 值 | 作用 |
+|---|---|---|
+| `track` | `elevator`、`arm` | 直接進電梯或手臂，不用先選 |
+| `scenario` | 3F 情境 id（`src/pages/simulate/simScenarios.ts`、`src/pages/arm/armScenarios.ts`） | 進 3F 時直接載入 |
+| `section` | 元素 id，例如 `unit4`、`measure-ks` | 捲到該區塊，`<details>` 自動打開 |
+| `from=course&ch=` | 章節編號 0–19 | 顯示「回到課程第幾章」 |
+
+樓層照舊用 hash（`#calc`、`#tune`、`#sim`、`#learn`）。例：
+
+```
+https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/?track=elevator&scenario=noKg&from=course&ch=13#sim
+```
+
+參數只接受白名單格式，讀過就從網址拿掉；回課程的連結固定指向課程網站。**改情境 id 或單元 id 時，課程的 `src/data/course.json` 也要一起改**，課程那邊的檢查腳本會比對。
 
 ## 開發
 
