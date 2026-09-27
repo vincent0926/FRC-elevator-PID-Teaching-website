@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { computeArmFeedforward, kPFromVoltsPerDeg, type ArmFeedforwardResult } from '../../core/arm/feedforward'
 import { ARM_DEFAULT_SPEC, isSpec, type Spec } from '../../core/physics/spec'
 import { ArmMechanismSchema, ArmParameterSetSchema, DEFAULT_ARM, type ArmMechanism, type ArmParameterSet } from '../../schema/armParameterSet'
+import type { FieldMapping } from '../../core/log/fieldMap'
 import { loadJson, saveJson } from '../../storage/local'
 
 /**
@@ -24,6 +25,12 @@ interface ArmStore {
   setSource: (s: ArmSource) => void
   spec: Spec
   setSpec: (s: Spec) => void
+  /** 4F 單元零的勾選（每次上機前重做） */
+  unit0: boolean[]
+  setUnit0: (v: boolean[]) => void
+  /** 2F 日誌的欄位對應（跟電梯分開記） */
+  fieldMapping: Partial<FieldMapping>
+  setFieldMapping: (m: Partial<FieldMapping>) => void
   /** 最近一次存到瀏覽器失敗：畫面上的值還在，但重新整理會回到上次存的值 */
   unsaved: boolean
 }
@@ -75,9 +82,11 @@ export function ArmStoreProvider({ children }: { children: ReactNode }) {
   const [custom, setCustom] = usePersisted<ArmParameterSet | null>('armCustom', null, isArmParamsOrNull, onSaved)
   const [source, setSource] = usePersisted<ArmSource>('armSource', 'theory', (v): v is ArmSource => v === 'theory' || v === 'custom', onSaved)
   const [spec, setSpec] = usePersisted<Spec>('armSpec', ARM_DEFAULT_SPEC, isSpec, onSaved)
+  const [fieldMapping, setFieldMapping] = usePersisted<Partial<FieldMapping>>('armFieldMapping', {}, (v): v is Partial<FieldMapping> => typeof v === 'object' && v !== null, onSaved)
+  const [unit0, setUnit0] = usePersisted<boolean[]>('armUnit0', [], (v): v is boolean[] => Array.isArray(v) && v.every((x) => typeof x === 'boolean'), onSaved)
   const ff = useMemo(() => computeArmFeedforward(arm), [arm])
   const theory = useMemo(() => buildArmTheory(arm, ff, voltsPerDeg), [arm, ff, voltsPerDeg])
-  const value: ArmStore = { arm, setArm, voltsPerDeg, setVoltsPerDeg, ff, theory, custom, setCustom, source, setSource, spec, setSpec, unsaved }
+  const value: ArmStore = { arm, setArm, voltsPerDeg, setVoltsPerDeg, ff, theory, custom, setCustom, source, setSource, spec, setSpec, fieldMapping, setFieldMapping, unit0, setUnit0, unsaved }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

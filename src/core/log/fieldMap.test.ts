@@ -63,3 +63,14 @@ describe('alignSeries', () => {
     expect(v.slice(1)).toEqual([20, 20, 40])
   })
 })
+
+describe('手臂的欄位對應', () => {
+  it('ArmIO 的欄位名稱會被認出來，不會被電梯的搶走', () => {
+    const entries = ['/Arm/PositionRad', '/Arm/VelocityRadPerSec', '/Arm/ClosedLoopReferenceRad', '/Arm/ClosedLoopReferenceSlopeRadPerSec', '/Elevator/PositionMeters', '/Elevator/VelocityMetersPerSec'].map((n) => e(n))
+    const m = suggestMapping(entries, undefined, 'arm')
+    expect(m.position.entry).toBe('/Arm/PositionRad')
+    expect(m.velocity.entry).toBe('/Arm/VelocityRadPerSec')
+    expect(m.reference.entry).toBe('/Arm/ClosedLoopReferenceRad')
+    expect(suggestMapping(entries).position.entry).toBe('/Elevator/PositionMeters')
+  })
+})

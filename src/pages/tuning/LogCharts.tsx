@@ -4,11 +4,16 @@ import type { AlignedLog, RoleKey } from '../../core/log/fieldMap'
 
 /** 日誌圖表：四張圖時間軸連動，資料檢查的問題時段用黃色標示。 */
 
-export function LogCharts({ log, bands }: { log: AlignedLog; bands?: [number, number][] }) {
+/** angle：手臂，位置與速度換成度顯示（資料本身是 rad） */
+export function LogCharts({ log, bands, angle }: { log: AlignedLog; bands?: [number, number][]; angle?: boolean }) {
   const charts = useMemo(() => {
     const c = log.cols
+    const R2D = 180 / Math.PI
+    const kin: RoleKey[] = ['reference', 'position', 'referenceSlope', 'velocity']
     const pick = (defs: [RoleKey, string, string, boolean?][]): ChartSeries[] =>
-      defs.filter(([k]) => c[k]).map(([k, label, color, dash]) => ({ label, color, dash, values: c[k]! }))
+      defs
+        .filter(([k]) => c[k])
+        .map(([k, label, color, dash]) => ({ label, color, dash, values: angle && kin.includes(k) ? Float64Array.from(c[k]!, (v) => v * R2D) : c[k]! }))
     return {
       pos: pick([
         ['reference', '目標（閉迴路參考）', '--steel', true],
@@ -28,12 +33,12 @@ export function LogCharts({ log, bands }: { log: AlignedLog; bands?: [number, nu
         ['supplyVoltage', '電池電壓（V）', '--violet'],
       ]),
     }
-  }, [log])
+  }, [log, angle])
 
   return (
     <div className="panel stack">
-      <Chart title="位置" x={log.t} series={charts.pos} height={220} yLabel="m" syncKey="log" bands={bands} />
-      {charts.vel.length > 0 && <Chart title="速度" x={log.t} series={charts.vel} height={160} yLabel="m/s" syncKey="log" bands={bands} />}
+      <Chart title="位置" x={log.t} series={charts.pos} height={220} yLabel={angle ? '°' : 'm'} syncKey="log" bands={bands} />
+      {charts.vel.length > 0 && <Chart title="速度" x={log.t} series={charts.vel} height={160} yLabel={angle ? '°/s' : 'm/s'} syncKey="log" bands={bands} />}
       {charts.volt.length > 0 && <Chart title="電壓" x={log.t} series={charts.volt} height={180} yLabel="V" syncKey="log" bands={bands} />}
       {charts.power.length > 0 && <Chart title="電流與電池" x={log.t} series={charts.power} height={160} syncKey="log" bands={bands} />}
       <p className="small muted" style={{ margin: 0 }}>

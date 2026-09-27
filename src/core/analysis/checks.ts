@@ -22,6 +22,8 @@ export interface CheckOptions {
   maxFollowingError?: number
   /** 參考速度至少要多大才算有激勵（m/s） */
   minExcitationVelocity?: number
+  /** 手臂：位置是角度（rad），文字顯示度；門檻預設 10°、0.1 rad/s */
+  angle?: boolean
 }
 
 export interface CheckReport {
@@ -140,7 +142,7 @@ export function runDataChecks(log: AlignedLog, opt: CheckOptions): CheckReport {
   // 跟隨誤差
   const pos = cols.position
   const ref = cols.reference
-  const maxErr = opt.maxFollowingError ?? 0.1
+  const maxErr = opt.maxFollowingError ?? (opt.angle ? (10 * Math.PI) / 180 : 0.1)
   if (pos && ref) {
     let worst = 0
     for (let i = 0; i < n; i++) if (mask[i] && Number.isFinite(ref[i])) worst = Math.max(worst, Math.abs(ref[i] - pos[i]))
@@ -149,7 +151,7 @@ export function runDataChecks(log: AlignedLog, opt: CheckOptions): CheckReport {
       key: 'following',
       label: '跟隨誤差',
       status: worst > maxErr ? 'fail' : worst > maxErr / 2 ? 'warn' : 'pass',
-      detail: `最大跟隨誤差 ${(worst * 100).toFixed(1)} cm。${worst > maxErr ? '誤差大到不正常：先確認方向、單位、有沒有卡住，再談調參。' : ''}`,
+      detail: `最大跟隨誤差 ${opt.angle ? `${((worst * 180) / Math.PI).toFixed(1)}°` : `${(worst * 100).toFixed(1)} cm`}。${worst > maxErr ? '誤差大到不正常：先確認方向、單位、有沒有卡住，再談調參。' : ''}`,
       spans: spansOf(t, big, mask),
     })
   }
@@ -172,7 +174,7 @@ export function runDataChecks(log: AlignedLog, opt: CheckOptions): CheckReport {
       status,
       detail:
         status === 'fail'
-          ? `速度一直低於 ${minV} m/s，看不出前饋對不對。請錄一段上下來回移動的資料。`
+          ? `速度一直低於 ${opt.angle ? `${((minV * 180) / Math.PI).toFixed(0)} °/s` : `${minV} m/s`}，看不出前饋對不對。請錄一段上下來回移動的資料。`
           : status === 'warn'
             ? `只有往${up ? '上' : '下'}的移動，看不出上下是否對稱（kS、kG 分不開）。`
             : `往上 ${((up / active) * 100).toFixed(0)}%、往下 ${((down / active) * 100).toFixed(0)}% 的時間在移動。`,

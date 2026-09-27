@@ -103,6 +103,37 @@ export interface DiagnoseOptions {
   /** 到位容許誤差（m） */
   tolerance?: number
   statorCurrentLimit?: number
+  /** 機構：手臂的重力項是 kG·cos θ，位置單位是 rad（畫面顯示度） */
+  mechanism?: Mechanism
+}
+
+export type Mechanism = 'elevator' | 'arm'
+
+/** 位置、速度、加速度的顯示格式（電梯 cm、m/s；手臂 °、°/s） */
+export interface UnitFmt {
+  pos: (x: number) => string
+  vel: (x: number) => string
+  acc: (x: number) => string
+  velUnit: string
+  accUnit: string
+}
+
+const R2D = 180 / Math.PI
+export function unitFmt(mech: Mechanism = 'elevator'): UnitFmt {
+  return mech === 'arm'
+    ? { pos: (x) => `${(x * R2D).toFixed(1)}°`, vel: (x) => `${(x * R2D).toFixed(0)} °/s`, acc: (x) => `${(x * R2D).toFixed(0)} °/s²`, velUnit: 'rad/s', accUnit: 'rad/s²' }
+    : { pos: (x) => `${(x * 100).toFixed(1)} cm`, vel: (x) => `${x.toFixed(2)} m/s`, acc: (x) => `${x.toFixed(1)} m/s²`, velUnit: 'm/s', accUnit: 'm/s²' }
+}
+
+/**
+ * 重力項的欄位：電梯是 1（kG 是常數）；手臂是 cos θ。
+ * 前饋誤差分析用參考角度（跟控制器算前饋一樣），機構特性量測用實際角度。
+ */
+export function gravityColumn(log: AlignedLog, mech: Mechanism = 'elevator', which: 'reference' | 'position' = 'reference'): Float64Array {
+  const n = log.t.length
+  const th = which === 'reference' ? (log.cols.reference ?? log.cols.position) : log.cols.position
+  if (mech !== 'arm' || !th) return new Float64Array(n).fill(1)
+  return Float64Array.from(th, (x) => (Number.isFinite(x) ? Math.cos(x) : NaN))
 }
 
 export interface Diagnosis {
@@ -127,18 +158,18 @@ export function round3(x: number): number {
 }
 
 const V = (x: number) => `${x >= 0 ? '+' : ''}${x.toFixed(2)} V`
-const cm = (x: number) => `${(x * 100).toFixed(1)} cm`
 
 /**
  * 回授輸出（P+I+D）。有記錄就直接用；否則用輸出電壓減前饋欄位；
  * 兩個都沒有時用目前參數算前饋再相減（不準，會提醒）。
  */
-export function feedbackSignal(log: AlignedLog, seg: Segments, gains: Slot0Gains): { fb: Float64Array; source: 'logged' | 'ffColumn' | 'computed' } {
+export function feedbackSignal(log: AlignedLog, seg: Segments, gains: Slot0Gains, mech: Mechanism = 'elevator'): { fb: Float64Array; source: 'logged' | 'ffColumn' | 'computed' } {
   const c = log.cols
+  const g = gravityColumn(log, mech)
   if (c.closedLoopOutput) return { fb: c.closedLoopOutput, source: 'logged' }
   const u = c.appliedVolts!
   if (c.feedforwardOutput) return { fb: Float64Array.from(u, (v, i) => v - c.feedforwardOutput![i]), source: 'ffColumn' }
-  const fb = Float64Array.from(u, (v, i) => v - (gains.kS * Math.sign(seg.vref[i]) + gains.kG + gains.kV * seg.vref[i] + gains.kA * seg.aref[i]))
+  const fb = Float64Array.from(u, (v, i) => v - (gains.kS * Math.sign(seg.vref[i]) + gains.kG * g[i] + gains.kV * seg.vref[i] + gains.kA * seg.aref[i]))
   return { fb, source: 'computed' }
 }
 
@@ -213,6 +244,7 @@ export function estimateRobotGains(
   log: AlignedLog,
   fallback: Pick<Slot0Gains, 'kS' | 'kA' | 'kP' | 'kD'>,
   seg?: Segments,
+  mech: Mechanism = 'elevator',
 ): { gains: Slot0Gains; r2: number; feedbackReliable: boolean; fromFallback: GainKey[] } | null {
   const c = log.cols
   if (!c.feedforwardOutput || !c.closedLoopOutput || !c.reference || !c.position || !c.velocity) return null
@@ -229,7 +261,7 @@ export function estimateRobotGains(
     else if (s.vref[i] < 0) down++
   }
   const sgn = Float64Array.from(s.vref, Math.sign)
-  const ones = new Float64Array(n).fill(1)
+  const ones = gravityColumn(log, mech)
   let nAcc = 0
   for (let i = 0; i < n; i++) if (use[i] && (s.phase[i] === PI.accel || s.phase[i] === PI.decel)) nAcc++
   const ff = adaptiveFfFit(c.feedforwardOutput, use, { sgn, v: s.vref, a: s.aref, ones }, { separable: up > 10 && down > 10, enoughAccel: nAcc >= 6 })
@@ -458,8 +490,8 @@ export function isDerivativeNoise(osc: Oscillation, gains: Slot0Gains): boolean 
   return osc.voltageRms > 0 && (gains.kP > 0 || gains.kD > 0) && gains.kP * osc.positionRms < 0.3 * osc.voltageRms
 }
 
-function oscillationIssue(osc: Oscillation, gains: Slot0Gains, kPFactor: number): Issue {
-  const evidence = [`高通後輸出電壓 RMS ${osc.voltageRms.toFixed(2)} V，約 ${osc.frequency.toFixed(1)} Hz`, `位置來回約 ±${cm(osc.positionRms * Math.SQRT2)}`]
+function oscillationIssue(osc: Oscillation, gains: Slot0Gains, kPFactor: number, u: UnitFmt): Issue {
+  const evidence = [`高通後輸出電壓 RMS ${osc.voltageRms.toFixed(2)} V，約 ${osc.frequency.toFixed(1)} Hz`, `位置來回約 ±${u.pos(osc.positionRms * Math.SQRT2)}`]
   if (isDerivativeNoise(osc, gains)) {
     return {
       key: 'oscillation',
@@ -485,7 +517,10 @@ function oscillationIssue(osc: Oscillation, gains: Slot0Gains, kPFactor: number)
 }
 
 export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains, motionMagic: { cruiseVelocity: number; acceleration: number }, opt: DiagnoseOptions = {}): Diagnosis {
-  const tol = opt.tolerance ?? 0.01
+  const mech = opt.mechanism ?? 'elevator'
+  const arm = mech === 'arm'
+  const uf = unitFmt(mech)
+  const tol = opt.tolerance ?? (arm ? Math.PI / 180 : 0.01)
   const { t, cols } = log
   const n = t.length
   const seg = segment(log)
@@ -493,7 +528,7 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
   const issues: Issue[] = []
   const osc = detectOscillation(log, seg)
   const moves = moveMetrics(log, seg, tol)
-  const { fb, source } = feedbackSignal(log, seg, gains)
+  const { fb, source } = feedbackSignal(log, seg, gains, mech)
   if (source === 'computed') notes.push('日誌裡沒有回授輸出或前饋欄位，回授是用「輸出電壓 − 目前參數算的前饋」估的，參數選錯結果就會錯。建議照範例程式記錄 ClosedLoopOutput。')
   if (source === 'ffColumn') notes.push('日誌裡沒有回授輸出欄位，改用「輸出電壓 − 前饋欄位」。飽和時會不準。')
 
@@ -507,7 +542,9 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
     if (cur && opt.statorCurrentLimit && Math.abs(cur[i]) >= opt.statorCurrentLimit * 0.95) sat[i] = 1
   }
 
-  const ones = new Float64Array(n).fill(1)
+  // 重力欄位：電梯是 1；手臂是 cos θ（前饋誤差用參考角度，機構特性用實際角度）
+  const ones = gravityColumn(log, mech, 'reference')
+  const onesActual = gravityColumn(log, mech, 'position')
   const on = (i: number) => seg.phase[i] !== PI.off
   const inOsc = (i: number) => osc.spans.some(([a, b]) => t[i] >= a && t[i] <= b)
 
@@ -520,9 +557,9 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
     const nearEdge = (i: number) => seg.phase[i] === PI.transition
     const useB = new Uint8Array(n)
     const vTh = Math.max(0.02, 0.05 * seg.vScale)
-    for (let i = 0; i < n; i++) if (on(i) && !sat[i] && !nearEdge(i) && !inOsc(i) && Math.abs(vel[i]) > vTh && Number.isFinite(acc[i])) useB[i] = 1
+    for (let i = 0; i < n; i++) if (on(i) && !sat[i] && !nearEdge(i) && !inOsc(i) && Math.abs(vel[i]) > vTh && Number.isFinite(acc[i]) && Number.isFinite(onesActual[i])) useB[i] = 1
     const sv = Float64Array.from(vel, Math.sign)
-    const fitB = ols([sv, ones, vel, acc], u, useB)
+    const fitB = ols([sv, onesActual, vel, acc], u, useB)
     if (fitB) plant = { kS: fitB.coef[0], kG: fitB.coef[1], kV: fitB.coef[2], kA: fitB.coef[3], fit: fitB }
   }
   const plantOk = !!plant && plant.fit.cond < COND_LIMIT && plant.fit.r2 > 0.95 && plant.kV > 0 && plant.kA > 0
@@ -568,7 +605,7 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
         ffError.splitByPlant = true
         notes.push('移動時速度幾乎都一樣，kS 和 kV 是用機構特性量測拆開的，準度差一點。')
       } else {
-        notes.push(`移動時速度幾乎都一樣，kS 和 kV 分不開：只知道在 ${vTyp.toFixed(2)} m/s 時往上往下差 ${V(c.kS * 2)}。錄一段 Motion Magic 速度只有一半的資料，就能分開。`)
+        notes.push(`移動時速度幾乎都一樣，kS 和 kV 分不開：只知道在 ${uf.vel(vTyp)} 時往上往下差 ${V(c.kS * 2)}。錄一段 Motion Magic 速度只有一半的資料，就能分開。`)
       }
     }
   } else notes.push('移動的資料太少，沒辦法做前饋誤差分析。')
@@ -597,7 +634,7 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       if (inOsc(i)) continue
       limited++
       if (!g) continue
-      const ffStar = g.kS * Math.sign(seg.vref[i]) + g.kG + g.kV * seg.vref[i] + g.kA * seg.aref[i]
+      const ffStar = g.kS * Math.sign(seg.vref[i]) + g.kG * ones[i] + g.kV * seg.vref[i] + g.kA * seg.aref[i]
       const vmax = (supply && Number.isFinite(supply[i]) ? supply[i] : 12) - 0.3
       const iStar = R > 0 ? (ffStar - kVp * seg.vref[i]) / R : 0
       if (Math.abs(ffStar) >= vmax || (opt.statorCurrentLimit && Math.abs(iStar) >= opt.statorCurrentLimit)) stillLimited++
@@ -624,7 +661,7 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
 
   // ---------- 振盪 ----------
   if (osc.detected) {
-    issues.push(oscillationIssue(osc, gains, 0.6))
+    issues.push(oscillationIssue(osc, gains, 0.6, uf))
     if (!isDerivativeNoise(osc, gains)) notes.push('振盪時先降 kP。如果閉迴路在 roboRIO 上跑（50 Hz），延遲會讓振盪更容易發生，改用 TalonFX 內建的閉迴路（1 kHz）。')
   }
 
@@ -638,18 +675,51 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       evidence: [`機構特性量測 R² = ${plant.fit.r2.toFixed(2)}（正常應 > 0.9）`, `量到 kV = ${plant.kV.toFixed(2)}、kA = ${plant.kA.toFixed(3)}`],
       lookAt: '速度圖：實際速度有沒有忽快忽慢、卡一下又衝出去；電流圖：同樣速度電流差很多。',
       spans: [],
-      checklist: [
+      checklist: arm
+        ? [
+            '皮帶、鏈條或齒輪有背隙、跳齒',
+            '轉軸或軸承卡住，某個角度特別緊（斷電後用手轉轉看整個範圍）',
+            '線材勾到手臂',
+            'CANcoder 鬆脫、磁鐵偏移，或 SensorToMechanismRatio、RotorToSensorRatio 設錯',
+            '零點不在水平（cos θ 整個偏掉）',
+          ]
+        : [
         '皮帶或鏈條鬆了、跳齒',
         '軌道卡住或某一段特別緊（用手推推看整個行程）',
         '線材勾到機構',
         '兩顆馬達方向或 follower 設定錯，互相對抗',
         '編碼器鬆脫、SensorToMechanismRatio 設錯',
-      ],
+          ],
     })
   }
 
+  // ---------- 手臂：重力型態設錯 ----------
+  // 日誌有前饋欄位時，看控制器的重力項是跟著 cos θ 變（Arm_Cosine），還是一個常數（Elevator_Static）
+  let wrongGravityType = false
+  if (arm && cols.feedforwardOutput && !osc.detected) {
+    const useG = new Uint8Array(n)
+    for (let i = 0; i < n; i++) if (on(i) && Number.isFinite(cols.feedforwardOutput[i]) && Number.isFinite(ones[i])) useG[i] = 1
+    const constCol = new Float64Array(n).fill(1)
+    const fitG = ols([Float64Array.from(seg.vref, Math.sign), constCol, ones, seg.vref, seg.aref], cols.feedforwardOutput, useG)
+    if (fitG && fitG.cond < COND_LIMIT) {
+      const [, c0, cCos] = fitG.coef
+      const [, s0] = fitG.se
+      if (Math.abs(c0) > 0.05 && Math.abs(c0) > 3 * s0 && Math.abs(cCos) < 0.3 * Math.abs(c0)) {
+        wrongGravityType = true
+        issues.push({
+          key: 'kG',
+          summary: '控制器的重力補償是一個常數，沒有跟著角度變：GravityType 設成 Elevator_Static 了。改成 Arm_Cosine，kG 的大小先不用動。',
+          evidence: [`日誌的前饋欄位裡，固定不變的部分 ${V(c0)}、跟 cos θ 變的部分只有 ${V(cCos)}`, '停在水平附近沒事，抬高之後回授一直往下壓：常數 kG 在高角度補過頭'],
+          lookAt: '電壓圖：前饋輸出在不同角度停住時是不是都一樣高？回授輸出是不是抬越高越負？',
+          spans: spansWhere(t, (i) => seg.phase[i] === PI.hold),
+          checklist: ['Slot0Configs 的 GravityType 改成 GravityTypeValue.Arm_Cosine', '確認水平時角度讀成 0（Arm_Cosine 用這個位置算 cos）'],
+        })
+      }
+    }
+  }
+
   // ---------- kG、kS、kV、kA ----------
-  if (ffError && !osc.detected && ffError.fit.n >= 30) {
+  if (ffError && !osc.detected && !wrongGravityType && ffError.fit.n >= 30) {
     const f = ffError
     const { kS: seS, kG: seG, kV: seV, kA: seA } = f.se
     const aTyp = Math.max(seg.aScale, 1e-3)
@@ -667,8 +737,13 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       issues.push({
         key: 'kG',
         summary: `回授一直在幫忙${f.dKg > 0 ? '往上撐' : '往下壓'}：kG ${f.dKg > 0 ? '太小' : '太大'}。`,
-        evidence: [`回授輸出的固定偏移 ${V(f.dKg)}（往上往下都一樣）`, `目前 kG = ${gains.kG.toFixed(3)} V`],
-        lookAt: '電壓圖的靜止保持段：回授輸出（紅線）是不是一直偏同一邊？往上、往下移動時也一樣偏？',
+        evidence: [
+          arm ? `回授輸出換算成水平時的偏移 ${V(f.dKg)}（跟著 cos θ 變，往上往下都一樣）` : `回授輸出的固定偏移 ${V(f.dKg)}（往上往下都一樣）`,
+          `目前 kG = ${gains.kG.toFixed(3)} V${arm ? '（水平時的值）' : ''}`,
+        ],
+        lookAt: arm
+          ? '電壓圖的靜止保持段：停在水平附近時回授輸出（紅線）是不是一直偏同一邊？停在接近直立時偏差是不是變小？'
+          : '電壓圖的靜止保持段：回授輸出（紅線）是不是一直偏同一邊？往上、往下移動時也一樣偏？',
         spans: holdSpans,
         change: { kind: 'gain', param: 'kG', from: gains.kG, to: round3(gains.kG + f.dKg) },
       })
@@ -690,8 +765,8 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
         key: 'kV',
         summary: `等速段回授輸出跟著速度變大、方向${f.dKv > 0 ? '相同' : '相反'}：kV ${f.dKv > 0 ? '太小，一直落後' : '太大，一直超前'}。`,
         evidence: [
-          `在 ${vTyp.toFixed(2)} m/s 時回授要多補 ${V(f.dKv * vTyp)}`,
-          `前饋還差 ${f.dKv >= 0 ? '+' : ''}${f.dKv.toFixed(3)} V/(m/s)，目前 kV = ${gains.kV.toFixed(3)}`,
+          `在 ${uf.vel(vTyp)} 時回授要多補 ${V(f.dKv * vTyp)}`,
+          `前饋還差 ${f.dKv >= 0 ? '+' : ''}${f.dKv.toFixed(3)} V/(${uf.velUnit})，目前 kV = ${gains.kV.toFixed(3)}`,
         ],
         lookAt: '速度圖和位置圖的等速段：實際是不是一直落後（或超前）目標？電壓圖的回授輸出往上往下是不是正負相反、跟速度同方向？',
         spans: cruiseSpans,
@@ -702,7 +777,7 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       issues.push({
         key: 'kA',
         summary: `只有加速、減速的時候對不上：kA ${f.dKa > 0 ? '太小' : '太大'}。`,
-        evidence: [`在 ${aTyp.toFixed(1)} m/s² 時回授要多補 ${V(f.dKa * aTyp)}`, `目前 kA = ${gains.kA.toFixed(4)}`],
+        evidence: [`在 ${uf.acc(aTyp)} 時回授要多補 ${V(f.dKa * aTyp)}`, `目前 kA = ${gains.kA.toFixed(4)}`],
         lookAt: '電壓圖的加速、減速段：回授輸出是不是只在速度變化時冒出來，等速時又回到 0？',
         spans: accSpans,
         change: { kind: 'gain', param: 'kA', from: gains.kA, to: Math.max(0, round3(gains.kA + f.dKa)) },
@@ -734,10 +809,10 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
     if (unsettled.length > 0 || settleMed > 0.3) {
       issues.push({
         key: 'kP',
-        summary: '軌跡跑完之後，位置要很久才進到目標附近（或停在差一點的地方）：kP 不夠。前饋是常數，高度不同重力不一樣、摩擦不一樣的部分，只能靠回授補。',
+        summary: `軌跡跑完之後，位置要很久才進到目標附近（或停在差一點的地方）：kP 不夠。${arm ? '前饋模型跟真的手臂總有差（重心、負載、摩擦），差的部分只能靠回授補。' : '前饋是常數，高度不同重力不一樣、摩擦不一樣的部分，只能靠回授補。'}`,
         evidence: [
-          `到位時間中位數 ${settleMed >= 1.5 ? '> 1.5' : settleMed.toFixed(2)} s（容許誤差 ${cm(tol)}）`,
-          `最大殘留誤差 ${cm(worstFinal)}，${unsettled.length}/${moves.length} 次沒到位`,
+          `到位時間中位數 ${settleMed >= 1.5 ? '> 1.5' : settleMed.toFixed(2)} s（容許誤差 ${uf.pos(tol)}）`,
+          `最大殘留誤差 ${uf.pos(worstFinal)}，${unsettled.length}/${moves.length} 次沒到位`,
         ],
         lookAt: '位置圖的到位穩定段：軌跡（虛線）停了以後，實際位置是不是慢慢爬過去、或停在差一點的地方？',
         spans: settleSpans,
@@ -749,7 +824,7 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       issues.push({
         key: 'kD',
         summary: '到位時衝過頭再拉回來：阻尼不夠，加 kD。',
-        evidence: [`超過目標的中位數 ${cm(overMed)}（容許 ${cm(tol)}）`, `目前 kD = ${gains.kD.toFixed(2)}，建議值由 kA、kP 算阻尼比 0.7`],
+        evidence: [`超過目標的中位數 ${uf.pos(overMed)}（容許 ${uf.pos(tol)}）`, `目前 kD = ${gains.kD.toFixed(2)}，建議值由 kA、kP 算阻尼比 0.7`],
         lookAt: '位置圖的到位穩定段：實際位置有沒有超過目標再回來？',
         spans: settleSpans,
         change: { kind: 'gain', param: 'kD', from: gains.kD, to: round3(target > gains.kD * 1.2 ? target : Math.max(gains.kD * 1.5, 0.5)) },
@@ -765,11 +840,11 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
  * 步驟 0 沒過的日誌：不做分析，但如果是在振盪，飽和、跟隨誤差多半是振盪造成的，
  * 直接告訴隊員先降 kP，而不是只說「放慢 Motion Magic」。
  */
-export function oscillationBehindRefusal(log: AlignedLog, gains: Slot0Gains): Issue | null {
+export function oscillationBehindRefusal(log: AlignedLog, gains: Slot0Gains, mech: Mechanism = 'elevator'): Issue | null {
   const seg = segment(log)
   const osc = detectOscillation(log, seg)
   if (!osc.detected) return null
-  const issue = oscillationIssue(osc, gains, 0.5)
+  const issue = oscillationIssue(osc, gains, 0.5, unitFmt(mech))
   if (isDerivativeNoise(osc, gains)) return { ...issue, summary: '資料檢查沒過，但主因看起來是 kD 放大了雜訊：電壓一直抖、位置沒動。先把 kD 降下來再重錄。' }
   return {
     ...issue,
@@ -778,9 +853,10 @@ export function oscillationBehindRefusal(log: AlignedLog, gains: Slot0Gains): Is
   }
 }
 
-export function describeChange(c: ParamChange): string {
+export function describeChange(c: ParamChange, mech: Mechanism = 'elevator'): string {
   if (c.kind === 'motionMagic') {
-    return `Motion Magic 巡航速度 ${c.cruiseVelocity.from.toFixed(2)} → ${c.cruiseVelocity.to.toFixed(2)} m/s，加速度 ${c.acceleration.from.toFixed(2)} → ${c.acceleration.to.toFixed(2)} m/s²`
+    const u = unitFmt(mech)
+    return `Motion Magic 巡航速度 ${u.vel(c.cruiseVelocity.from)} → ${u.vel(c.cruiseVelocity.to)}，加速度 ${u.acc(c.acceleration.from)} → ${u.acc(c.acceleration.to)}`
   }
   return `${c.param} ${round3(c.from)} → ${round3(c.to)}`
 }
