@@ -15,11 +15,14 @@ export interface Spec {
 
 export const DEFAULT_SPEC: Spec = { overshoot: 0.01, settling: 0.5, steadyState: 0.01, following: 0.03, saturation: 0.02, ripple: 0.3 }
 
-/** 常用的標準：依賽季機構需求選一個，再微調 */
+/**
+ * 教學用的標準（不是 FRC 官方標準，FRC 沒有這種規定）：依賽季、機構、得分位置選一個，再微調。
+ * id 沿用舊的（存在瀏覽器裡的標準比對數值，不看 id）。
+ */
 export const SPEC_PRESETS: { id: string; label: string; what: string; spec: Spec }[] = [
-  { id: 'default', label: '預設', what: '得分位置要準（±1 cm），一般的電梯', spec: DEFAULT_SPEC },
-  { id: 'precise', label: '精準放置', what: '要把遊戲物件放進很窄的位置：超調和穩態誤差 5 mm', spec: { ...DEFAULT_SPEC, overshoot: 0.005, steadyState: 0.005, following: 0.02 } },
-  { id: 'fast', label: '快就好', what: '只要大概到就好、重點是快：允許 3 cm 誤差、穩定時間 0.3 s', spec: { ...DEFAULT_SPEC, overshoot: 0.03, steadyState: 0.03, following: 0.06, settling: 0.3 } },
+  { id: 'precise', label: '保守', what: '要把遊戲物件放進很窄的位置：超調和穩態誤差 5 mm', spec: { ...DEFAULT_SPEC, overshoot: 0.005, steadyState: 0.005, following: 0.02 } },
+  { id: 'default', label: '平衡（預設教學標準）', what: '一般的電梯，得分位置 ±1 cm', spec: DEFAULT_SPEC },
+  { id: 'fast', label: '快速', what: '只要大概到就好、重點是快：允許 3 cm 誤差、穩定時間 0.3 s', spec: { ...DEFAULT_SPEC, overshoot: 0.03, steadyState: 0.03, following: 0.06, settling: 0.3 } },
 ]
 
 export function isSpec(v: unknown): v is Spec {
@@ -73,4 +76,37 @@ export function specScore(moves: MoveMetrics[], spec: Spec = DEFAULT_SPEC): numb
     )
   }
   return s
+}
+
+/** 每一項沒過時：可能的原因、先試什麼（3F 指標表逐次移動顯示） */
+export const SPEC_ADVICE: Record<keyof Spec, { cause: string; next: string }> = {
+  overshoot: { cause: 'kP 太大、kD 不夠、有 kI 的積分飽和，或軌跡太快追不上', next: '先降 kP 或加一點 kD；有 kI 的話先拿掉' },
+  settling: { cause: '到位後在振盪，或 kP 太小慢慢爬', next: '看位置圖：來回擺就降 kP／加 kD，慢慢爬就先檢查 kG、kS 再加 kP' },
+  steadyState: { cause: '前饋撐不住：kG 不準，或靜摩擦 kS 卡住', next: '修 kG（回授一直偏同一邊）、補 kS；不要急著加 kI' },
+  following: { cause: '前饋沒跟上軌跡：kV、kA 不準，或輸出飽和', next: '先確認沒飽和，再修 kV（等速段）、kA（加減速段）' },
+  saturation: { cause: '物理限制：馬達已經全力，軌跡要的比電池給得起的多', next: '降低 Motion Magic 速度或加速度，調 PID 沒用' },
+  ripple: { cause: '到位後電壓抖：振盪（kP 太大、控制週期長、延遲）或 kD 放大雜訊', next: '位置也在抖就降 kP；位置不動只有電壓抖就降 kD' },
+}
+
+export interface MoveDiagnosis {
+  key: keyof Spec
+  label: string
+  actual: string
+  limit: string
+  cause: string
+  next: string
+}
+
+/** 一次移動沒過的每一項，附數值、門檻、原因與建議 */
+export function diagnoseMove(m: MoveMetrics, spec: Spec = DEFAULT_SPEC): MoveDiagnosis[] {
+  const cm = (v: number) => `${(v * 100).toFixed(1)} cm`
+  const fmt: Record<keyof Spec, [string, string]> = {
+    overshoot: [cm(m.overshoot), cm(spec.overshoot)],
+    settling: [m.settlingTime === null ? '沒穩定' : `${m.settlingTime.toFixed(2)} s`, `${spec.settling} s`],
+    steadyState: [cm(m.steadyStateError), cm(spec.steadyState)],
+    following: [cm(m.maxFollowingError), cm(spec.following)],
+    saturation: [`${(m.saturationFraction * 100).toFixed(1)}%`, `${(spec.saturation * 100).toFixed(1)}%`],
+    ripple: [`${m.holdVoltageRipple.toFixed(2)} V`, `${spec.ripple} V`],
+  }
+  return moveFailures(m, spec).map((key) => ({ key, label: SPEC_LABEL[key], actual: fmt[key][0], limit: fmt[key][1], ...SPEC_ADVICE[key] }))
 }

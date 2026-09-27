@@ -17,9 +17,11 @@ describe('1F 教學關卡的比較模擬（圖上要真的看得到說明的現�
   })
 
   it('kI：平常能補穩態誤差，電池低時積分飽和衝過頭；修好 kG 最好', () => {
-    const { metrics: [p, pi, piLow, fixed] } = compareMoves(m, ff, kiCases(ff, 50))
+    const { metrics: [p, pi, piLow, piLowAw, fixed] } = compareMoves(m, ff, kiCases(ff, 50))
     expect(p.steadyStateError).toBeGreaterThan(pi.steadyStateError)
     expect(piLow.overshoot).toBeGreaterThan(0.02)
+    // 積分防飽和把超調壓下來
+    expect(piLowAw.overshoot).toBeLessThan(piLow.overshoot / 2)
     expect(pi.overshoot).toBeLessThan(piLow.overshoot / 3)
     expect(fixed.steadyStateError).toBeLessThan(p.steadyStateError / 2)
   })

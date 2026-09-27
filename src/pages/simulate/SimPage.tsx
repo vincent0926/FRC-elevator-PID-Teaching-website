@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore, type Calibration, type SimSource } from '../../app/store'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
-import { CONTROL_PERIOD, type ControllerLocation } from '../../core/controller/slot0'
+import { CONTROL_PERIOD, type AntiWindup, type ControllerLocation } from '../../core/controller/slot0'
 import { CHALLENGE_ATTEMPTS, makeChallenge, nextStatus, referenceSolution, type ChallengeLevel, type HiddenPlant } from '../../core/challenge'
 import { simulate, type SimResult } from '../../core/physics/simulate'
 import { passesSpec } from '../../core/physics/spec'
@@ -11,9 +11,12 @@ import { runSimulation } from '../../workers/client'
 import { ExportPanel } from '../calculate/ExportPanel'
 import { CalibrationPanel } from './CalibrationPanel'
 import { ChallengePanel, type ChallengeState } from './ChallengePanel'
-import { ApproxNote, PLANT_ASSUMPTIONS } from '../../components/ApproxNote'
+import { ApproxNote, PLANT_ASSUMPTIONS, SIM_SCOPE } from '../../components/ApproxNote'
 import { ControllerSettings } from './ControllerSettings'
 import { CustomEditor } from './CustomEditor'
+import { AntiWindupEditor } from './AntiWindupEditor'
+import { TuningGuide } from './TuningGuide'
+import { tuningStepParams } from './tuningSteps'
 import { MetricsTable } from './Metrics'
 import { SpecEditor } from './SpecEditor'
 import { ElevatorView } from './ElevatorView'
@@ -62,6 +65,7 @@ export function SimPage() {
   const [knobs, setKnobs] = useState<PlantKnobs>(DEFAULT_KNOBS)
   const [location, setLocation] = useState<ControllerLocation>('talonfx')
   const [periodOverride, setPeriodOverride] = useState<number | null>(null)
+  const [antiWindup, setAntiWindup] = useState<AntiWindup>({ mode: 'none' })
   const [goal, setGoal] = useState(() => Math.round(mechanism.travel * 0.75 * 100) / 100)
   const [compare, setCompare] = useState(false)
   const [result, setResult] = useState<SimResult | null>(null)
@@ -85,8 +89,8 @@ export function SimPage() {
   const simKnobs = useMemo(() => (hidden ? hiddenKnobs(hidden) : knobs), [hidden, knobs])
 
   const setup = useMemo(
-    () => ({ mechanism, ff, knobs: simKnobs, controlPeriod, goal: safeGoal, tolerance: spec.steadyState }),
-    [mechanism, ff, simKnobs, controlPeriod, safeGoal, spec.steadyState],
+    () => ({ mechanism, ff, knobs: simKnobs, controlPeriod, goal: safeGoal, tolerance: spec.steadyState, antiWindup: challenge ? undefined : antiWindup }),
+    [mechanism, ff, simKnobs, controlPeriod, safeGoal, spec.steadyState, antiWindup, challenge],
   )
   // 穩健性測試用同一個物件，參數沒變時舊結果才會繼續顯示
   const robustBase = useMemo(() => buildSimInput(setup, ps), [setup, ps])
@@ -173,22 +177,14 @@ export function SimPage() {
     setKnobs({ ...DEFAULT_KNOBS, ...st.knobs })
     setLocation(st.location)
     setPeriodOverride(null)
+    setAntiWindup(st.antiWindup ?? { mode: 'none' })
     setCompare(true)
     setScenario(s)
   }
   const startChallenge = (level: ChallengeLevel) => {
     const probe = (h: HiddenPlant, p: ParameterSet) => passesSpec(simulate(buildSimInput({ ...setup, knobs: hiddenKnobs(h) }, p)).moves, spec)
     // 出題：理論值就過了的不要；參考解答也過不了的也不要
-    const hidden = makeChallenge(Math.floor(Math.random() * 1e9), level, (h) => {
-      const sol = referenceSolution(h, ff)
-      const solPs: ParameterSet = {
-        ...theory,
-        feedforward: { kS: sol.kS, kG: sol.kG, kV: sol.kV, kA: sol.kA },
-        feedback: { ...theory.feedback, kP: sol.kP },
-        motionMagic: { cruiseVelocity: theory.motionMagic.cruiseVelocity * sol.motionMagicScale, acceleration: theory.motionMagic.acceleration * sol.motionMagicScale },
-      }
-      return probe(h, theory) || !probe(h, solPs)
-    })
+    const hidden = makeChallenge(Math.floor(Math.random() * 1e9), level, (h) => probe(h, theory) || !probe(h, solutionParams(h)))
     if (!hidden) {
       setError('這台電梯的機構資料出不了題目：試了 30 台，不是理論值就過了、就是怎麼調都過不了。檢查 1F 的機構資料（例如 kG 是不是超過計算電壓的一半），或換個難度。')
       return
@@ -204,6 +200,26 @@ export function SimPage() {
     if (!challenge || !custom || challenge.status !== 'playing') return
     judging.current = true
     setChallenge({ ...challenge, attempts: challenge.attempts + 1, submitted: { ...custom } })
+  }
+  // 參考解答（出題篩選、結束後「用參考解答跑一次」共用）
+  const solutionParams = (h: HiddenPlant): ParameterSet => {
+    const sol = referenceSolution(h, ff)
+    return {
+      ...theory,
+      source: 'custom',
+      createdAt: new Date().toISOString(),
+      note: '挑戰模式參考解答',
+      feedforward: { kS: sol.kS, kG: sol.kG, kV: sol.kV, kA: sol.kA },
+      feedback: { ...theory.feedback, kP: sol.kP },
+      motionMagic: { cruiseVelocity: theory.motionMagic.cruiseVelocity * sol.motionMagicScale, acceleration: theory.motionMagic.acceleration * sol.motionMagicScale },
+    }
+  }
+  const trySolution = () => {
+    if (!challenge || challenge.status === 'playing') return
+    const sp = solutionParams(challenge.hidden)
+    setCustom(sp)
+    // 不算次數：只是讓你看參考解答在這台電梯上的曲線
+    setChallenge({ ...challenge, submitted: sp })
   }
   const quitChallenge = () => {
     judging.current = false
@@ -229,6 +245,7 @@ export function SimPage() {
     setKnobs(DEFAULT_KNOBS)
     setLocation('talonfx')
     setPeriodOverride(null)
+    setAntiWindup({ mode: 'none' })
     setSimSource('theory')
   }
 
@@ -250,7 +267,41 @@ export function SimPage() {
         onSubmit={submitChallenge}
         onQuit={quitChallenge}
         solution={challenge && challenge.status !== 'playing' ? referenceSolution(challenge.hidden, ff) : null}
+        submitted={challenge?.submitted ?? null}
+        onTrySolution={trySolution}
       />
+      {!challenge && (
+        <TuningGuide
+          onStep={(i) => {
+            setScenario(null)
+            setCustom(tuningStepParams(theory, i, knobs.realistic && knobs.friction ? knobs.frictionUp : 0))
+            setSimSource('custom')
+          }}
+          onReset={() => {
+            setScenario(null)
+            setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString(), note: '理論值' })
+            setSimSource('custom')
+          }}
+          onWellTuned={() => {
+            setScenario(null)
+            // 前饋補上目前受控體的摩擦（理想模型沒有摩擦就是理論值）
+            const kS = knobs.realistic && knobs.friction ? (knobs.frictionUp + knobs.frictionDown) / 2 : theory.feedforward.kS
+            const dKg = knobs.realistic && knobs.friction ? (knobs.frictionUp - knobs.frictionDown) / 2 : 0
+            setCustom({
+              ...theory,
+              source: 'custom',
+              createdAt: new Date().toISOString(),
+              note: '調好的範例',
+              feedforward: { ...theory.feedforward, kS, kG: theory.feedforward.kG * knobs.kGScale + dKg, kV: theory.feedforward.kV * knobs.kVScale, kA: theory.feedforward.kA * knobs.kAScale },
+            })
+            setSimSource('custom')
+          }}
+          onScenario={(id) => {
+            const sc = SIM_SCENARIOS.find((s) => s.id === id)
+            if (sc) loadScenario(sc)
+          }}
+        />
+      )}
       {!challenge && <ScenarioPicker active={scenario} onPick={loadScenario} onLeave={leaveScenario} />}
 
       <div className="bar">
@@ -348,6 +399,7 @@ export function SimPage() {
               </p>
             </>
           )}
+          {!challenge && <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />}
           <details style={{ marginTop: 16 }}>
             <summary className="small" style={{ cursor: 'pointer' }}>
               達標了？輸出這組參數
@@ -489,10 +541,26 @@ function PlantPanel({
         summary={
           knobs.calibrated
             ? '校正只調了重力、kV、慣性、摩擦四個數，其他簡化還在。用來預覽趨勢、抓明顯的錯，數字以實測為準。'
-            : '模擬器用來理解趨勢、先抓出明顯的錯（振盪、飽和、撞限位），不保證跟真的機器人一模一樣。數字以實測為準。'
+            : '教學模擬：用來理解趨勢、先抓出明顯的錯（振盪、飽和、撞限位），不是 TalonFX 韌體的數值重現，也不保證跟真的機器人一樣。數字以實測為準。'
         }
         items={PLANT_ASSUMPTIONS}
-      />
+      >
+        <p className="small" style={{ margin: '8px 0 4px' }}>
+          <b>教學模擬，不是 TalonFX／SPARK MAX 韌體的數值重現。</b>
+        </p>
+        <div className="sim-scope">
+          {SIM_SCOPE.map((g) => (
+            <div key={g.title}>
+              <b className="small">{g.title}</b>
+              <ul className="small">
+                {g.items.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </ApproxNote>
       {knobs.realistic && (
         <ul className="toggles">
           {TOGGLES.map((t) => (

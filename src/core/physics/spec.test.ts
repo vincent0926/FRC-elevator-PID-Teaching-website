@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SPEC, SPEC_PRESETS, describeSpec, isSpec, moveFailures } from './spec'
+import { DEFAULT_SPEC, SPEC_PRESETS, describeSpec, diagnoseMove, isSpec, moveFailures } from './spec'
 import type { MoveMetrics } from './simulate'
 
 const move = (o: Partial<MoveMetrics>): MoveMetrics =>
@@ -24,5 +24,22 @@ describe('達標標準', () => {
   })
   it('說明文字用公分', () => {
     expect(describeSpec(DEFAULT_SPEC)).toContain('超調 ≤ 1 cm')
+  })
+})
+
+describe('逐次移動的診斷', () => {
+  it('每一個沒過的項目都有數值、門檻、原因、建議', () => {
+    const m = move({ overshoot: 0.02, settlingTime: null, saturationFraction: 0.1 })
+    const d = diagnoseMove(m, DEFAULT_SPEC)
+    expect(d.map((x) => x.key)).toEqual(['overshoot', 'settling', 'saturation'])
+    expect(d[0].actual).toBe('2.0 cm')
+    expect(d[1].actual).toBe('沒穩定')
+    for (const x of d) {
+      expect(x.cause.length).toBeGreaterThan(5)
+      expect(x.next.length).toBeGreaterThan(5)
+    }
+  })
+  it('都過就沒有診斷', () => {
+    expect(diagnoseMove(move({}), DEFAULT_SPEC)).toEqual([])
   })
 })

@@ -97,11 +97,11 @@ export function CalcPage() {
               ]),
             )}
             notes={{
-              kS: '公式算不出，一定要上機量',
+              kS: ff.kS > 0 ? '你量到的值（機構資料最下面）' : '公式算不出，一定要上機量',
               kI: '預設 0，穩態誤差交給 kG',
               kD: '到位後振盪時再加',
-              cruise: `上限 ${f(ff.maxVelocity, 2)} 的 75%`,
-              accel: `上限 ${f(ff.maxAccelUp, 1)} 的 75%`,
+              cruise: `上限 ${f(ff.maxVelocity, 2)} 的 75%${ff.frictionIncluded ? '（已扣 kS）' : '（沒扣摩擦，實際會更低）'}`,
+              accel: `上限 ${f(ff.maxAccelUp, 1)} 的 75%${ff.frictionIncluded ? '（已扣 kS）' : '（沒扣摩擦）'}`,
             }}
           />
           {ff.warnings.length ? (

@@ -1,3 +1,5 @@
+import { MeasureKsKg } from './MeasureKsKg'
+import { Unit4 } from './Unit4'
 import { UNIT0_ITEMS, useStore } from '../../app/store'
 import { Unit1 } from './Unit1'
 import { Unit2 } from './Unit2'
@@ -32,7 +34,7 @@ const UNIT0: { title: string; items: string[] }[] = [
 ]
 
 export function LearnPage() {
-  const { unit0, setUnit0, lessonsDone } = useStore()
+  const { unit0, setUnit0, lessonsDone, mechanism } = useStore()
   const done0 = unit0.filter(Boolean).length
   const unlocked = done0 === UNIT0_ITEMS
 
@@ -98,6 +100,15 @@ export function LearnPage() {
         </div>
       </details>
 
+      <details className="unit" id="measure-ks">
+        <summary>
+          <h2 style={{ margin: 0 }}>量 kS、kG（兩點法，不用 SysId）</h2>
+          <span className="tag">{mechanism.measuredKs ? `已填 kS ${mechanism.measuredKs} V` : 'kS 一定要量'}</span>
+        </summary>
+        {!unlocked && <LockNote onGo={() => document.getElementById('unit0')?.scrollIntoView({ behavior: 'smooth' })} />}
+        <MeasureKsKg />
+      </details>
+
       <details className="unit">
         <summary>
           <h2 style={{ margin: 0 }}>單元一：用 AdvantageKit 錄日誌</h2>
@@ -122,6 +133,14 @@ export function LearnPage() {
           <span className={'tag' + (lessonsDone['unit3'] ? ' done' : '')}>{lessonsDone['unit3'] ? '已完成' : '可以先讀'}</span>
         </summary>
         <Unit3 />
+      </details>
+
+      <details className="unit">
+        <summary>
+          <h2 style={{ margin: 0 }}>單元四：期末檢核（沒看過的日誌）</h2>
+          <span className={'tag' + (lessonsDone['unit4'] ? ' done' : '')}>{lessonsDone['unit4'] ? '已通過' : '讀完 2F 與單元一到三再做'}</span>
+        </summary>
+        <Unit4 />
       </details>
     </section>
   )

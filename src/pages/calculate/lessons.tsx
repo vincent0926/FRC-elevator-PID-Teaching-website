@@ -6,7 +6,7 @@ import type { QuizDef } from '../../components/Quiz'
 import { PROFILE_SAFETY_FACTOR, type FeedforwardResult } from '../../core/feedforward'
 import { motorModel } from '../../core/motors'
 import { plantFromMechanism } from '../../core/physics/elevator'
-import type { Slot0Gains } from '../../core/controller/slot0'
+import type { AntiWindup, Slot0Gains } from '../../core/controller/slot0'
 import { simulate } from '../../core/physics/simulate'
 import { trapezoidTime } from '../../core/ratioSweep'
 import type { ElevatorMechanism } from '../../schema/parameterSet'
@@ -204,9 +204,20 @@ kA：每 1 m/s² 推動慣性要的電壓
         ]}
       />
       <p>
-        能跑多快？計算電壓 {f(m.calcVoltage, 1)} V 扣掉 kG 後全部拿來抵反電動勢：最高速度 ({f(m.calcVoltage, 1)} − {f(ff.kG)}) ÷ {f(ff.kV)} ={' '}
-        <b>{f(ff.maxVelocity, 2)} m/s</b>。Motion Magic 先用上限的 {PROFILE_SAFETY_FACTOR * 100}%，留電壓給 PID 修正。
+        能跑多快？往上等速時 a = 0，電壓要扛重力、摩擦和反電動勢：V = kG + kS + kV·v，所以最高速度 v = (V − kG − kS) ÷ kV。
       </p>
+      {ff.frictionIncluded ? (
+        <p>
+          用你量到的 kS：({f(m.calcVoltage, 1)} − {f(ff.kG)} − {f(ff.kS)}) ÷ {f(ff.kV)} = <b>{f(ff.maxVelocity, 2)} m/s</b>（不扣摩擦會算成{' '}
+          {f(ff.maxVelocityNoFriction, 2)} m/s，高估 {f(((ff.maxVelocityNoFriction - ff.maxVelocity) / ff.maxVelocity) * 100, 0)}%）。
+        </p>
+      ) : (
+        <p>
+          kS 還沒量，先當 0：({f(m.calcVoltage, 1)} − {f(ff.kG)}) ÷ {f(ff.kV)} = <b>{f(ff.maxVelocity, 2)} m/s</b>。這是<b>不含摩擦的理論上限</b>，
+          實際一定比較低；量到 kS 後填在機構資料最下面，這裡和 Motion Magic 建議值會一起更新。
+        </p>
+      )}
+      <p>Motion Magic 先用上限的 {PROFILE_SAFETY_FACTOR * 100}%，留電壓給 PID 修正、電池變低也還夠用。</p>
     </>
   )
 }
@@ -270,6 +281,7 @@ export interface CompareCase {
   color: string
   gains: Slot0Gains
   batteryVoltage?: number
+  antiWindup?: AntiWindup
 }
 
 /** 同一台電梯（真實模型、摩擦 0.15 V）跑同一個移動，比較不同參數：給教學關卡畫圖用 */
@@ -288,6 +300,7 @@ export function compareMoves(m: ElevatorMechanism, ff: FeedforwardResult, cases:
       initialPosition: low,
       moves: [{ time: 0.3, goal: high }],
       duration,
+      antiWindup: c.antiWindup,
     }),
   )
   const step = 5
@@ -345,6 +358,7 @@ export function kiCases(ff: FeedforwardResult, kP: number): CompareCase[] {
     { label: 'kG 少 20%，只有 kP', color: '--red', gains: base },
     { label: 'kG 少 20%，加 kI 300', color: '--amber', gains: { ...base, kI: 300 } },
     { label: 'kG 少 20%，加 kI 300，電池 9 V', color: '--violet', gains: { ...base, kI: 300 }, batteryVoltage: 9 },
+    { label: '同上，加積分防飽和（飽和時停止積分）', color: '--green', gains: { ...base, kI: 300 }, batteryVoltage: 9, antiWindup: { mode: 'clamp' } },
     { label: '把 kG 修好，只有 kP', color: '--blue', gains: { ...base, kG: ff.kG } },
   ]
 }
@@ -373,7 +387,8 @@ function KiCompare({ m, ff, kP }: LessonCtx) {
       <h3>為什麼 kI 通常不需要，什麼時候才加</h3>
       <p>
         kG 少了 20%。只有 kP 時停得比目標低；加上 kI，平常看起來會慢慢補回去；但只要輸出頂到上限（下圖電池只剩 9 V），誤差一直累積在積分裡，
-        追上軌跡時放不掉，就衝過頭。把 kG 修好，只用 kP 就停得準，也不怕電池低。
+        追上軌跡時放不掉，就衝過頭（積分飽和，windup）。加上積分防飽和（輸出頂到上限時停止積分）可以壓住超調；但最好的做法還是把 kG 修好，
+        只用 kP 就停得準，也不怕電池低。3F 情境「積分防飽和」可以比較四種做法。
       </p>
       <Chart x={data.t} series={data.series} height={220} yLabel="位置（m）" />
       <CompareTable labels={cases.map((c) => c.label)} metrics={data.metrics} />

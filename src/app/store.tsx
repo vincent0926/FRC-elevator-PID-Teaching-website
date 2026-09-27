@@ -118,7 +118,7 @@ export function buildTheory(mechanism: ElevatorMechanism, ff: FeedforwardResult,
     source: 'theory',
     createdAt: new Date().toISOString(),
     mechanism,
-    feedforward: { kS: 0, kG: ff.kG, kV: ff.kV, kA: ff.kA },
+    feedforward: { kS: ff.kS, kG: ff.kG, kV: ff.kV, kA: ff.kA },
     feedback: { kP: kPFromVoltsPerCm(voltsPerCm), kI: 0, kD: 0 },
     motionMagic: {
       cruiseVelocity: ff.cruiseVelocity > 0 ? ff.cruiseVelocity : 0.1,

@@ -46,6 +46,16 @@ export function MechanismForm({ m, onChange, voltsPerCm, onVoltsPerCm }: Props) 
             max={13}
             hint="考慮電池壓降，通常 10–11 V"
           />
+          <NumberField
+            label="量到的 kS（靜摩擦）"
+            value={m.measuredKs ?? 0}
+            onChange={(v) => set('measuredKs', v)}
+            unit="V"
+            min={0}
+            max={6}
+            step={0.01}
+            hint="公式算不出來，沒量過填 0。量法看 4F「量 kS、kG（兩點法）」"
+          />
         </div>
       </fieldset>
 

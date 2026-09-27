@@ -1,3 +1,4 @@
+import type { AntiWindup } from '../../core/controller/slot0'
 import { describe, expect, it } from 'vitest'
 import { buildTheory } from '../../app/store'
 import { CONTROL_PERIOD } from '../../core/controller/slot0'
@@ -14,12 +15,16 @@ const ff = computeFeedforward(mechanism)
 const theory = buildTheory(mechanism, ff, 0.5)
 const goal = mechanism.travel * 0.75
 
-function run(id: string, patch: { params?: (p: ParameterSet) => ParameterSet; knobs?: Partial<PlantKnobs>; location?: 'talonfx' | 'roborio' } = {}): SimResult {
+function run(
+  id: string,
+  patch: { params?: (p: ParameterSet) => ParameterSet; knobs?: Partial<PlantKnobs>; location?: 'talonfx' | 'roborio'; antiWindup?: AntiWindup } = {},
+): SimResult {
   const sc = SIM_SCENARIOS.find((s) => s.id === id)!
   const s = sc.setup(theory, ff)
   const ps = patch.params ? patch.params(s.params) : s.params
   const knobs = { ...DEFAULT_KNOBS, ...s.knobs, ...patch.knobs }
-  return simulate(buildSimInput({ mechanism, ff, knobs, controlPeriod: CONTROL_PERIOD[patch.location ?? s.location], goal }, ps))
+  const antiWindup = patch.antiWindup ?? s.antiWindup
+  return simulate(buildSimInput({ mechanism, ff, knobs, controlPeriod: CONTROL_PERIOD[patch.location ?? s.location], goal, antiWindup }, ps))
 }
 const fb = (p: ParameterSet, f: Partial<ParameterSet['feedback']>) => ({ ...p, feedback: { ...p.feedback, ...f } })
 const ffp = (p: ParameterSet, f: Partial<ParameterSet['feedforward']>) => ({ ...p, feedforward: { ...p.feedforward, ...f } })
@@ -70,6 +75,15 @@ describe('3F 教學情境', () => {
     const good = run('whyNoKi', { params: (p) => fb(ffp(p, { kG: ff.kG }), { kI: 0 }) })
     expect(bad.moves[0].overshoot).toBeGreaterThan(0.03)
     expect(good.moves[0].overshoot).toBeLessThan(0.01)
+  })
+
+  it('積分防飽和：三種做法的超調都比「沒有」小很多', () => {
+    const none = run('antiWindup')
+    expect(none.moves[0].overshoot).toBeGreaterThan(0.03)
+    for (const mode of ['clamp', 'izone', 'backCalc'] as const) {
+      const r = run('antiWindup', { antiWindup: { mode } })
+      expect(r.moves[0].overshoot, mode).toBeLessThan(none.moves[0].overshoot / 2)
+    }
   })
 
   it('控制週期：同一組參數 roboRIO 振盪、TalonFX 穩', () => {

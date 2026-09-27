@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ParameterSet } from '../../schema/parameterSet'
 import { CHALLENGE_ATTEMPTS, LEVEL_LABEL, type ChallengeLevel, type ChallengeStatus, type HiddenPlant } from '../../core/challenge'
 
 /**
@@ -21,13 +22,18 @@ export function ChallengePanel({
   onSubmit,
   onQuit,
   solution,
+  submitted,
+  onTrySolution,
 }: {
   state: ChallengeState | null
   onStart: (level: ChallengeLevel) => void
   onSubmit: () => void
   onQuit: () => void
   /** 參考解答（結束後顯示） */
-  solution: { kS: number; kG: number; kV: number; kA: number } | null
+  solution: { kS: number; kG: number; kV: number; kA: number; kP: number } | null
+  /** 最後一次送出的參數（結束後跟參考解答比） */
+  submitted?: ParameterSet | null
+  onTrySolution?: () => void
 }) {
   const [level, setLevel] = useState<ChallengeLevel>('easy')
 
@@ -92,9 +98,60 @@ export function ChallengePanel({
             這台電梯其實是：重量 {pct(h.kGScale)}、kV {pct(h.kVScale)}、慣性 {pct(h.kAScale)}、摩擦往上 {h.frictionUp.toFixed(2)} V、往下 {h.frictionDown.toFixed(2)} V。
           </p>
           {solution && (
-            <p className="muted" style={{ margin: 0 }}>
-              參考解答：kS {solution.kS.toFixed(2)}、kG {solution.kG.toFixed(3)}、kV {solution.kV.toFixed(3)}、kA {solution.kA.toFixed(4)}，kP 100 V/m，Motion Magic 放慢到 60%（重的電梯用理論速度會頂到上限）。
-            </p>
+            <>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="tbl" style={{ margin: '6px 0' }}>
+                  <thead>
+                    <tr>
+                      <th>參數</th>
+                      <th className="num">你最後送出的</th>
+                      <th className="num">參考解答</th>
+                      <th>為什麼是這個數</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>kS</td>
+                      <td className="num">{submitted ? submitted.feedforward.kS.toFixed(2) : '—'}</td>
+                      <td className="num">{solution.kS.toFixed(2)}</td>
+                      <td>往上、往下摩擦的平均</td>
+                    </tr>
+                    <tr>
+                      <td>kG</td>
+                      <td className="num">{submitted ? submitted.feedforward.kG.toFixed(3) : '—'}</td>
+                      <td className="num">{solution.kG.toFixed(3)}</td>
+                      <td>理論 × 重量倍率，再加（往上摩擦 − 往下摩擦）÷ 2：摩擦不對稱等於 kG 偏移</td>
+                    </tr>
+                    <tr>
+                      <td>kV</td>
+                      <td className="num">{submitted ? submitted.feedforward.kV.toFixed(3) : '—'}</td>
+                      <td className="num">{solution.kV.toFixed(3)}</td>
+                      <td>理論 × kV 倍率（看等速段落後多少）</td>
+                    </tr>
+                    <tr>
+                      <td>kA</td>
+                      <td className="num">{submitted ? submitted.feedforward.kA.toFixed(4) : '—'}</td>
+                      <td className="num">{solution.kA.toFixed(4)}</td>
+                      <td>理論 × 慣性倍率（看加減速時差多少）</td>
+                    </tr>
+                    <tr>
+                      <td>kP</td>
+                      <td className="num">{submitted ? submitted.feedback.kP.toFixed(0) : '—'}</td>
+                      <td className="num">{solution.kP.toFixed(0)}</td>
+                      <td>前饋準了，kP 只要修剩下的一點誤差</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="muted" style={{ margin: '0 0 6px' }}>
+                Motion Magic 放慢到 60%：重的電梯用理論速度會頂到電壓上限，這時調 PID 沒用，要先放慢。
+              </p>
+              {onTrySolution && (
+                <button className="btn small" type="button" onClick={onTrySolution}>
+                  用參考解答在這台電梯跑一次（不算次數）
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
