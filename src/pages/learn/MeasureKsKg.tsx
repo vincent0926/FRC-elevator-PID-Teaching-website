@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../../app/store'
 import { twoPointKsKg } from '../../core/twoPoint'
+import { ElevatorMechanismSchema } from '../../schema/parameterSet'
 
 /** 4F「量 kS、kG（兩點法）」：不用 SysId，用 Phoenix Tuner 或程式慢慢加電壓就能量 */
 
@@ -11,6 +12,7 @@ export function MeasureKsKg() {
   const [up, setUp] = useState('')
   const [down, setDown] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
+  const [err, setErr] = useState<string | null>(null)
   const r = up !== '' && down !== '' ? twoPointKsKg(Number(up), Number(down)) : null
   const ok = r && !('error' in r) ? r : null
   const diff = ok ? (ok.kG - ff.kG) / Math.abs(ff.kG || 1) : 0
@@ -68,7 +70,16 @@ kS = (${f(Number(up), 2)} − ${f(Number(down), 2)}) / 2 = ${f(ok.kS)} V
               className="btn small"
               type="button"
               onClick={() => {
-                setMechanism({ ...mechanism, measuredKs: Math.round(ok.kS * 1000) / 1000 })
+                const next = { ...mechanism, measuredKs: Math.round(ok.kS * 1000) / 1000 }
+                // 先驗證：超出範圍的值存進去，重新整理時整份機構資料會被丟掉
+                const v = ElevatorMechanismSchema.safeParse(next)
+                if (!v.success) {
+                  setMsg(null)
+                  setErr(`kS = ${f(ok.kS)} V 超出可以存的範圍（0–6 V），沒有填進 1F。這麼大的摩擦先檢查機構，或重新量一次。`)
+                  return
+                }
+                setErr(null)
+                setMechanism(v.data)
                 setMsg(`已把 kS = ${f(ok.kS)} V 填進 1F。理論值的 kS、最高速度、Motion Magic 建議值都會跟著更新。kG 請照 2F 或 3F 自訂參數修正。`)
               }}
             >
@@ -76,6 +87,7 @@ kS = (${f(Number(up), 2)} − ${f(Number(down), 2)}) / 2 = ${f(ok.kS)} V
             </button>
           </div>
           {msg && <div className="ok">{msg}</div>}
+          {err && <div className="warn">{err}</div>}
         </>
       )}
       <p className="small muted">

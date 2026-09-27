@@ -97,4 +97,12 @@ describe('最高速度、加速度要扣掉 kS', () => {
     // kG、kV、kA 跟摩擦無關
     expect(withKs.kG).toBeCloseTo(base.kG)
   })
+  it('加速不起來時分清楚是電壓不夠還是電流限制', () => {
+    const lowV = computeFeedforward({ ...DEFAULT_MECHANISM, measuredKs: 0.5, calcVoltage: 0.6 })
+    expect(lowV.warnings.some((w) => w.includes('電壓不夠'))).toBe(true)
+    expect(lowV.warnings.some((w) => w.includes('電流限制給的力'))).toBe(false)
+    const lowI = computeFeedforward({ ...DEFAULT_MECHANISM, statorCurrentLimit: 1 })
+    expect(lowI.warnings.some((w) => w.includes('電流限制給的力'))).toBe(true)
+    expect(lowI.warnings.some((w) => w.includes('電壓不夠'))).toBe(false)
+  })
 })

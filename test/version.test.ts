@@ -9,6 +9,7 @@ describe('版本一致', () => {
     const m = readme.match(/## 目前進度：v(\d+\.\d+(?:\.\d+)?)/)
     expect(m).not.toBeNull()
     const [maj, min] = pkg.version.split('.')
-    expect(m![1].startsWith(`${maj}.${min}`)).toBe(true)
+    const [rMaj, rMin] = m![1].split('.')
+    expect([rMaj, rMin]).toEqual([maj, min])
   })
 })

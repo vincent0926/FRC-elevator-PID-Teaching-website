@@ -97,6 +97,8 @@ export const CASES: AssessmentCase[] = [
   { scenario: 'saturate', symptom: 'saturated', evidence: ['voltAtBattery', 'followBig'], component: 'mm', change: 'mm-', expect: 'notSaturated', why: '輸出已經貼著電池電壓，馬達全力了，調 PID 沒用；要把軌跡放慢到馬達做得到。' },
 ]
 
+export const PASS_SCORE = 6
+
 export interface Answers {
   symptom: string | null
   evidence: string[]
@@ -110,6 +112,8 @@ export interface Answers {
 export interface Graded {
   score: number
   max: number
+  /** 通過：總分到 PASS_SCORE，而且上機前檢查有分、沒有選不安全的做法 */
+  passed: boolean
   parts: { q: string; got: number; of: number; note: string }[]
 }
 
@@ -135,8 +139,8 @@ export function grade(c: AssessmentCase, a: Answers): Graded {
     of: 2,
     note: bad > 0 ? '選了不安全的做法（加倍 kP、關軟體限位），這題 0 分。' : `${good} / ${need.length} 項安全檢查。`,
   })
-  const score = parts.reduce((s, p) => s + p.got, 0)
-  return { score: Math.round(score * 10) / 10, max: parts.reduce((s, p) => s + p.of, 0), parts }
+  const score = Math.round(parts.reduce((s, p) => s + p.got, 0) * 10) / 10
+  // 安全不能用其他題的分數換：選了不安全的做法，或完全沒選檢查，就算總分夠也不通過
+  const passed = score >= PASS_SCORE && bad === 0 && sf > 0
+  return { score, max: parts.reduce((s, p) => s + p.of, 0), passed, parts }
 }
-
-export const PASS_SCORE = 6

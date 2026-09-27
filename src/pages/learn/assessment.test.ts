@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SCENARIOS } from '../tuning/sampleScenarios'
-import { CASES, CHANGES, COMPONENTS, EVIDENCE, EXPECTS, SAFETY, SYMPTOMS, grade, type Answers } from './assessment'
+import { CASES, CHANGES, COMPONENTS, EVIDENCE, EXPECTS, PASS_SCORE, SAFETY, SYMPTOMS, grade, type Answers } from './assessment'
 
 const ids = (l: { id: string }[]) => l.map((o) => o.id)
 
@@ -31,5 +31,20 @@ describe('4F 期末檢核', () => {
     const c = CASES[3]
     const g = grade(c, { symptom: null, evidence: ['posOsc', 'fbAccel'], component: c.component, change: c.change, why: '', expect: null, safety: [] })
     expect(g.score).toBeLessThan(6)
+  })
+})
+
+describe('期末檢核通過條件', () => {
+  it('其他題全對、但選了不安全的做法：總分 6，不通過', () => {
+    const c = CASES[0]
+    const g = grade(c, { symptom: c.symptom, evidence: c.evidence, component: c.component, change: c.change, why: '', expect: c.expect, safety: ['noSoftLimit'] })
+    expect(g.score).toBeGreaterThanOrEqual(PASS_SCORE)
+    expect(g.passed).toBe(false)
+  })
+  it('上機前檢查一項都沒選也不通過', () => {
+    const c = CASES[0]
+    const g = grade(c, { symptom: c.symptom, evidence: c.evidence, component: c.component, change: c.change, why: '', expect: c.expect, safety: [] })
+    expect(g.score).toBeGreaterThanOrEqual(PASS_SCORE)
+    expect(g.passed).toBe(false)
   })
 })

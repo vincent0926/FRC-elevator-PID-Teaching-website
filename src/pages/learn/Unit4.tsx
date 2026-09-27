@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
-import { useStore } from '../../app/store'
+import { buildTheory, useStore } from '../../app/store'
+import { computeFeedforward } from '../../core/feedforward'
+import { DEFAULT_MECHANISM } from '../../schema/parameterSet'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { sampleAlignedLog } from '../../core/log/sampleLog'
 import { SCENARIOS } from '../tuning/sampleScenarios'
@@ -47,9 +49,17 @@ export function Unit4() {
   const [submitted, setSubmitted] = useState(false)
   const c = CASES[idx]
 
+  // 你的電梯 kG 太小（配重幾乎抵掉重力）或動不了時，kG 多或少的日誌看不出差別，改用範例電梯出題
+  const own = Math.abs(ff.kG) >= 0.1 && ff.maxVelocity > 0
+  const base = useMemo(() => {
+    if (own) return { mechanism, ff, theory }
+    const f2 = computeFeedforward(DEFAULT_MECHANISM)
+    return { mechanism: DEFAULT_MECHANISM, ff: f2, theory: buildTheory(DEFAULT_MECHANISM, f2, 0.5) }
+  }, [own, mechanism, ff, theory])
+
   const log = useMemo(() => {
     const sc = SCENARIOS.find((s) => s.id === c.scenario)!
-    const l = sampleAlignedLog({ mechanism, ff, ...sc.build(theory, ff) })
+    const l = sampleAlignedLog({ mechanism: base.mechanism, ff: base.ff, ...sc.build(base.theory, base.ff) })
     const col = (k: keyof typeof l.cols) => l.cols[k] ?? new Float64Array(l.t.length)
     const pos: ChartSeries[] = [
       { label: '目標（軌跡）', color: '--steel', dash: true, values: col('reference') },
@@ -66,7 +76,7 @@ export function Unit4() {
       { label: '速度', color: '--blue', values: col('velocity') },
     ]
     return { t: l.t, pos, volt, vel }
-  }, [c.scenario, mechanism, ff, theory])
+  }, [c.scenario, base])
 
   const g = submitted ? grade(c, a) : null
   const set = (patch: Partial<Answers>) => setA({ ...a, ...patch })
@@ -78,7 +88,7 @@ export function Unit4() {
   const submit = () => {
     setSubmitted(true)
     const r = grade(c, a)
-    if (r.score >= PASS_SCORE) markLesson('unit4')
+    if (r.passed) markLesson('unit4')
   }
 
   return (
@@ -87,7 +97,8 @@ export function Unit4() {
         學習目標：拿到一份沒看過的日誌，自己說出發生什麼事、證據在哪、該改哪個參數、為什麼、改完預期會怎樣、上機前要檢查什麼。
       </div>
       <p className="small">
-        這份日誌是用你 1F 的電梯模擬出來的，有一個地方設錯了（不告訴你是哪個）。分數看推理：證據和上機前檢查佔一半，只猜對參數不會及格（{PASS_SCORE} 分及格）。
+        {own ? '這份日誌是用你 1F 的電梯模擬出來的' : '你 1F 的電梯 kG 太小（配重幾乎抵掉重力）或動不了，這份日誌改用範例電梯模擬'}
+        ，有一個地方設錯了（不告訴你是哪個）。分數看推理：證據和上機前檢查佔一半，只猜對參數不會及格（{PASS_SCORE} 分及格，而且上機前檢查不能選錯）。
         {lessonsDone['unit4'] && ' 你已經通過過一次，可以換一份再練。'}
       </p>
       <Chart title="位置" x={log.t} series={log.pos} height={200} yLabel="m" />
@@ -119,8 +130,13 @@ export function Unit4() {
       ) : (
         g && (
           <div className="stack" style={{ marginTop: 12 }}>
-            <div className={g.score >= PASS_SCORE ? 'ok' : 'warn'}>
-              {g.score} / {g.max} 分，{g.score >= PASS_SCORE ? '通過。' : '還沒通過，看完下面的說明換一份再試。'}
+            <div className={g.passed ? 'ok' : 'warn'}>
+              {g.score} / {g.max} 分，
+              {g.passed
+                ? '通過。'
+                : g.score >= PASS_SCORE
+                  ? '分數夠了，但上機前檢查沒過（選了不安全的做法，或一項都沒選）：安全不能用其他題的分數換。'
+                  : '還沒通過，看完下面的說明換一份再試。'}
             </div>
             <table className="tbl">
               <tbody>

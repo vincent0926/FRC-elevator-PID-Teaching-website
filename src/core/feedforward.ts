@@ -79,13 +79,16 @@ export function computeFeedforward(m: ElevatorMechanism): FeedforwardResult {
   // kS 換成力：每伏特的力 = n·kT·G / (R·r)
   const frictionForce = (kS * n * kT * G) / (R * r)
   // 起步時速度為 0，可用加速度受電流限制與電壓兩者中較小者限制；兩者都要先扣掉重力和摩擦
-  const maxAccelUp = Math.min((maxForce - netGravityForce - frictionForce) / mass.inertia, (m.calcVoltage - kG - kS) / kA)
+  const accelByCurrent = (maxForce - netGravityForce - frictionForce) / mass.inertia
+  const accelByVoltage = (m.calcVoltage - kG - kS) / kA
+  const maxAccelUp = Math.min(accelByCurrent, accelByVoltage)
 
   const warnings: string[] = []
   if (kG > m.calcVoltage * 0.5) warnings.push('kG 超過計算用電壓的一半：機構太重或齒比不夠，剩下能拿來加速和跑速度的電壓很少。')
   if (kG < 0) warnings.push('配重力大於重力，kG 是負的：電梯沒通電時會自己往上跑。')
   if (!(maxVelocity > 0)) warnings.push(kS > 0 ? '計算用電壓扣掉 kG 和 kS 後沒有剩，電梯動不了。' : '計算用電壓扣掉 kG 後沒有剩，電梯動不了。')
-  if (!(maxAccelUp > 0)) warnings.push('電流限制給的力撐不住電梯，往上加速不起來。')
+  if (!(accelByCurrent > 0)) warnings.push('電流限制給的力撐不住電梯（加上摩擦），往上加速不起來：提高 Stator 電流限制或加大齒比。')
+  if (!(accelByVoltage > 0)) warnings.push('計算用電壓扣掉 kG 和 kS 後沒有剩，往上加速不起來：這是電壓不夠，不是電流限制。')
   if (m.motor === 'neo') warnings.push('NEO 屬於 REV，第一版只支援 Phoenix 6 輸出，數字可以參考但不能產生程式碼。')
 
   return {
