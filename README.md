@@ -6,10 +6,8 @@ FRC 9427 的電梯調參教學工具。目標是讓隊員搞懂電梯的前饋�
 
 **https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/**
 
-推到 `main` 後 GitHub Actions 會自動測試、建置並部署，約 1–2 分鐘後網址就是最新版本（網頁上方會出現「有新版本」提示）。
-
-> 第一次部署前要到 repo 的 **Settings → Pages → Build and deployment → Source** 選 **GitHub Actions**，
-> 否則部署步驟會失敗、網址會是 404。
+推到 `main` 後 GitHub Actions 會自動測試、建置，並把網站推到 `gh-pages` 分支，約 1–2 分鐘後網址就是最新版本（網頁上方會出現「有新版本」提示）。
+部署進度看 repo 的 Actions 分頁。
 
 ## 目前進度：v0.3（Phase 0 + Phase 1）
 

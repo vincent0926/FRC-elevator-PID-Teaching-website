@@ -33,3 +33,4 @@
 | 17 | Java 範本一律輸出 `slot1()`，沒有摩擦不對稱時回傳 `null` | 機器人端讀取器可以固定呼叫，不必依版本判斷；JSON 缺 Slot 1 欄位時沿用 Slot 0，不讀成 0 |
 | 18 | `robot-example/` 的 ElevatorGains.java 與 JSON 由範本產生，單元測試檢查一致 | 範例程式與網站輸出不會各自走樣 |
 | 19 | 回授輸出記錄 P+I+D 三項相加，前饋 = 閉迴路總輸出 − 回授 | 不依賴 Phoenix 6 各版本對 ClosedLoopFeedForward 定義的差異 |
+| 20 | GitHub Pages 用 gh-pages 分支部署（peaceiris/actions-gh-pages），不用 actions/deploy-pages | deploy-pages 需要先手動到 Settings 開啟 Pages；推 gh-pages 分支會自動開啟，換人維護也不會卡在設定 |
