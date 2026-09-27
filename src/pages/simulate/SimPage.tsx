@@ -321,7 +321,7 @@ export function SimPage() {
         <MetricsTable
           moves={result.moves}
           other={other?.moves ?? null}
-          otherLabel={otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : ''}
+          otherLabel={otherLabel}
           spec={spec}
           editor={!challenge && <SpecEditor spec={spec} setSpec={setSpec} />}
         />

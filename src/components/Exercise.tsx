@@ -57,6 +57,7 @@ export function Exercise({
     <div className="exercise">
       <b className="small">先自己算</b>
       <div style={{ margin: '4px 0 8px' }}>{prompt}</div>
+      {solvedAlready && <div className="ok">已完成。答案：{fields.map((f) => `${f.label} = ${f.answer} ${f.unit}`).join('、')}。</div>}
       {!solvedAlready && (
         <>
           <div className="fields">

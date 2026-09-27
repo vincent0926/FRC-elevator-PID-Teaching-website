@@ -23,4 +23,13 @@ describe('1F 教學關卡的比較模擬（圖上要真的看得到說明的現�
     expect(pi.overshoot).toBeLessThan(piLow.overshoot / 3)
     expect(fixed.steadyStateError).toBeLessThan(p.steadyStateError / 2)
   })
+
+  it('行程長、速度慢的電梯也模擬到軌跡走完並穩定（不會在半路截斷）', () => {
+    const slow = { ...m, travel: 3, gearRatio: 25 }
+    const f2 = computeFeedforward(slow)
+    const { t, metrics } = compareMoves(slow, f2, pidVsFfCases(f2, 50))
+    const ffPid = metrics[2]
+    expect(t[t.length - 1]).toBeGreaterThan(0.3 + ffPid.profileDuration + 1)
+    expect(ffPid.settlingTime).not.toBeNull()
+  })
 })

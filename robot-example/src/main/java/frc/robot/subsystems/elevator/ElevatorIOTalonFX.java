@@ -176,7 +176,12 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   }
 
   @Override
-  public void setSoftLimitsEnabled(boolean enabled) {
-    leader.getConfigurator().apply(softLimits.withForwardSoftLimitEnable(enabled).withReverseSoftLimitEnable(enabled));
+  public boolean setSoftLimitsEnabled(boolean enabled) {
+    softLimits.withForwardSoftLimitEnable(enabled).withReverseSoftLimitEnable(enabled);
+    // CAN 忙的時候設定可能寫不進去：重試幾次，還是失敗就回報，讓子系統停下來
+    for (int i = 0; i < 3; i++) {
+      if (leader.getConfigurator().apply(softLimits).isOK()) return true;
+    }
+    return false;
   }
 }

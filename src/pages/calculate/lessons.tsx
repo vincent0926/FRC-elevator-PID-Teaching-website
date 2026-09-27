@@ -8,6 +8,7 @@ import { motorModel } from '../../core/motors'
 import { plantFromMechanism } from '../../core/physics/elevator'
 import type { Slot0Gains } from '../../core/controller/slot0'
 import { simulate } from '../../core/physics/simulate'
+import { trapezoidTime } from '../../core/ratioSweep'
 import type { ElevatorMechanism } from '../../schema/parameterSet'
 
 /**
@@ -275,6 +276,9 @@ export interface CompareCase {
 export function compareMoves(m: ElevatorMechanism, ff: FeedforwardResult, cases: CompareCase[]) {
   const low = m.travel * 0.1
   const high = m.travel * 0.75
+  // 模擬到軌跡走完再多 1.5 s，讓每一組都有時間穩定（行程長、速度慢的電梯也一樣）
+  const profileTime = trapezoidTime(high - low, ff.cruiseVelocity, ff.acceleration)
+  const duration = 0.3 + (Number.isFinite(profileTime) ? profileTime : 5) + 1.5
   const runs = cases.map((c) =>
     simulate({
       plant: plantFromMechanism(m, ff, { realistic: true, frictionKs: 0.15, batteryVoltage: c.batteryVoltage ?? 12.5 }),
@@ -283,7 +287,7 @@ export function compareMoves(m: ElevatorMechanism, ff: FeedforwardResult, cases:
       controlPeriod: 0.001,
       initialPosition: low,
       moves: [{ time: 0.3, goal: high }],
-      duration: 3,
+      duration,
     }),
   )
   const step = 5

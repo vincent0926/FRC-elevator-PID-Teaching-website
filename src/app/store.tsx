@@ -80,8 +80,8 @@ interface Store {
   pendingScenario: string | null
   openScenario: (id: string | null) => void
   /** 參數庫選來在 3F 疊圖比較的參數組（只在記憶體） */
-  compareSet: { label: string; params: ParameterSet } | null
-  setCompareSet: (c: { label: string; params: ParameterSet } | null) => void
+  compareSet: { id?: number; label: string; params: ParameterSet } | null
+  setCompareSet: (c: { id?: number; label: string; params: ParameterSet } | null) => void
   /** 從分享連結打開時的結果；prev 是被取代的機構資料（可以復原） */
   shared: { ok: boolean; text: string; prev?: ElevatorMechanism } | null
   dismissShared: (undo: boolean) => void
@@ -150,7 +150,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [lastLog, setLastLog] = useState<{ log: AlignedLog; name: string } | null>(null)
   const [pendingScenario, setPendingScenario] = useState<string | null>(null)
   const [spec, setSpec] = usePersisted<Spec>('spec', DEFAULT_SPEC, isSpec)
-  const [compareSet, setCompareSet] = useState<{ label: string; params: ParameterSet } | null>(null)
+  const [compareSet, setCompareSet] = useState<{ id?: number; label: string; params: ParameterSet } | null>(null)
   const [shared, setShared] = useState<Store['shared']>(null)
 
   // 分享連結（?m=）：載入機構資料後把查詢字串拿掉，重新整理才不會又蓋掉一次

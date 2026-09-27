@@ -60,7 +60,7 @@ export function ParamLibrary({ current, currentLabel, defaultTag }: { current: P
     setMsg(`已把「${e.label}」載入成「自訂」。${same ? '' : '注意：這組是用不同的機構資料存的，機構資料沒有跟著改；要整組換掉就下載後到 1F 匯入。'}`)
   }
   const overlay = (e: HistoryEntry) => {
-    setCompareSet({ label: e.label, params: e.params })
+    setCompareSet({ id: e.id, label: e.label, params: e.params })
     if (page !== 'sim') go('sim')
   }
 
@@ -109,7 +109,7 @@ export function ParamLibrary({ current, currentLabel, defaultTag }: { current: P
       <ul className="lib-list">
         {shown.map((e) => {
           const d = open === e.id ? diffParams(current, e.params) : null
-          const isCompared = compareSet?.label === e.label
+          const isCompared = compareSet?.id !== undefined && compareSet.id === e.id
           return (
             <li key={e.id}>
               <div className="lib-head">
