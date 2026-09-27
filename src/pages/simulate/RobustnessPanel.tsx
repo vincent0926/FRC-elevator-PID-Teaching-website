@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Chart } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
 import type { FeedforwardResult } from '../../core/feedforward'
@@ -15,24 +15,29 @@ import { runRobustnessTest } from '../../workers/client'
 
 export function RobustnessPanel({ base, mechanism, ff, realistic }: { base: SimInput; mechanism: ElevatorMechanism; ff: FeedforwardResult; realistic: boolean }) {
   const [ranges, setRanges] = useState<RobustRanges>(DEFAULT_RANGES)
-  const [result, setResult] = useState<RobustResult | null>(null)
+  // 結果記住是用哪一組輸入算的；參數、受控體或範圍一改，舊結果就不顯示
+  const [saved, setSaved] = useState<{ r: RobustResult; ms: number; base: SimInput; mechanism: ElevatorMechanism; ff: FeedforwardResult; ranges: RobustRanges } | null>(null)
   const [busy, setBusy] = useState(false)
-  const [ms, setMs] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const runId = useRef(0)
   const set = (patch: Partial<RobustRanges>) => setRanges({ ...ranges, ...patch })
+  const current = saved && saved.base === base && saved.mechanism === mechanism && saved.ff === ff && saved.ranges === ranges ? saved : null
+  const result = current?.r ?? null
+  const ms = current?.ms ?? 0
 
   const run = async () => {
+    const id = ++runId.current
+    const inputs = { base, mechanism, ff, ranges }
     setBusy(true)
     setError(null)
     const t0 = performance.now()
     try {
       const r = await runRobustnessTest(base, mechanism, ff, { ...ranges, seed: Math.floor(Math.random() * 1e9) })
-      setResult(r)
-      setMs(performance.now() - t0)
+      if (id === runId.current) setSaved({ r, ms: performance.now() - t0, ...inputs })
     } catch (e) {
-      if (!(e instanceof Error && e.message === 'stale')) setError(e instanceof Error ? e.message : String(e))
+      if (id === runId.current && !(e instanceof Error && e.message === 'stale')) setError(e instanceof Error ? e.message : String(e))
     } finally {
-      setBusy(false)
+      if (id === runId.current) setBusy(false)
     }
   }
 

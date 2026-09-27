@@ -92,7 +92,10 @@ function usePersisted<T>(key: string, initial: T, validate?: (v: unknown) => v i
 
 const isMechanism = (v: unknown): v is ElevatorMechanism => ElevatorMechanismSchema.safeParse(v).success
 const isCalibrationOrNull = (v: unknown): v is Calibration | null =>
-  v === null || (typeof v === 'object' && ['kGScale', 'kVScale', 'kAScale', 'friction', 'rms'].every((k) => Number.isFinite((v as Record<string, unknown>)[k])))
+  v === null ||
+  (typeof v === 'object' &&
+    typeof (v as Record<string, unknown>).logName === 'string' &&
+    ['kGScale', 'kVScale', 'kAScale', 'friction', 'rms', 'rmsTheory'].every((k) => Number.isFinite((v as Record<string, unknown>)[k])))
 const isParamsOrNull = (v: unknown): v is ParameterSet | null => v === null || ParameterSetSchema.safeParse(v).success
 
 export function buildTheory(mechanism: ElevatorMechanism, ff: FeedforwardResult, voltsPerCm: number): ParameterSet {

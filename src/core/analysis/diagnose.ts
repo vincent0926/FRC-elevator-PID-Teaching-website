@@ -454,7 +454,8 @@ export function suggestedKd(g: Slot0Gains, zeta = 0.7): number {
  * 不看 kD 本身：TalonFX 用 1 kHz 的速度算 D，日誌 50 Hz 的速度看不到那些雜訊，kD 常常推不回來。
  */
 export function isDerivativeNoise(osc: Oscillation, gains: Slot0Gains): boolean {
-  return osc.voltageRms > 0 && gains.kP > 0 && gains.kP * osc.positionRms < 0.3 * osc.voltageRms
+  // kP = 0 時乘積一定是 0，只有真的有 kD 才算 kD 放大雜訊
+  return osc.voltageRms > 0 && (gains.kP > 0 || gains.kD > 0) && gains.kP * osc.positionRms < 0.3 * osc.voltageRms
 }
 
 function oscillationIssue(osc: Oscillation, gains: Slot0Gains, kPFactor: number): Issue {
@@ -708,7 +709,8 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       })
     }
     // 往上往下需要的電壓不一樣（摩擦不對稱）：kG、kS 各補一半就是最佳解，不需要 Slot 1
-    if (issues.some((i) => i.key === 'kG' || i.key === 'kS') && f.separable) {
+    // kS、kV 分不開時 dKs 是兩者的合併值，不能拿來算往上往下各要多少
+    if (issues.some((i) => i.key === 'kG' || i.key === 'kS') && f.separable && !f.ksKvCombined) {
       const upV = gains.kG + f.dKg + gains.kS + f.dKs
       const downV = gains.kG + f.dKg - (gains.kS + f.dKs)
       notes.push(

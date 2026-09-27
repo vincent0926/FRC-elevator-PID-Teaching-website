@@ -78,6 +78,8 @@ export function SimPage() {
   const simKnobs = useMemo(() => (hidden ? hiddenKnobs(hidden) : knobs), [hidden, knobs])
 
   const setup = useMemo(() => ({ mechanism, ff, knobs: simKnobs, controlPeriod, goal: safeGoal }), [mechanism, ff, simKnobs, controlPeriod, safeGoal])
+  // 穩健性測試用同一個物件，參數沒變時舊結果才會繼續顯示
+  const robustBase = useMemo(() => buildSimInput(setup, ps), [setup, ps])
 
   useEffect(() => {
     let alive = true
@@ -168,6 +170,11 @@ export function SimPage() {
       }
       return probe(h, theory) || !probe(h, solPs)
     })
+    if (!hidden) {
+      setError('這台電梯的機構資料出不了題目：試了 30 台，不是理論值就過了、就是怎麼調都過不了。檢查 1F 的機構資料（例如 kG 是不是超過計算電壓的一半），或換個難度。')
+      return
+    }
+    setError(null)
     const start: ParameterSet = { ...theory, source: 'custom', createdAt: new Date().toISOString(), note: '挑戰模式' }
     setCustom(start)
     setScenario(null)
@@ -335,7 +342,7 @@ export function SimPage() {
 
       {!challenge && (
         <>
-          <RobustnessPanel base={buildSimInput(setup, ps)} mechanism={mechanism} ff={ff} realistic={knobs.realistic} />
+          <RobustnessPanel base={robustBase} mechanism={mechanism} ff={ff} realistic={knobs.realistic} />
           <CalibrationPanel onApply={applyCalibration} />
         </>
       )}

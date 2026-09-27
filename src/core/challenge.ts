@@ -51,15 +51,24 @@ function candidate(rand: () => number, level: ChallengeLevel): HiddenPlant {
   }
 }
 
+/** 不篩選、直接抽一台（校正練習用：只要跟理論不一樣就好） */
+export function randomHiddenPlant(seed: number, level: ChallengeLevel): HiddenPlant {
+  const rand = uniformRng(seed)
+  rand()
+  return candidate(rand, level)
+}
+
 /**
- * @param reject 回傳 true 表示這台不適合出題（理論值就達標、或參考解答也過不了），會換一台（最多試 30 次）
+ * @param reject 回傳 true 表示這台不適合出題（理論值就達標、或參考解答也過不了），會換一台；試 30 台都不行回傳 null
  */
-export function makeChallenge(seed: number, level: ChallengeLevel, reject: (h: HiddenPlant) => boolean = () => false): HiddenPlant {
+export function makeChallenge(seed: number, level: ChallengeLevel, reject: (h: HiddenPlant) => boolean = () => false): HiddenPlant | null {
   const rand = uniformRng(seed)
   rand() // 小 seed 的第一個值分布不均，丟掉
-  let h = candidate(rand, level)
-  for (let k = 0; k < 30 && reject(h); k++) h = candidate(rand, level)
-  return h
+  for (let k = 0; k < 30; k++) {
+    const h = candidate(rand, level)
+    if (!reject(h)) return h
+  }
+  return null
 }
 
 /**

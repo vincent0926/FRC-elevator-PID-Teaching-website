@@ -48,9 +48,41 @@ export function runSimulation(input: SimInput, channel = 'main'): Promise<SimRes
   return simCall<SimResult>(channel, (id) => ({ id, kind: 'sim', input }))
 }
 
-/** 穩健性測試：幾十次模擬在 Worker 裡一次跑完，只傳回最差那一次的曲線 */
+let robust: { worker: Worker; reject: (e: Error) => void } | null = null
+let robustSeq = 0
+
+/**
+ * 穩健性測試：幾十次模擬在 Worker 裡一次跑完，只傳回最差那一次的曲線。
+ * 用自己的 Worker，跑的時候畫面上的即時模擬不用排隊；又按一次時直接終止舊的那個。
+ */
 export function runRobustnessTest(base: SimInput, mechanism: ElevatorMechanism, ff: FeedforwardResult, ranges: RobustRanges): Promise<RobustResult> {
-  return simCall<RobustResult>('robust', (id) => ({ id, kind: 'robust', base, mechanism, ff, ranges }))
+  if (robust) {
+    robust.worker.terminate()
+    robust.reject(new Error('stale'))
+    robust = null
+  }
+  const id = ++robustSeq
+  const worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' })
+  return new Promise<RobustResult>((resolve, reject) => {
+    robust = { worker, reject }
+    const done = () => {
+      worker.terminate()
+      if (robust?.worker === worker) robust = null
+    }
+    worker.onmessage = (ev: MessageEvent<SimResponse>) => {
+      const d = ev.data
+      if (d.id !== id) return
+      done()
+      if (!d.ok) reject(new Error(d.error))
+      else if ('robust' in d) resolve(d.robust)
+      else reject(new Error('Worker 回傳格式不對'))
+    }
+    worker.onerror = (e) => {
+      done()
+      reject(new Error(e.message || '模擬 Worker 發生錯誤'))
+    }
+    worker.postMessage({ id, kind: 'robust', base, mechanism, ff, ranges } satisfies SimRequest)
+  })
 }
 
 let logSeq = 0

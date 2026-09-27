@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore, type Calibration } from '../../app/store'
 import { Chart } from '../../components/Chart'
-import { makeChallenge } from '../../core/challenge'
+import { randomHiddenPlant } from '../../core/challenge'
 import type { AlignedLog } from '../../core/log/fieldMap'
 import { sampleAlignedLog } from '../../core/log/sampleLog'
 import { calibrate, CALIBRATION_RMS_LIMIT, type CalibrationResult } from '../../core/physics/calibrate'
@@ -20,7 +20,7 @@ export function CalibrationPanel({ onApply }: { onApply: (c: Calibration) => voi
 
   const practice = () => {
     // 練習：藏一台跟理論不一樣的電梯，產生一份日誌讓你校正，最後對答案
-    const h = makeChallenge(Math.floor(Math.random() * 1e9), 'hard')
+    const h = randomHiddenPlant(Math.floor(Math.random() * 1e9), 'hard')
     const f = (h.frictionUp + h.frictionDown) / 2
     const log = sampleAlignedLog({
       mechanism,

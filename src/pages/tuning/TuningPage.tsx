@@ -73,10 +73,12 @@ export function TuningPage() {
       const series = await extractLog(blob, names, setProgress)
       const aligned = alignSeries(series, m)
       setLog(aligned)
-      setLastLog({ log: aligned, name })
       setLogSeq((k) => k + 1)
       setDiagBands(null)
-      setReport(runDataChecks(aligned, { statorCurrentLimit: mechanism.statorCurrentLimit }))
+      const report = runDataChecks(aligned, { statorCurrentLimit: mechanism.statorCurrentLimit })
+      setReport(report)
+      // 步驟 0 沒過的日誌不能拿去 3F 校正
+      setLastLog(report.ok ? { log: aligned, name } : null)
       setFieldMapping(m)
       setStage('done')
     } catch (e) {
