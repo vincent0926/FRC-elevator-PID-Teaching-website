@@ -2,6 +2,7 @@ import { useStore } from '../../app/store'
 import { QuizSet, type QuizDef } from '../../components/Quiz'
 import { SIGNAL_LOGGER_SNIPPET, SYSID_BINDINGS_SNIPPET, SYSID_ROUTINE_SNIPPET } from './snippets'
 import { SysIdCompare } from './SysIdCompare'
+import { Workflow } from '../../components/Workflow'
 
 /** 4F 單元二：用 SysId 量測參數（選用）。 */
 
@@ -35,8 +36,13 @@ export function Unit2() {
     <div className="body">
       <div className="goal lgoal">學習目標：知道 SysId 四個測試在量什麼、在程式裡加上 SysIdRoutine、安全地跑完測試，並把結果跟理論值比，找出機構資料哪裡填錯。</div>
       <p className="small">
-        電梯行程短，動態測試很容易撞到上下限，所以 SysId 是<b>選用</b>。多數時候「理論值 + 上機錄日誌 + 調參建議」就夠了。
-        SysId 最有用的地方是<b>檢查 1F 的機構資料</b>：量到的跟理論差很多，通常是質量、齒比或半徑填錯。
+        SysId 是<b>系統鑑別（System Identification）</b>：用真的機器錄下電壓和運動，反推出這台電梯實際的 kS、kG、kV、kA。
+        理論值只是初始值，不能取代鑑別；鑑別出來的機構參數再拿去做閉迴路調參，最後上機驗證。
+      </p>
+      <Workflow active={2} />
+      <p className="small">
+        電梯行程短，動態測試很容易撞到上下限，要照第 4 步的安全設定跑。行程實在太短跑不了 SysId 時，2F 的日誌（靜止保持段量 kG、往上往下量 kS、等速段量 kV）也是一種鑑別，
+        只是比較粗。量到的跟理論差很多，通常是質量、齒比或半徑填錯（第 7 步）。
       </p>
 
       <h3>1. SysId 在做什麼</h3>
@@ -64,7 +70,7 @@ export function Unit2() {
       </table>
       <p className="small">
         量到的值跟理論不一樣很正常：理論沒算摩擦（kS 只能靠量）、齒輪箱效率、線材和螺絲的重量、拖鏈在不同高度的重量變化。差太多才要回頭檢查。
-        每個參數是「算得準」「算個起點要量來修正」「一定要量」還是「自己決定」，整理在 1F 最下面的對照表。
+        每個參數是「模型」「模型給起點再鑑別」「一定要量」「閉迴路調參」還是「自己設的限制」，整理在 1F 最下面的對照表。
       </p>
 
       <h3>2. 在程式裡加入 SysIdRoutine</h3>

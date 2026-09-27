@@ -36,6 +36,8 @@ export const ElevatorMechanismSchema = z.object({
   calcVoltage: z.number().positive().max(13),
   /** 行程（m），機構座標 */
   travel: z.number().positive(),
+  /** 上機量到的靜摩擦 kS（V）。公式算不出來；沒量過是 0，最高速度、加速度就是不含摩擦的理論上限 */
+  measuredKs: z.number().nonnegative().max(6).default(0),
 })
 
 /**
@@ -83,6 +85,7 @@ export const DEFAULT_MECHANISM: ElevatorMechanism = {
   statorCurrentLimit: 60,
   calcVoltage: 11,
   travel: 1.2,
+  measuredKs: 0,
 }
 
 /** 讀入外部 JSON，失敗時回傳人看得懂的錯誤清單。 */

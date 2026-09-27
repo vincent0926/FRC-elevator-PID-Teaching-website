@@ -1,3 +1,4 @@
+import type { AntiWindup } from '../../core/controller/slot0'
 import type { FeedforwardResult } from '../../core/feedforward'
 import { plantFromMechanism } from '../../core/physics/elevator'
 import { NOMINAL_VOLTAGE, type SimInput } from '../../core/physics/simulate'
@@ -108,6 +109,7 @@ export interface SimSetup {
   goal: number
   /** 到位判定的範圍（m），跟達標標準的穩態誤差一樣 */
   tolerance?: number
+  antiWindup?: AntiWindup
 }
 
 export function buildSimInput(setup: SimSetup, ps: ParameterSet): SimInput {
@@ -153,6 +155,7 @@ export function buildSimInput(setup: SimSetup, ps: ParameterSet): SimInput {
     voltageLimit: real ? knobs.voltageLimit : true,
     slotByDirection: ps.slotByDirection,
     output: real ? outputConfig(knobs, mechanism.travel) : undefined,
+    antiWindup: setup.antiWindup,
   }
 }
 

@@ -18,7 +18,8 @@ export function SpecEditor({ spec, setSpec }: { spec: Spec; setSpec: (s: Spec) =
         ))}
       </div>
       <p className="small muted" style={{ margin: '6px 0 8px' }}>
-        {SPEC_PRESETS.find((p) => same(spec, p.spec))?.what ?? '自訂標準。'}改了之後，指標表、穩健性測試、挑戰模式都用這組標準；存在這台電腦。
+        {SPEC_PRESETS.find((p) => same(spec, p.spec))?.what ?? '自訂。'}這些是教學用的預設，不是 FRC 的官方標準，要看這個賽季的機構和得分位置決定。
+        改了之後，指標表、穩健性測試、挑戰模式都用這組標準；存在這台電腦。
       </p>
       <div className="fields three">
         <NumberField label="超調 ≤" value={spec.overshoot} display={100} min={0.1} max={50} onChange={(v) => set({ overshoot: v })} unit="cm" />

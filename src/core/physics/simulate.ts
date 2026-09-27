@@ -1,4 +1,4 @@
-import { Slot0Controller, type Slot0Gains } from '../controller/slot0'
+import { Slot0Controller, type AntiWindup, type Slot0Gains } from '../controller/slot0'
 import { trapezoidProfile, type TrapezoidProfile } from '../profile'
 import { applyCurrentLimit, stepRK4, type PlantParams, type PlantState } from './elevator'
 
@@ -42,6 +42,8 @@ export interface SimInput {
   slotByDirection?: { up: { kS: number; kG: number }; down: { kS: number; kG: number } }
   /** 馬達控制器的輸出設定；沒給就是 TalonFX、不限輸出、沒有軟體限位、Brake */
   output?: OutputConfig
+  /** 積分防飽和（教學選項，預設沒有） */
+  antiWindup?: AntiWindup
 }
 
 export interface OutputConfig {
@@ -169,7 +171,7 @@ export function simulate(input: SimInput): SimResult {
   const supplyLimitedArr = new Uint8Array(steps)
   const coastMode = input.output?.neutralMode === 'coast'
 
-  const controller = new Slot0Controller({ ...input.gains }, p.batteryVoltage)
+  const controller = new Slot0Controller({ ...input.gains }, p.batteryVoltage, input.antiWindup ?? { mode: 'none' })
   const voltageLimit = input.voltageLimit ?? true
   const slotOf: (0 | 1)[] = []
   const sensor = input.sensor

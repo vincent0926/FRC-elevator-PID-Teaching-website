@@ -1,4 +1,4 @@
-import type { ControllerLocation } from '../../core/controller/slot0'
+import type { AntiWindup, ControllerLocation } from '../../core/controller/slot0'
 import { kPFromVoltsPerCm, type FeedforwardResult } from '../../core/feedforward'
 import type { ParameterSet } from '../../schema/parameterSet'
 import type { PlantKnobs } from './plantKnobs'
@@ -12,6 +12,8 @@ export interface SimScenarioSetup {
   params: ParameterSet
   knobs: Partial<PlantKnobs>
   location: ControllerLocation
+  /** 沒給就是「沒有防飽和」 */
+  antiWindup?: AntiWindup
 }
 
 export interface SimScenario {
@@ -109,6 +111,20 @@ export const SIM_SCENARIOS: SimScenario[] = [
       params: params(t, '情境：用 kI 補 kG', { ff: { kS: FRICTION, kG: ff.kG * 0.6 }, fb: { kI: 500 } }),
       knobs: { realistic: true, batteryVoltage: 9 },
       location: 'talonfx',
+    }),
+  },
+  {
+    id: 'antiWindup',
+    title: '積分防飽和（Anti-Windup）',
+    concept:
+      '一定要用 kI 的時候（例如機構的摩擦很難補），要加積分防飽和：輸出頂到上限時不要再積分（條件積分），或只在接近目標時才積分（I-Zone），或把被限制掉的部分回饋給積分（反算）。WPILib 的 PIDController 有 setIZone()、setIntegratorRange() 可以用。',
+    lookFor: '先看「沒有」：電壓貼到上限、積分一路長，到位時衝過頭。再切成其他三種，看超調怎麼縮小。',
+    tryNext: '把「積分防飽和」切成「飽和時停止積分」「I-Zone」「反算」各跑一次比較。最後還是記得：先把 kG 弄準，kI 能不用就不用。',
+    setup: (t, ff) => ({
+      params: params(t, '情境：積分防飽和', { ff: { kS: FRICTION, kG: ff.kG * 0.6 }, fb: { kI: 500 } }),
+      knobs: { realistic: true, batteryVoltage: 9 },
+      location: 'talonfx',
+      antiWindup: { mode: 'none' },
     }),
   },
   {

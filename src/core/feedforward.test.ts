@@ -82,3 +82,27 @@ describe('computeFeedforward', () => {
     expect(kPFromVoltsPerCm(0.5)).toBe(50)
   })
 })
+
+describe('最高速度、加速度要扣掉 kS', () => {
+  it('v_max = (V − kG − kS) / kV；kS = 0 時跟不含摩擦的一樣', () => {
+    const base = computeFeedforward(DEFAULT_MECHANISM)
+    expect(base.frictionIncluded).toBe(false)
+    expect(base.maxVelocity).toBeCloseTo(base.maxVelocityNoFriction)
+    const withKs = computeFeedforward({ ...DEFAULT_MECHANISM, measuredKs: 0.5 })
+    expect(withKs.frictionIncluded).toBe(true)
+    expect(withKs.maxVelocity).toBeCloseTo((DEFAULT_MECHANISM.calcVoltage - withKs.kG - 0.5) / withKs.kV)
+    expect(withKs.maxVelocity).toBeLessThan(base.maxVelocity)
+    expect(withKs.maxAccelUp).toBeLessThan(base.maxAccelUp)
+    expect(withKs.cruiseVelocity).toBeLessThan(base.cruiseVelocity)
+    // kG、kV、kA 跟摩擦無關
+    expect(withKs.kG).toBeCloseTo(base.kG)
+  })
+  it('加速不起來時分清楚是電壓不夠還是電流限制', () => {
+    const lowV = computeFeedforward({ ...DEFAULT_MECHANISM, measuredKs: 0.5, calcVoltage: 0.6 })
+    expect(lowV.warnings.some((w) => w.includes('電壓不夠'))).toBe(true)
+    expect(lowV.warnings.some((w) => w.includes('電流限制給的力'))).toBe(false)
+    const lowI = computeFeedforward({ ...DEFAULT_MECHANISM, statorCurrentLimit: 1 })
+    expect(lowI.warnings.some((w) => w.includes('電流限制給的力'))).toBe(true)
+    expect(lowI.warnings.some((w) => w.includes('電壓不夠'))).toBe(false)
+  })
+})

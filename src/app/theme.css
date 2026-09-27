@@ -267,9 +267,11 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .src-calc { color: var(--green); border-color: var(--green); background: var(--green-soft) }
 .src-calcThenMeasure { color: var(--blue); border-color: var(--blue); background: var(--blue-soft) }
 .src-measure { color: var(--amber); border-color: var(--amber); background: var(--amber-soft) }
-.src-choose { color: var(--violet); border-color: var(--violet); background: var(--panel-2) }
+.src-tune { color: var(--violet); border-color: var(--violet); background: var(--panel-2) }
+.src-constraint { color: var(--ink-2); border-color: var(--line); background: var(--panel-2) }
 .src-kinds { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px }
-.src-kinds li { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px; align-items: baseline }
+.src-kinds li { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 10px; align-items: baseline }
+.src-kinds li > .src-tag { justify-self: start }
 .src-tbl td, .src-tbl th { vertical-align: top; font-size: 13px }
 @media (max-width: 720px) { .src-kinds li { grid-template-columns: minmax(0, 1fr) } }
 .approx { border-left: 3px solid var(--amber); background: var(--amber-soft); border-radius: 4px; padding: 8px 12px; font-size: 13px; color: var(--ink); margin: 10px 0 }
@@ -308,3 +310,19 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .lib-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin-bottom: 4px }
 .lib-changed td { font-weight: 600 }
 .linkbtn:disabled { color: var(--ink-3); text-decoration: none; cursor: default }
+.workflow { list-style: none; padding: 0; margin: 10px 0 14px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px }
+.workflow li { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; background: var(--panel-2); display: flex; flex-direction: column; gap: 2px; position: relative }
+.workflow li.on { border-color: var(--blue); background: var(--blue-soft) }
+@media (max-width: 720px) { .workflow { grid-template-columns: minmax(0, 1fr) } }
+.src-code { font-family: var(--mono, monospace); font-size: 11px; opacity: 0.8; margin-left: 4px }
+.sim-scope { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px }
+.sim-scope ul { margin: 4px 0 0; padding-left: 18px }
+@media (max-width: 720px) { .sim-scope { grid-template-columns: minmax(0, 1fr) } }
+.move-diag { margin-top: 8px; border-left: 3px solid var(--red); padding: 2px 0 2px 10px }
+.move-diag ul { margin: 4px 0 0; padding-left: 18px }
+.guide-steps { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 8px }
+.guide-steps li { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px }
+.guide-steps li.on { border-color: var(--blue); background: var(--blue-soft) }
+.choices { display: grid; gap: 4px; margin: 4px 0 8px }
+.choices .check { align-items: flex-start }
+.why-box { width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 4px; background: var(--panel-2); color: var(--ink); padding: 8px 10px; font: inherit }
