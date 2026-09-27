@@ -188,6 +188,7 @@ export function simulate(input: SimInput): SimResult {
   let fb = 0
   let sat = false
   let neutral = false
+  let softBlockedNow = false
   let ref = { pos: s.pos, vel: 0, acc: 0 }
   let supplyVoltage = p.batteryVoltage
 
@@ -222,7 +223,9 @@ export function simulate(input: SimInput): SimResult {
       const c = controller.calculate(ref, meas, dt * ratio)
       const stage = applyOutputStage(c.output, meas.pos, supplyVoltage, input.output)
       u = stage.u
-      neutral = stage.neutral
+      // 輸出剛好是 0 也算 neutral（Phoenix 6 輸出為 0 時套用 NeutralMode）；軟體限位另外記
+      neutral = stage.neutral || stage.u === 0
+      softBlockedNow = stage.neutral
       ff = c.feedforward
       fb = c.feedback
       sat = c.saturated || stage.clamped
@@ -249,7 +252,7 @@ export function simulate(input: SimInput): SimResult {
     out.supplyCurrent[i] = supplyCurrent
     saturated[i] = sat ? 1 : 0
     limited[i] = drive.currentLimited ? 1 : 0
-    softBlocked[i] = neutral ? 1 : 0
+    softBlocked[i] = softBlockedNow ? 1 : 0
     supplyLimitedArr[i] = drive.supplyLimited ? 1 : 0
 
     s = stepRK4(p, s, u, dt, coast)
