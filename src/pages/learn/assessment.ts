@@ -117,8 +117,21 @@ export interface Graded {
   parts: { q: string; got: number; of: number; note: string }[]
 }
 
+/** 題目的選項清單（電梯用上面這幾份；手臂有自己的，見 pages/arm/armAssessment.ts） */
+export interface OptionLists {
+  symptoms: Option[]
+  evidence: Option[]
+  components: Option[]
+  changes: Option[]
+  expects: Option[]
+  safety: (Option & { ok: boolean })[]
+}
+
+export const ELEVATOR_LISTS: OptionLists = { symptoms: SYMPTOMS, evidence: EVIDENCE, components: COMPONENTS, changes: CHANGES, expects: EXPECTS, safety: SAFETY }
+
 /** 證據與上機前檢查給部分分數：選對的加分、選錯的扣分，最少 0 */
-export function grade(c: AssessmentCase, a: Answers): Graded {
+export function grade(c: AssessmentCase, a: Answers, lists: OptionLists = ELEVATOR_LISTS): Graded {
+  const { symptoms: SYMPTOMS, evidence: EVIDENCE, components: COMPONENTS, changes: CHANGES, expects: EXPECTS, safety: SAFETY } = lists
   const label = (list: Option[], id: string | null) => list.find((o) => o.id === id)?.label ?? '（沒選）'
   const parts: Graded['parts'] = []
   parts.push({ q: '1. 發生什麼事', got: a.symptom === c.symptom ? 1 : 0, of: 1, note: `答案：${label(SYMPTOMS, c.symptom)}` })
@@ -137,7 +150,7 @@ export function grade(c: AssessmentCase, a: Answers): Graded {
     q: '7. 上機前檢查',
     got: Math.round(sf * 10) / 10,
     of: 2,
-    note: bad > 0 ? '選了不安全的做法（加倍 kP、關軟體限位），這題 0 分。' : `${good} / ${need.length} 項安全檢查。`,
+    note: bad > 0 ? `選了不安全的做法（${SAFETY.filter((x) => !x.ok).map((x) => x.label).join('、')}），這題 0 分。` : `${good} / ${need.length} 項安全檢查。`,
   })
   const score = Math.round(parts.reduce((s, p) => s + p.got, 0) * 10) / 10
   // 安全不能用其他題的分數換：選了不安全的做法，或完全沒選檢查，就算總分夠也不通過

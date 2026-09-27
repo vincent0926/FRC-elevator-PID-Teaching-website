@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../../app/store'
 import { Quiz } from '../../components/Quiz'
+import { ArmExportPanel } from './ArmExportPanel'
 import { ArmForm } from './ArmForm'
 import { ArmParamCard } from './ArmParamCard'
 import { ARM_LESSONS } from './armLessons'
@@ -106,9 +107,8 @@ export function ArmCalcPage() {
               複製成自訂再模擬
             </button>
           </div>
-          <p className="small muted" style={{ margin: '10px 0 0' }}>
-            程式輸出（Java、TalonFX 內建編碼器或 CANcoder）下一版推出。現在可以先把參數卡的灰字（Phoenix 6 轉數制）抄進 Slot0，GravityType 設 Arm_Cosine。
-          </p>
+          <hr style={{ border: 0, borderTop: '1px solid var(--line-2)', margin: '18px 0' }} />
+          <ArmExportPanel />
         </aside>
       </div>
     </section>

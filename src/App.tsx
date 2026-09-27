@@ -9,7 +9,8 @@ import { LearnPage } from './pages/learn/LearnPage'
 import { ArmHomePage } from './pages/arm/ArmHomePage'
 import { ArmCalcPage } from './pages/arm/ArmCalcPage'
 import { ArmSimPage } from './pages/arm/ArmSimPage'
-import { ArmComingSoon } from './pages/arm/ArmComingSoon'
+import { ArmTuningPage } from './pages/arm/ArmTuningPage'
+import { ArmLearnPage } from './pages/arm/ArmLearnPage'
 
 export default function App() {
   const { page, track } = useStore()
@@ -19,9 +20,9 @@ export default function App() {
       <Shell>
         {page === 'home' && <ArmHomePage />}
         {page === 'calc' && <ArmCalcPage />}
-        {page === 'tune' && <ArmComingSoon floor="2F 調參建議" />}
+        {page === 'tune' && <ArmTuningPage />}
         {page === 'sim' && <ArmSimPage />}
-        {page === 'learn' && <ArmComingSoon floor="4F 實機資料教學" />}
+        {page === 'learn' && <ArmLearnPage />}
       </Shell>
     )
   return (

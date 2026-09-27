@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest'
 import { computeFeedforward, kPFromVoltsPerCm } from '../src/core/feedforward'
 import { DEFAULT_MECHANISM, type ParameterSet } from '../src/schema/parameterSet'
 import { phoenix6_2026, toRobotConfig } from '../src/core/codegen'
+import { renderArmGains, toArmRobotConfig } from '../src/core/codegen/arm'
+import { computeArmFeedforward, kPFromVoltsPerDeg } from '../src/core/arm/feedforward'
+import { DEFAULT_ARM, type ArmParameterSet } from '../src/schema/armParameterSet'
 
 /**
  * robot-example/ 裡的 ElevatorGains.java 與 elevator-gains.json 由範本產生，這個測試確保兩邊一致。
@@ -34,4 +37,28 @@ describe('robot-example 與範本同步', () => {
   }
   it('ElevatorGains.java', () => expect(readFileSync(JAVA, 'utf8')).toBe(java))
   it('elevator-gains.json', () => expect(readFileSync(JSON_FILE, 'utf8')).toBe(json))
+})
+
+const ARM_JAVA = new URL('java/frc/robot/subsystems/arm/ArmGains.java', DIR)
+const ARM_JSON = new URL('deploy/arm-gains.json', DIR)
+const aff = computeArmFeedforward(DEFAULT_ARM)
+const armTheory: ArmParameterSet = {
+  schemaVersion: 1,
+  source: 'theory',
+  createdAt: NOW.toISOString(),
+  mechanism: DEFAULT_ARM,
+  feedforward: { kS: 0, kG: aff.kG, kV: aff.kV, kA: aff.kA },
+  feedback: { kP: kPFromVoltsPerDeg(0.3), kI: 0, kD: 0 },
+  motionMagic: { cruiseVelocity: aff.cruiseVelocity, acceleration: aff.acceleration },
+}
+
+describe('robot-example 手臂與範本同步', () => {
+  const java = renderArmGains(armTheory, NOW)
+  const json = JSON.stringify(toArmRobotConfig(armTheory, NOW), null, 2) + '\n'
+  if (process.env.UPDATE_ROBOT_EXAMPLE) {
+    writeFileSync(ARM_JAVA, java)
+    writeFileSync(ARM_JSON, json)
+  }
+  it('ArmGains.java', () => expect(readFileSync(ARM_JAVA, 'utf8')).toBe(java))
+  it('arm-gains.json', () => expect(readFileSync(ARM_JSON, 'utf8')).toBe(json))
 })

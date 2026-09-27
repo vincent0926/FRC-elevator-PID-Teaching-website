@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generator": "elevator-tuner",
+  "generatedAt": "2026-09-27T00:00:00.000Z",
+  "source": "theory",
+  "mechanism": "arm",
+  "units": "phoenix6-rotations",
+  "gearRatio": 60,
+  "encoder": "internal",
+  "cancoderToArmRatio": 1,
+  "slot0": {
+    "kS": 0,
+    "kG": 0.4981100141043723,
+    "kV": 7.160655737704919,
+    "kA": 0.1488822470530565,
+    "kP": 107.99999999999999,
+    "kI": 0,
+    "kD": 0
+  },
+  "motionMagic": {
+    "cruiseVelocity": 1.0999575706381066,
+    "acceleration": 7.400662921850189
+  }
+}

@@ -76,19 +76,21 @@ function simulateSample(o: SampleLogOptions): SimResult {
 const LOG_EVERY = 20 // 1 ms 模擬 → 50 Hz 日誌
 const ENABLE_OFFSET = 0.5 // 開機後 0.5 s 才 Enable
 
-function noiseSource(o: SampleLogOptions) {
+function noiseSource(o: { noise?: number; seed?: number }) {
   const rand = rng(o.seed ?? 9427)
   const gauss = () => Math.sqrt(-2 * Math.log(rand() + 1e-12)) * Math.cos(2 * Math.PI * rand())
   const noise = o.noise ?? 0.0003
   return { pos: () => noise * gauss(), vel: () => noise * 20 * gauss() }
 }
 
-export function makeSampleLog(o: SampleLogOptions): Uint8Array {
-  const r = simulateSample(o)
+export type SampleKeys = Record<keyof typeof SAMPLE_KEYS, string>
+
+/** 模擬結果 → .wpilog（50 Hz）。電梯、手臂共用，只有欄位名稱不同 */
+export function logFromSim(r: SimResult, keys: SampleKeys, o: { noise?: number; seed?: number } = {}): Uint8Array {
   const nz = noiseSource(o)
   const w = new WpilogWriter('AdvantageKit')
   const id = Object.fromEntries(
-    Object.entries(SAMPLE_KEYS).map(([k, name]) => [k, w.start(name, k === 'enabled' ? 'boolean' : 'double')]),
+    Object.entries(keys).map(([k, name]) => [k, w.start(name, k === 'enabled' ? 'boolean' : 'double')]),
   ) as Record<keyof typeof SAMPLE_KEYS, number>
   for (let i = 0; i < r.t.length; i += LOG_EVERY) {
     const ts = (r.t[i] + ENABLE_OFFSET) * 1e6
@@ -107,9 +109,8 @@ export function makeSampleLog(o: SampleLogOptions): Uint8Array {
   return w.toBytes()
 }
 
-/** 跟 makeSampleLog 同一份資料，但直接給對齊好的欄位（不經過 .wpilog 編碼、解析）。3F 校正練習與測試用 */
-export function sampleAlignedLog(o: SampleLogOptions): AlignedLog {
-  const r = simulateSample(o)
+/** 模擬結果 → 對齊好的欄位（不經過 .wpilog 編碼、解析） */
+export function alignedFromSim(r: SimResult, o: { noise?: number; seed?: number } = {}): AlignedLog {
   const nz = noiseSource(o)
   const n = Math.ceil(r.t.length / LOG_EVERY)
   const col = () => new Float64Array(n)
@@ -139,4 +140,13 @@ export function sampleAlignedLog(o: SampleLogOptions): AlignedLog {
     c.feedforwardOutput[k] = r.feedforward[i]
   }
   return { t, cols: c }
+}
+
+export function makeSampleLog(o: SampleLogOptions): Uint8Array {
+  return logFromSim(simulateSample(o), SAMPLE_KEYS, o)
+}
+
+/** 跟 makeSampleLog 同一份資料，但直接給對齊好的欄位。3F 校正練習與測試用 */
+export function sampleAlignedLog(o: SampleLogOptions): AlignedLog {
+  return alignedFromSim(simulateSample(o), o)
 }
