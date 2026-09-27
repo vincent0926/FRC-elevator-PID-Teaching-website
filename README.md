@@ -39,3 +39,6 @@ npm run build
 - `docs/decisions.md`：已定案的設計決策
 - `robot-example/`：機器人端範例程式（AdvantageKit + Phoenix 6），說明見裡面的 README
 - `prototype/v0.1.html`：最早的單檔原型
+
+  ## 計劃書 供參考
+  https://docs.google.com/document/d/1COk0hkgmx6_rWsd29wvYwGAsm021SyaoNdcIHxZr26o/edit?usp=sharing
