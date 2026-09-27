@@ -3,7 +3,7 @@ import { downloadBlob } from '../../app/download'
 import { useStore } from '../../app/store'
 import { gainsOf } from '../../core/analysis/apply'
 import { runDataChecks, type CheckReport } from '../../core/analysis/checks'
-import { oscillationBehindRefusal } from '../../core/analysis/diagnose'
+import { estimateRobotGains, oscillationBehindRefusal } from '../../core/analysis/diagnose'
 import { alignSeries, missingRequired, suggestMapping, type AlignedLog, type FieldMapping } from '../../core/log/fieldMap'
 import type { ScanResult } from '../../core/log/reader'
 import { makeSampleLog } from '../../core/log/sampleLog'
@@ -24,7 +24,7 @@ type Stage = 'idle' | 'scanning' | 'mapping' | 'reading' | 'done'
 const STATUS_MARK = { pass: '✓', warn: '!', fail: '✕', skip: '–' } as const
 
 export function TuningPage() {
-  const { mechanism, ff, theory, custom, tuning, fieldMapping, setFieldMapping } = useStore()
+  const { mechanism, ff, theory, custom, tuning, fieldMapping, setFieldMapping, setLastLog } = useStore()
   const [stage, setStage] = useState<Stage>('idle')
   const [file, setFile] = useState<{ blob: Blob; name: string; scenario?: string } | null>(null)
   const [scan, setScan] = useState<ScanResult | null>(null)
@@ -55,14 +55,14 @@ export function TuningPage() {
       setMapping(m)
       setStage('mapping')
       // 欄位都自動對到了就直接讀，不用多按一次
-      if (!missingRequired(m).length && Object.keys(fieldMapping).length) await read(blob, m)
+      if (!missingRequired(m).length && Object.keys(fieldMapping).length) await read(blob, m, name)
     } catch (e) {
       setError(`讀不了 ${name}：${e instanceof Error ? e.message : String(e)}（確認是 .wpilog，而不是 .hoot 或 .rlog）`)
       setStage('idle')
     }
   }
 
-  const read = async (blob: Blob, m: FieldMapping) => {
+  const read = async (blob: Blob, m: FieldMapping, name: string) => {
     setStage('reading')
     setProgress(0)
     setError(null)
@@ -73,6 +73,7 @@ export function TuningPage() {
       const series = await extractLog(blob, names, setProgress)
       const aligned = alignSeries(series, m)
       setLog(aligned)
+      setLastLog({ log: aligned, name })
       setLogSeq((k) => k + 1)
       setDiagBands(null)
       setReport(runDataChecks(aligned, { statorCurrentLimit: mechanism.statorCurrentLimit }))
@@ -92,7 +93,12 @@ export function TuningPage() {
 
   const bands = useMemo(() => diagBands ?? report?.items.find((i) => i.key === highlight)?.spans ?? undefined, [report, highlight, diagBands])
   // 步驟 0 沒過時，看是不是振盪造成的（振盪常直接飽和，只說「放慢」會誤導）
-  const refusalOsc = useMemo(() => (log && report && !report.ok ? oscillationBehindRefusal(log, gainsOf(tuning ?? custom ?? theory)) : null), [log, report, tuning, custom, theory])
+  // 用日誌推回機器人當時的 kP、kD（推不出來才用選的參數組），才分得出是 kP 振盪還是 kD 放大雜訊
+  const refusalOsc = useMemo(() => {
+    if (!log || !report || report.ok) return null
+    const g = gainsOf(tuning ?? custom ?? theory)
+    return oscillationBehindRefusal(log, estimateRobotGains(log, g)?.gains ?? g)
+  }, [log, report, tuning, custom, theory])
   const scenario = file?.scenario ? SCENARIOS.find((s) => s.id === file.scenario) : undefined
   const busy = stage === 'scanning' || stage === 'reading'
 
@@ -175,7 +181,7 @@ export function TuningPage() {
               </div>
               <FieldMappingTable entries={scan.entries} mapping={mapping} onChange={setMapping} mechanism={mechanism} />
               <div className="row" style={{ marginTop: 12 }}>
-                <button className="btn primary" type="button" disabled={busy || missingRequired(mapping).length > 0} onClick={() => void read(file.blob, mapping)}>
+                <button className="btn primary" type="button" disabled={busy || missingRequired(mapping).length > 0} onClick={() => void read(file.blob, mapping, file.name)}>
                   {stage === 'done' ? '重新讀取並檢查' : '讀取並檢查'}
                 </button>
                 {missingRequired(mapping).length > 0 && (
@@ -221,7 +227,9 @@ export function TuningPage() {
                 <div className="note">
                   <b>但是：</b>
                   {refusalOsc.summary}（{refusalOsc.evidence[0]}）
-                  {refusalOsc.change?.kind === 'gain' && `建議先把 kP 從 ${refusalOsc.change.from} 降到 ${refusalOsc.change.to} 左右。`}
+                  {refusalOsc.change?.kind === 'gain'
+                    ? `建議先把 ${refusalOsc.change.param} 從 ${refusalOsc.change.from} 降到 ${refusalOsc.change.to} 左右。`
+                    : refusalOsc.evidence[refusalOsc.evidence.length - 1]}
                 </div>
               )}
             </div>

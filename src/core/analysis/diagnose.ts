@@ -448,6 +448,41 @@ export function suggestedKd(g: Slot0Gains, zeta = 0.7): number {
   return Math.max(0, 2 * zeta * Math.sqrt(Math.max(0, g.kA * g.kP)) - g.kV)
 }
 
+/**
+ * 電壓抖得很兇、位置卻幾乎沒動：抖動不是來自位置誤差（kP），也不會是 kI（積分不會抖這麼快），
+ * 只剩 kD 乘上速度雜訊。真的振盪時 kP × 位置振幅 跟電壓振幅差不多；kD 放大雜訊時前者小很多。
+ * 不看 kD 本身：TalonFX 用 1 kHz 的速度算 D，日誌 50 Hz 的速度看不到那些雜訊，kD 常常推不回來。
+ */
+export function isDerivativeNoise(osc: Oscillation, gains: Slot0Gains): boolean {
+  return osc.voltageRms > 0 && gains.kP > 0 && gains.kP * osc.positionRms < 0.3 * osc.voltageRms
+}
+
+function oscillationIssue(osc: Oscillation, gains: Slot0Gains, kPFactor: number): Issue {
+  const evidence = [`高通後輸出電壓 RMS ${osc.voltageRms.toFixed(2)} V，約 ${osc.frequency.toFixed(1)} Hz`, `位置來回約 ±${cm(osc.positionRms * Math.SQRT2)}`]
+  if (isDerivativeNoise(osc, gains)) {
+    return {
+      key: 'oscillation',
+      summary: '輸出電壓一直抖，但位置幾乎沒動：不是 kP 造成的振盪，是 kD 把速度量測的雜訊放大了。降 kD，不要降 kP。',
+      evidence: [
+        ...evidence,
+        `kP × 位置振幅只有 ${(gains.kP * osc.positionRms).toFixed(2)} V，解釋不了電壓的抖動`,
+        gains.kD > 0 ? `目前 kD = ${gains.kD.toFixed(2)}` : '日誌看不出目前的 kD（TalonFX 用 1 kHz 的速度算 D）：把機器人上的 kD 改成 0 或原本的三分之一以下',
+      ],
+      lookAt: '電壓圖：到位後回授輸出（紅線）是不是一條很粗的毛線？位置圖卻幾乎是平的？',
+      spans: osc.spans,
+      change: gains.kD > 0 ? { kind: 'gain', param: 'kD', from: gains.kD, to: round3(Math.min(gains.kD * 0.3, Math.max(0, suggestedKd(gains)) || gains.kD * 0.1)) } : undefined,
+    }
+  }
+  return {
+    key: 'oscillation',
+    summary: '輸出電壓來回抖。振盪會污染後面所有的分析，先把它壓下來。',
+    evidence,
+    lookAt: '電壓圖與位置圖：放大看有沒有一直來回的鋸齒，特別是靜止保持和到位穩定的時候。',
+    spans: osc.spans,
+    change: { kind: 'gain', param: 'kP', from: gains.kP, to: round3(gains.kP * kPFactor) },
+  }
+}
+
 export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains, motionMagic: { cruiseVelocity: number; acceleration: number }, opt: DiagnoseOptions = {}): Diagnosis {
   const tol = opt.tolerance ?? 0.01
   const { t, cols } = log
@@ -588,18 +623,8 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
 
   // ---------- 振盪 ----------
   if (osc.detected) {
-    issues.push({
-      key: 'oscillation',
-      summary: '輸出電壓來回抖。振盪會污染後面所有的分析，先把它壓下來。',
-      evidence: [
-        `高通後輸出電壓 RMS ${osc.voltageRms.toFixed(2)} V，約 ${osc.frequency.toFixed(1)} Hz`,
-        `位置來回約 ±${cm(osc.positionRms * Math.SQRT2)}`,
-      ],
-      lookAt: '電壓圖與位置圖：放大看有沒有一直來回的鋸齒，特別是靜止保持和到位穩定的時候。',
-      spans: osc.spans,
-      change: { kind: 'gain', param: 'kP', from: gains.kP, to: round3(gains.kP * 0.6) },
-    })
-    notes.push('振盪時先降 kP。如果閉迴路在 roboRIO 上跑（50 Hz），延遲會讓振盪更容易發生，改用 TalonFX 內建的閉迴路（1 kHz）。')
+    issues.push(oscillationIssue(osc, gains, 0.6))
+    if (!isDerivativeNoise(osc, gains)) notes.push('振盪時先降 kP。如果閉迴路在 roboRIO 上跑（50 Hz），延遲會讓振盪更容易發生，改用 TalonFX 內建的閉迴路（1 kHz）。')
   }
 
   // ---------- 機構問題 ----------
@@ -682,6 +707,14 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
         change: { kind: 'gain', param: 'kA', from: gains.kA, to: Math.max(0, round3(gains.kA + f.dKa)) },
       })
     }
+    // 往上往下需要的電壓不一樣（摩擦不對稱）：kG、kS 各補一半就是最佳解，不需要 Slot 1
+    if (issues.some((i) => i.key === 'kG' || i.key === 'kS') && f.separable) {
+      const upV = gains.kG + f.dKg + gains.kS + f.dKs
+      const downV = gains.kG + f.dKg - (gains.kS + f.dKs)
+      notes.push(
+        `等速時往上需要 ${upV.toFixed(2)} V、往下 ${downV.toFixed(2)} V（不含 kV·v）。就算摩擦往上往下不一樣，把 kG、kS 照建議改好，kG 剛好落在靜摩擦範圍中間，一個 Slot 就夠；改好後指標還是不過，才考慮往下用 Slot 1。`,
+      )
+    }
     // 前饋誤差迴歸解釋不了、殘差又很大：可能是機構或雜訊
     if (f.fit.sigma > 0.5 && f.fit.r2 < 0.3 && !issues.some((i) => i.key === 'mechanism') && !osc.detected) {
       notes.push(`回授輸出有 ${f.fit.sigma.toFixed(2)} V 的變化解釋不了（R² ${f.fit.r2.toFixed(2)}）。如果重錄還是這樣，檢查機構。`)
@@ -734,13 +767,12 @@ export function oscillationBehindRefusal(log: AlignedLog, gains: Slot0Gains): Is
   const seg = segment(log)
   const osc = detectOscillation(log, seg)
   if (!osc.detected) return null
+  const issue = oscillationIssue(osc, gains, 0.5)
+  if (isDerivativeNoise(osc, gains)) return { ...issue, summary: '資料檢查沒過，但主因看起來是 kD 放大了雜訊：電壓一直抖、位置沒動。先把 kD 降下來再重錄。' }
   return {
-    key: 'oscillation',
+    ...issue,
     summary: '資料檢查沒過，但主因看起來是振盪：電壓來回打到上下限。先把 kP 降下來再重錄，不要先去改 Motion Magic。',
-    evidence: [`高通後輸出電壓 RMS ${osc.voltageRms.toFixed(2)} V，約 ${osc.frequency.toFixed(1)} Hz`, `位置來回約 ±${cm(osc.positionRms * Math.SQRT2)}`],
     lookAt: '電壓圖與位置圖：放大看有沒有一直來回的鋸齒。',
-    spans: osc.spans,
-    change: { kind: 'gain', param: 'kP', from: gains.kP, to: round3(gains.kP * 0.5) },
   }
 }
 

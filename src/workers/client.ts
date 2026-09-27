@@ -1,4 +1,7 @@
+import type { FeedforwardResult } from '../core/feedforward'
+import type { RobustRanges, RobustResult } from '../core/physics/robustness'
 import type { SimInput, SimResult } from '../core/physics/simulate'
+import type { ElevatorMechanism } from '../schema/parameterSet'
 import type { ScanResult, Series } from '../core/log/reader'
 import type { SimRequest, SimResponse } from './sim.worker'
 import type { LogRequest, LogResponse } from './log.worker'
@@ -7,7 +10,7 @@ import type { LogRequest, LogResponse } from './log.worker'
 
 let simWorker: Worker | null = null
 let simSeq = 0
-const simPending = new Map<number, { channel: string; resolve: (r: SimResult) => void; reject: (e: Error) => void }>()
+const simPending = new Map<number, { channel: string; resolve: (r: never) => void; reject: (e: Error) => void }>()
 
 function getSimWorker(): Worker {
   if (!simWorker) {
@@ -16,8 +19,9 @@ function getSimWorker(): Worker {
       const p = simPending.get(ev.data.id)
       if (!p) return
       simPending.delete(ev.data.id)
-      if (ev.data.ok) p.resolve(ev.data.result)
-      else p.reject(new Error(ev.data.error))
+      const d = ev.data
+      if (!d.ok) p.reject(new Error(d.error))
+      else p.resolve(('robust' in d ? d.robust : d.result) as never)
     }
   }
   return simWorker
@@ -27,17 +31,26 @@ function getSimWorker(): Worker {
  * 連續拖滑桿時，同一個 channel 的舊請求會被標成過期（reject 'stale'），畫面只畫最新的。
  * 疊圖比較用不同 channel，兩組模擬互不取消。
  */
-export function runSimulation(input: SimInput, channel = 'main'): Promise<SimResult> {
+function simCall<T>(channel: string, build: (id: number) => SimRequest): Promise<T> {
   const id = ++simSeq
   for (const [k, p] of simPending) {
     if (p.channel !== channel) continue
     p.reject(new Error('stale'))
     simPending.delete(k)
   }
-  return new Promise((resolve, reject) => {
-    simPending.set(id, { channel, resolve, reject })
-    getSimWorker().postMessage({ id, input } satisfies SimRequest)
+  return new Promise<T>((resolve, reject) => {
+    simPending.set(id, { channel, resolve: resolve as (r: never) => void, reject })
+    getSimWorker().postMessage(build(id))
   })
+}
+
+export function runSimulation(input: SimInput, channel = 'main'): Promise<SimResult> {
+  return simCall<SimResult>(channel, (id) => ({ id, kind: 'sim', input }))
+}
+
+/** 穩健性測試：幾十次模擬在 Worker 裡一次跑完，只傳回最差那一次的曲線 */
+export function runRobustnessTest(base: SimInput, mechanism: ElevatorMechanism, ff: FeedforwardResult, ranges: RobustRanges): Promise<RobustResult> {
+  return simCall<RobustResult>('robust', (id) => ({ id, kind: 'robust', base, mechanism, ff, ranges }))
 }
 
 let logSeq = 0

@@ -252,3 +252,11 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) }
 }
 @media (prefers-reduced-motion: reduce) { .car { transition: none } }
+.robust-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0; border: 1px solid var(--line-2); border-radius: var(--radius); padding: 10px 14px }
+.robust-sum > div { display: flex; flex-direction: column; gap: 2px; min-width: 0 }
+.robust-sum small { color: var(--ink-3); font-size: 12px }
+.robust-sum b { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums }
+.challenge { border-left: 4px solid var(--yellow) }
+.challenge.won { border-left-color: var(--green) }
+.challenge.lost { border-left-color: var(--red) }
+@media (max-width: 720px) { .robust-sum { grid-template-columns: minmax(0, 1fr) } }

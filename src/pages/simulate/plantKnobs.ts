@@ -32,6 +32,8 @@ export interface PlantKnobs {
   kGScale: number
   kVScale: number
   kAScale: number
+  /** 目前的倍率與摩擦來自模型校正（改任何一項就不再算已校正） */
+  calibrated: boolean
 }
 
 export const DEFAULT_KNOBS: PlantKnobs = {
@@ -53,6 +55,7 @@ export const DEFAULT_KNOBS: PlantKnobs = {
   kGScale: 1,
   kVScale: 1,
   kAScale: 1,
+  calibrated: false,
 }
 
 /** 速度是位置差分再濾波，雜訊大約是位置雜訊 × 20（跟範例日誌一樣） */

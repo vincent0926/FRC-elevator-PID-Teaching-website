@@ -1,13 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useStore, type SimSource } from '../../app/store'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useStore, type Calibration, type SimSource } from '../../app/store'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
 import { CONTROL_PERIOD, type ControllerLocation } from '../../core/controller/slot0'
-import type { MoveMetrics, SimResult } from '../../core/physics/simulate'
+import { CHALLENGE_ATTEMPTS, makeChallenge, nextStatus, referenceSolution, type ChallengeLevel, type HiddenPlant } from '../../core/challenge'
+import { simulate, type SimResult } from '../../core/physics/simulate'
+import { passesSpec } from '../../core/physics/spec'
 import type { ParameterSet } from '../../schema/parameterSet'
 import { runSimulation } from '../../workers/client'
 import { ExportPanel } from '../calculate/ExportPanel'
+import { CalibrationPanel } from './CalibrationPanel'
+import { ChallengePanel, type ChallengeState } from './ChallengePanel'
+import { CustomEditor } from './CustomEditor'
+import { MetricsTable } from './Metrics'
 import { MiniShaft, PlaybackBar, usePlayback } from './MiniShaft'
+import { RobustnessPanel } from './RobustnessPanel'
 import { buildSimInput, DEFAULT_KNOBS, TOGGLES, type PlantKnobs } from './plantKnobs'
 import { SIM_SCENARIOS, type SimScenario } from './simScenarios'
 
@@ -23,12 +30,30 @@ const SOURCES: { id: SimSource; label: string }[] = [
   { id: 'custom', label: '自訂' },
 ]
 
-const LIMITS = { overshoot: 0.01, settling: 0.5, steadyState: 0.01, following: 0.03, saturation: 0.02, ripple: 0.3 }
+/** 挑戰模式的受控體：真實模型，倍率與摩擦是隱藏的 */
+const hiddenKnobs = (h: HiddenPlant): PlantKnobs => ({
+  ...DEFAULT_KNOBS,
+  realistic: true,
+  frictionUp: h.frictionUp,
+  frictionDown: h.frictionDown,
+  kGScale: h.kGScale,
+  kVScale: h.kVScale,
+  kAScale: h.kAScale,
+})
 
-const cm = (v: number) => `${(v * 100).toFixed(1)} cm`
+const calibratedKnobs = (c: Calibration): PlantKnobs => ({
+  ...DEFAULT_KNOBS,
+  realistic: true,
+  frictionUp: c.friction,
+  frictionDown: c.friction,
+  kGScale: c.kGScale,
+  kVScale: c.kVScale,
+  kAScale: c.kAScale,
+  calibrated: true,
+})
 
 export function SimPage() {
-  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource } = useStore()
+  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration } = useStore()
   const [knobs, setKnobs] = useState<PlantKnobs>(DEFAULT_KNOBS)
   const [location, setLocation] = useState<ControllerLocation>('talonfx')
   const [periodOverride, setPeriodOverride] = useState<number | null>(null)
@@ -38,16 +63,21 @@ export function SimPage() {
   const [otherRaw, setOther] = useState<SimResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [scenario, setScenario] = useState<SimScenario | null>(null)
+  const [challenge, setChallenge] = useState<(ChallengeState & { submitted: ParameterSet }) | null>(null)
+  // 送出後等模擬結果出來才判斷勝負
+  const judging = useRef(false)
   const pb = usePlayback(result)
 
   const sets: Record<SimSource, ParameterSet | null> = { theory, tuning, custom }
-  const source: SimSource = sets[simSource] ? simSource : 'theory'
-  const ps = sets[source]!
+  const source: SimSource = challenge ? 'custom' : sets[simSource] ? simSource : 'theory'
+  const ps = challenge ? challenge.submitted : sets[source]!
   const otherSource: SimSource | null = source === 'custom' ? 'theory' : custom ? 'custom' : null
   const safeGoal = Math.min(mechanism.travel, Math.max(0, goal))
   const controlPeriod = periodOverride ?? CONTROL_PERIOD[location]
+  const hidden = challenge?.hidden
+  const simKnobs = useMemo(() => (hidden ? hiddenKnobs(hidden) : knobs), [hidden, knobs])
 
-  const setup = useMemo(() => ({ mechanism, ff, knobs, controlPeriod, goal: safeGoal }), [mechanism, ff, knobs, controlPeriod, safeGoal])
+  const setup = useMemo(() => ({ mechanism, ff, knobs: simKnobs, controlPeriod, goal: safeGoal }), [mechanism, ff, simKnobs, controlPeriod, safeGoal])
 
   useEffect(() => {
     let alive = true
@@ -56,6 +86,10 @@ export function SimPage() {
         if (!alive) return
         setResult(r)
         setError(null)
+        if (judging.current) {
+          judging.current = false
+          setChallenge((c) => (c ? { ...c, status: nextStatus(passesSpec(r.moves), c.attempts, c.max) } : c))
+        }
       })
       .catch((e: Error) => alive && e.message !== 'stale' && setError(e.message))
     return () => {
@@ -121,6 +155,39 @@ export function SimPage() {
     setCompare(true)
     setScenario(s)
   }
+  const startChallenge = (level: ChallengeLevel) => {
+    const probe = (h: HiddenPlant, p: ParameterSet) => passesSpec(simulate(buildSimInput({ ...setup, knobs: hiddenKnobs(h) }, p)).moves)
+    // 出題：理論值就過了的不要；參考解答也過不了的也不要
+    const hidden = makeChallenge(Math.floor(Math.random() * 1e9), level, (h) => {
+      const sol = referenceSolution(h, ff)
+      const solPs: ParameterSet = {
+        ...theory,
+        feedforward: { kS: sol.kS, kG: sol.kG, kV: sol.kV, kA: sol.kA },
+        feedback: { ...theory.feedback, kP: sol.kP },
+        motionMagic: { cruiseVelocity: theory.motionMagic.cruiseVelocity * sol.motionMagicScale, acceleration: theory.motionMagic.acceleration * sol.motionMagicScale },
+      }
+      return probe(h, theory) || !probe(h, solPs)
+    })
+    const start: ParameterSet = { ...theory, source: 'custom', createdAt: new Date().toISOString(), note: '挑戰模式' }
+    setCustom(start)
+    setScenario(null)
+    setCompare(false)
+    setChallenge({ level, hidden, max: CHALLENGE_ATTEMPTS[level], attempts: 0, status: 'playing', submitted: start })
+  }
+  const submitChallenge = () => {
+    if (!challenge || !custom || challenge.status !== 'playing') return
+    judging.current = true
+    setChallenge({ ...challenge, attempts: challenge.attempts + 1, submitted: { ...custom } })
+  }
+  const quitChallenge = () => {
+    judging.current = false
+    setChallenge(null)
+    setSimSource('custom')
+  }
+  const applyCalibration = (c: Calibration) => {
+    setKnobs(calibratedKnobs(c))
+  }
+
   const leaveScenario = () => {
     setScenario(null)
     setKnobs(DEFAULT_KNOBS)
@@ -137,11 +204,18 @@ export function SimPage() {
           <p className="lead">上機前先確認參數不會出事。改一個數字看看會怎樣，不用怕撞壞機構。</p>
         </div>
         <span className="phase">
-          {knobs.realistic ? '真實模型' : '理想模型'}・{location === 'talonfx' ? 'TalonFX 1 kHz' : 'roboRIO 50 Hz'}
+          {challenge ? '挑戰中（受控體隱藏）' : knobs.calibrated ? '已校正模型' : knobs.realistic ? '真實模型' : '理想模型'}・{location === 'talonfx' ? 'TalonFX 1 kHz' : 'roboRIO 50 Hz'}
         </span>
       </div>
 
-      <ScenarioPicker active={scenario} onPick={loadScenario} onLeave={leaveScenario} />
+      <ChallengePanel
+        state={challenge}
+        onStart={startChallenge}
+        onSubmit={submitChallenge}
+        onQuit={quitChallenge}
+        solution={challenge && challenge.status !== 'playing' ? referenceSolution(challenge.hidden, ff) : null}
+      />
+      {!challenge && <ScenarioPicker active={scenario} onPick={loadScenario} onLeave={leaveScenario} />}
 
       <div className="bar">
         <div className="seg" role="group" aria-label="參數來源">
@@ -150,7 +224,7 @@ export function SimPage() {
               key={s.id}
               type="button"
               aria-pressed={source === s.id}
-              disabled={!sets[s.id] && s.id !== 'custom'}
+              disabled={(!sets[s.id] && s.id !== 'custom') || (!!challenge && s.id !== 'custom')}
               title={s.id === 'tuning' && !tuning ? '還沒有調參建議值：先到 2F 分析日誌並套用一個建議' : undefined}
               onClick={() => {
                 if (s.id === 'custom' && !custom) setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString() })
@@ -177,6 +251,11 @@ export function SimPage() {
       </div>
 
       {error && <div className="warn">模擬失敗：{error}</div>}
+      {source === 'tuning' && !knobs.calibrated && !challenge && (
+        <div className="note" style={{ marginBottom: 12 }}>
+          未校正，僅供參考：目前的受控體是用 1F 理論值算的。到下面「模型校正」用實機日誌校正後，預覽調參建議會比較接近真的機器人。
+        </div>
+      )}
 
       <div className="simwrap">
         <MiniShaft result={result} travel={mechanism.travel} goal={safeGoal} idx={pb.idx} />
@@ -203,7 +282,15 @@ export function SimPage() {
         <div className="panel">
           <h2>參數（{SOURCES.find((s) => s.id === source)!.label}）</h2>
           {source === 'custom' && custom ? (
-            <CustomEditor custom={custom} edit={editCustom} reset={() => setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString() })} />
+            <CustomEditor
+              custom={custom}
+              edit={editCustom}
+              resetTheory={() => setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString() })}
+              baseline={baseline}
+              setBaseline={(p) => setBaseline({ ...p, createdAt: new Date().toISOString(), note: p.note ?? '自訂' })}
+              resetBaseline={() => baseline && setCustom({ ...baseline, source: 'custom', createdAt: new Date().toISOString() })}
+              locked={!!challenge}
+            />
           ) : (
             <>
               <GainList ps={ps} />
@@ -222,7 +309,15 @@ export function SimPage() {
           </details>
         </div>
 
+        {challenge ? (
+          <div className="panel">
+            <h2>受控體（隱藏中）</h2>
+            <p className="small muted">挑戰模式：這台電梯跟理論值不一樣，但不告訴你哪裡不一樣。真實模型（摩擦、電流限制、電池壓降），TalonFX 1 kHz。挑戰結束後會公布答案。</p>
+          </div>
+        ) : (
         <PlantPanel
+          calibration={calibration}
+          onCalibrated={() => calibration && applyCalibration(calibration)}
           knobs={knobs}
           setKnobs={setKnobs}
           location={location}
@@ -235,7 +330,15 @@ export function SimPage() {
           setPeriodOverride={setPeriodOverride}
           continuous={mechanism.rig === 'continuous'}
         />
+        )}
       </div>
+
+      {!challenge && (
+        <>
+          <RobustnessPanel base={buildSimInput(setup, ps)} mechanism={mechanism} ff={ff} realistic={knobs.realistic} />
+          <CalibrationPanel onApply={applyCalibration} />
+        </>
+      )}
     </section>
   )
 }
@@ -273,92 +376,9 @@ function ScenarioPicker({ active, onPick, onLeave }: { active: SimScenario | nul
   )
 }
 
-function CustomEditor({
-  custom,
-  edit,
-  reset,
-}: {
-  custom: ParameterSet
-  edit: (patch: (p: ParameterSet) => ParameterSet) => void
-  reset: () => void
-}) {
-  const slots = custom.slotByDirection
-  const setSlot = (dir: 'up' | 'down', k: 'kS' | 'kG', v: number) =>
-    edit((p) => (p.slotByDirection ? { ...p, slotByDirection: { ...p.slotByDirection, [dir]: { ...p.slotByDirection[dir], [k]: v } } } : p))
-  return (
-    <>
-      <div className="gains">
-        {(['kS', 'kG', 'kV', 'kA'] as const).map((k) => (
-          <NumberField
-            key={k}
-            label={slots && (k === 'kS' || k === 'kG') ? `${k}（沒用到）` : k}
-            value={custom.feedforward[k]}
-            onChange={(v) => edit((p) => ({ ...p, feedforward: { ...p.feedforward, [k]: v } }))}
-            unit={k === 'kS' || k === 'kG' ? 'V' : k === 'kV' ? 'V/(m/s)' : 'V/(m/s²)'}
-          />
-        ))}
-        {(['kP', 'kI', 'kD'] as const).map((k) => (
-          <NumberField
-            key={k}
-            label={k}
-            value={custom.feedback[k]}
-            min={0}
-            onChange={(v) => edit((p) => ({ ...p, feedback: { ...p.feedback, [k]: v } }))}
-            unit={k === 'kP' ? 'V/m' : k === 'kI' ? 'V/(m·s)' : 'V/(m/s)'}
-          />
-        ))}
-        <span />
-        <NumberField
-          label="巡航速度"
-          value={custom.motionMagic.cruiseVelocity}
-          min={0.01}
-          onChange={(v) => edit((p) => ({ ...p, motionMagic: { ...p.motionMagic, cruiseVelocity: v } }))}
-          unit="m/s"
-        />
-        <NumberField
-          label="加速度"
-          value={custom.motionMagic.acceleration}
-          min={0.01}
-          onChange={(v) => edit((p) => ({ ...p, motionMagic: { ...p.motionMagic, acceleration: v } }))}
-          unit="m/s²"
-        />
-      </div>
-
-      <label className="check" style={{ marginTop: 14 }}>
-        <input
-          type="checkbox"
-          checked={!!slots}
-          onChange={(e) =>
-            edit((p) => {
-              if (!e.target.checked) return { ...p, slotByDirection: undefined }
-              const base = { kS: p.feedforward.kS, kG: p.feedforward.kG }
-              return { ...p, slotByDirection: { up: base, down: { ...base } } }
-            })
-          }
-        />
-        往下用 Slot 1（摩擦不對稱時，往上、往下各自設 kS、kG）
-      </label>
-      {slots && (
-        <div className="gains" style={{ marginTop: 10 }}>
-          <NumberField label="往上 kS（Slot 0）" value={slots.up.kS} onChange={(v) => setSlot('up', 'kS', v)} unit="V" />
-          <NumberField label="往上 kG（Slot 0）" value={slots.up.kG} onChange={(v) => setSlot('up', 'kG', v)} unit="V" />
-          <NumberField label="往下 kS（Slot 1）" value={slots.down.kS} onChange={(v) => setSlot('down', 'kS', v)} unit="V" />
-          <NumberField label="往下 kG（Slot 1）" value={slots.down.kG} onChange={(v) => setSlot('down', 'kG', v)} unit="V" />
-        </div>
-      )}
-
-      <div className="row" style={{ marginTop: 12 }}>
-        <button className="btn small" type="button" onClick={reset}>
-          重置為理論值
-        </button>
-        <span className="small muted">一次只改一個參數，才看得出是誰造成的變化。</span>
-      </div>
-      {custom.note && <p className="small muted">來源：{custom.note}</p>}
-    </>
-  )
-}
-
 function PlantPanel({
+  calibration,
+  onCalibrated,
   knobs,
   setKnobs,
   location,
@@ -368,6 +388,8 @@ function PlantPanel({
   setPeriodOverride,
   continuous,
 }: {
+  calibration: Calibration | null
+  onCalibrated: () => void
   knobs: PlantKnobs
   setKnobs: (k: PlantKnobs) => void
   location: ControllerLocation
@@ -377,7 +399,7 @@ function PlantPanel({
   setPeriodOverride: (v: number) => void
   continuous: boolean
 }) {
-  const set = (patch: Partial<PlantKnobs>) => setKnobs({ ...knobs, ...patch })
+  const set = (patch: Partial<PlantKnobs>) => setKnobs({ ...knobs, ...patch, calibrated: false })
   return (
     <div className="panel">
       <h2>受控體（模擬的電梯）</h2>
@@ -385,12 +407,17 @@ function PlantPanel({
         <button type="button" aria-pressed={!knobs.realistic} onClick={() => set({ realistic: false })}>
           理想模型
         </button>
-        <button type="button" aria-pressed={knobs.realistic} onClick={() => set({ realistic: true })}>
+        <button type="button" aria-pressed={knobs.realistic && !knobs.calibrated} onClick={() => set({ realistic: true })}>
           真實模型
+        </button>
+        <button type="button" aria-pressed={knobs.calibrated} disabled={!calibration} title={calibration ? undefined : '先到下面「模型校正」用實機日誌校正'} onClick={onCalibrated}>
+          已校正
         </button>
       </div>
       <p className="small muted" style={{ margin: '8px 0 12px' }}>
-        {knobs.realistic
+        {knobs.calibrated && calibration
+          ? `重力、kV、慣性、摩擦用「${calibration.logName}」校正過（重播誤差 ${(calibration.rms * 100).toFixed(1)} cm）。改任何一項就變回一般的真實模型。`
+          : knobs.realistic
           ? '每一項都可以單獨開關。一次只開一項，看圖怎麼變，就知道它對電梯的影響。'
           : '沒有摩擦、沒有電流限制，只有重力、慣性和反電動勢（電壓最多到電池電壓）。理論值在這裡應該幾乎完美。'}
       </p>
@@ -510,68 +537,3 @@ function GainList({ ps }: { ps: ParameterSet }) {
   )
 }
 
-function MetricsRow({ m, label }: { m: MoveMetrics; label: string }) {
-  return (
-    <tr>
-      <td>{label}</td>
-      <td className="num">{m.profileDuration.toFixed(2)} s</td>
-      <td className={'num ' + (m.overshoot <= LIMITS.overshoot ? 'pass' : 'fail')}>{cm(m.overshoot)}</td>
-      <td className={'num ' + (m.settlingTime !== null && m.settlingTime <= LIMITS.settling ? 'pass' : 'fail')}>
-        {m.settlingTime === null ? '未穩定' : `${m.settlingTime.toFixed(2)} s`}
-      </td>
-      <td className={'num ' + (m.steadyStateError <= LIMITS.steadyState ? 'pass' : 'fail')}>{cm(m.steadyStateError)}</td>
-      <td className={'num ' + (m.maxFollowingError <= LIMITS.following ? 'pass' : 'fail')}>{cm(m.maxFollowingError)}</td>
-      <td className="num">{m.peakStatorCurrent.toFixed(0)} A</td>
-      <td className={'num ' + (m.saturationFraction <= LIMITS.saturation ? 'pass' : 'fail')}>{(m.saturationFraction * 100).toFixed(1)}%</td>
-      <td className={'num ' + (m.holdVoltageRipple <= LIMITS.ripple ? 'pass' : 'fail')}>{m.holdVoltageRipple.toFixed(2)} V</td>
-    </tr>
-  )
-}
-
-function MetricsTable({ moves, other, otherLabel }: { moves: MoveMetrics[]; other: MoveMetrics[] | null; otherLabel: string }) {
-  const hints: string[] = []
-  for (const m of moves) {
-    if (m.saturationFraction > LIMITS.saturation) hints.push('輸出電壓貼到電池電壓：馬達已經全力，調 PID 沒用，先降低 Motion Magic 速度或加速度。')
-    if (m.currentLimitFraction > LIMITS.saturation) hints.push('觸發 Stator 電流限制：加速度太大或機構太重，屬於物理限制。')
-    if (m.holdVoltageRipple > LIMITS.ripple) hints.push('到位後電壓一直抖：可能在振盪（kP 太大、控制週期太長、延遲），或 kD 把雜訊放大了。')
-  }
-  const moveLabel = (m: MoveMetrics, i: number) => `${i === 0 ? '往上' : '往下'} → ${m.goal.toFixed(2)} m${moves.some((x) => x.slot === 1) ? `（Slot ${m.slot}）` : ''}`
-  return (
-    <div className="panel" style={{ marginTop: 20 }}>
-      <h2>指標</h2>
-      <div style={{ overflowX: 'auto' }}>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>移動</th>
-              <th className="num">軌跡時間</th>
-              <th className="num">超調</th>
-              <th className="num">穩定時間</th>
-              <th className="num">穩態誤差</th>
-              <th className="num">最大跟隨誤差</th>
-              <th className="num">峰值電流</th>
-              <th className="num">電壓飽和</th>
-              <th className="num">到位電壓抖動</th>
-            </tr>
-          </thead>
-          <tbody>
-            {moves.map((m, i) => (
-              <MetricsRow key={i} m={m} label={moveLabel(m, i)} />
-            ))}
-            {other?.map((m, i) => (
-              <MetricsRow key={'o' + i} m={m} label={`${otherLabel}：${i === 0 ? '往上' : '往下'}`} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="small muted" style={{ margin: '10px 0 0' }}>
-        達標標準：超調 ≤ 1 cm、軌跡結束後 0.5 s 內穩定在 ±1 cm、穩態誤差 ≤ 1 cm、跟隨誤差 ≤ 3 cm、電壓飽和 ≤ 2%、到位後電壓抖動 ≤ 0.3 V。
-      </p>
-      {[...new Set(hints)].map((h) => (
-        <div key={h} className="warn">
-          {h}
-        </div>
-      ))}
-    </div>
-  )
-}

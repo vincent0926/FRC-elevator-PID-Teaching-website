@@ -18,13 +18,14 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
 - `src/core/`：純 TypeScript，**不可 import React 或 DOM**，Web Worker 與測試都直接用
   - `units.ts` SI ↔ Phoenix 6 轉數制；`motors.ts` 馬達常數；`feedforward.ts` kG、kV、kA、等效質量
   - `profile.ts` Motion Magic 梯形軌跡；`controller/slot0.ts` Slot0 控制公式
-  - `physics/` 受控體（伏特為力的單位）與 RK4 閉迴路模擬
+  - `physics/` 受控體（伏特為力的單位）與 RK4 閉迴路模擬、達標標準 `spec.ts`、穩健性測試 `robustness.ts`、模型校正 `calibrate.ts`
+  - `challenge.ts` 3F 挑戰模式出題與判斷
   - `log/` .wpilog 串流解析、寫入器、欄位對應與對齊
   - `analysis/` 步驟 0 資料檢查 `checks.ts`、切段 `segment.ts`、迴歸 `regression.ts`、診斷規則 `diagnose.ts`（決策 21–29）、SysId 比較 `sysid.ts`
   - `codegen/` Java 範本與 JSON 設定檔（**唯一做單位換算輸出的地方**）
 - `src/schema/`：zod。`ParameterSet` 是全站唯一的參數格式
 - `src/workers/`：`log.worker.ts`、`sim.worker.ts`，資料用 Transferable Float64Array 傳
-- `src/pages/`：`home/`、`calculate/`（1F，含教學關卡 `lessons.tsx`）、`tuning/`（2F）、`simulate/`（3F，受控體開關 `plantKnobs.ts`、教學情境 `simScenarios.ts`）、`learn/`（4F，單元一 `Unit1.tsx`、單元二 `Unit2.tsx`、SysId 比較；程式片段 `snippets.ts` 摘自 robot-example，改範例要一起改）
+- `src/pages/`：`home/`、`calculate/`（1F，含教學關卡 `lessons.tsx`）、`tuning/`（2F）、`simulate/`（3F，受控體開關 `plantKnobs.ts`、教學情境 `simScenarios.ts`、挑戰、校正、穩健性測試各一個 Panel）、`learn/`（4F，單元一 `Unit1.tsx`、單元二 `Unit2.tsx`、SysId 比較；程式片段 `snippets.ts` 摘自 robot-example，改範例要一起改）
 - `src/components/`：Chart（uPlot）、NumberField、Quiz、ParamCard；`src/app/`：store、Shell（井道導覽）、更新提示
 - `robot-example/`：機器人端 Java 範例（AdvantageKit + Phoenix 6，隊上 IO 架構）
 - `prototype/v0.1.html`：舊的單檔原型，只當參考
