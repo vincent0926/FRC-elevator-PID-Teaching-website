@@ -105,7 +105,7 @@ export function MiniShaft({ result, travel, goal, idx }: { result: SimResult | n
   )
 }
 
-export function PlaybackBar({ result, pb }: { result: SimResult | null; pb: Playback }) {
+export function PlaybackBar({ result, pb, unit = 'm' }: { result: SimResult | null; pb: Playback; unit?: 'm' | 'rad' }) {
   const last = result ? result.t.length - 1 : 0
   const k = pb.idx ?? last
   const t = result ? result.t[k] : 0
@@ -132,7 +132,7 @@ export function PlaybackBar({ result, pb }: { result: SimResult | null; pb: Play
         onChange={(e) => pb.seek(Number(e.target.value))}
       />
       <span className="small muted num-w">
-        {t.toFixed(2)} s・{result ? `${(result.pos[k] * 100).toFixed(1)} cm` : ''}
+        {t.toFixed(2)} s・{result ? (unit === 'rad' ? `${((result.pos[k] * 180) / Math.PI).toFixed(1)}°` : `${(result.pos[k] * 100).toFixed(1)} cm`) : ''}
       </span>
     </div>
   )

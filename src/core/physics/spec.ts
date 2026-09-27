@@ -31,8 +31,25 @@ export function isSpec(v: unknown): v is Spec {
   return (Object.keys(DEFAULT_SPEC) as (keyof Spec)[]).every((k) => typeof o[k] === 'number' && Number.isFinite(o[k]) && (o[k] as number) > 0)
 }
 
-export function describeSpec(s: Spec): string {
-  const cm = (v: number) => `${Number((v * 100).toFixed(1))} cm`
+/** 位置的單位：電梯是公尺（顯示公分），手臂是弧度（顯示度） */
+export type SpecUnit = 'm' | 'rad'
+
+/** 長度或角度誤差的顯示：m → cm、rad → ° */
+export function fmtPos(v: number, unit: SpecUnit = 'm', digits = 1): string {
+  return unit === 'rad' ? `${Number(((v * 180) / Math.PI).toFixed(digits))}°` : `${Number((v * 100).toFixed(digits))} cm`
+}
+
+/** 手臂的教學用標準（角度）：超調 2°、穩態 1°、跟隨 3° */
+export const ARM_DEFAULT_SPEC: Spec = { overshoot: (2 * Math.PI) / 180, settling: 0.5, steadyState: Math.PI / 180, following: (3 * Math.PI) / 180, saturation: 0.02, ripple: 0.3 }
+
+export const ARM_SPEC_PRESETS: { id: string; label: string; what: string; spec: Spec }[] = [
+  { id: 'precise', label: '保守', what: '要把遊戲物件放進很窄的位置：超調和穩態誤差 0.5°', spec: { ...ARM_DEFAULT_SPEC, overshoot: (0.5 * Math.PI) / 180, steadyState: (0.5 * Math.PI) / 180, following: (2 * Math.PI) / 180 } },
+  { id: 'default', label: '平衡（預設教學標準）', what: '一般的手臂，得分角度 ±1°', spec: ARM_DEFAULT_SPEC },
+  { id: 'fast', label: '快速', what: '大概到就好、重點是快：允許 3° 誤差、穩定時間 0.3 s', spec: { ...ARM_DEFAULT_SPEC, overshoot: (3 * Math.PI) / 180, steadyState: (3 * Math.PI) / 180, following: (6 * Math.PI) / 180, settling: 0.3 } },
+]
+
+export function describeSpec(s: Spec, unit: SpecUnit = 'm'): string {
+  const cm = (v: number) => fmtPos(v, unit)
   return `超調 ≤ ${cm(s.overshoot)}、軌跡結束後 ${s.settling} s 內穩定在 ±${cm(s.steadyState)}、穩態誤差 ≤ ${cm(s.steadyState)}、跟隨誤差 ≤ ${cm(s.following)}、電壓飽和 ≤ ${Number((s.saturation * 100).toFixed(1))}%、到位後電壓抖動 ≤ ${s.ripple} V`
 }
 
@@ -98,8 +115,8 @@ export interface MoveDiagnosis {
 }
 
 /** 一次移動沒過的每一項，附數值、門檻、原因與建議 */
-export function diagnoseMove(m: MoveMetrics, spec: Spec = DEFAULT_SPEC): MoveDiagnosis[] {
-  const cm = (v: number) => `${(v * 100).toFixed(1)} cm`
+export function diagnoseMove(m: MoveMetrics, spec: Spec = DEFAULT_SPEC, unit: SpecUnit = 'm'): MoveDiagnosis[] {
+  const cm = (v: number) => fmtPos(v, unit)
   const fmt: Record<keyof Spec, [string, string]> = {
     overshoot: [cm(m.overshoot), cm(spec.overshoot)],
     settling: [m.settlingTime === null ? '沒穩定' : `${m.settlingTime.toFixed(2)} s`, `${spec.settling} s`],

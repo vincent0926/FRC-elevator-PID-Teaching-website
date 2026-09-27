@@ -21,3 +21,21 @@ export function saveJson(key: string, value: unknown): void {
     // 儲存失敗不影響使用
   }
 }
+
+/** sessionStorage：這個分頁關掉就忘記（機構選擇用：每次進站都要選，重新整理不用重選） */
+export function loadSession(key: string): string | null {
+  try {
+    return sessionStorage.getItem(PREFIX + key)
+  } catch {
+    return null
+  }
+}
+
+export function saveSession(key: string, value: string | null): void {
+  try {
+    if (value === null) sessionStorage.removeItem(PREFIX + key)
+    else sessionStorage.setItem(PREFIX + key, value)
+  } catch {
+    // 儲存失敗不影響使用
+  }
+}

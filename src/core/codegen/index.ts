@@ -145,3 +145,16 @@ ${c.slot1 ? slotJava('slot1', c.slot1) : '  public static Slot1Configs slot1() {
 
 /** 每年新增一份範本，舊的保留給還沒升級的專案 */
 export const JAVA_TEMPLATES: JavaTemplate[] = [phoenix6_2026]
+
+/**
+ * 手臂的 Phoenix 6 換算：SensorToMechanismRatio 設好之後，位置單位是「手臂轉幾圈」，
+ * 一圈 = 2π rad，所以跟電梯一樣用 siToRotations，只是「每圈幾公尺」換成「每圈 2π 弧度」。
+ */
+export function convertArm(ps: { feedforward: { kS: number; kG: number; kV: number; kA: number }; feedback: { kP: number; kI: number; kD: number }; motionMagic: { cruiseVelocity: number; acceleration: number } }) {
+  const radPerRot = 2 * Math.PI
+  return {
+    slot0: siToRotations({ ...ps.feedforward, ...ps.feedback }, radPerRot),
+    cruiseVelocity: linearToRotations(ps.motionMagic.cruiseVelocity, radPerRot),
+    acceleration: linearToRotations(ps.motionMagic.acceleration, radPerRot),
+  }
+}

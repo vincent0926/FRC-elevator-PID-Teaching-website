@@ -20,7 +20,8 @@ function isDark(t: Theme) {
 }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { page, go } = useStore()
+  const { page, go, track, setTrack } = useStore()
+  const trackName = track === 'arm' ? '手臂' : '電梯'
   const [theme, setTheme] = useState<Theme>(() => loadJson<Theme>('theme', null))
 
   useEffect(() => {
@@ -42,8 +43,11 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="app">
         <nav className="shaft" aria-label="主選單">
           <div className="brand">
-            <b>電梯調參工作站</b>
+            <b>{trackName}調參工作站</b>
             <span>FRC 9427 前饋與 PID 學習</span>
+            <button className="theme-btn" type="button" style={{ marginTop: 8, display: 'block' }} onClick={() => setTrack(null)}>
+              換機構（目前：{trackName}）
+            </button>
           </div>
           <div className="floors">
             <div className="rail" aria-hidden="true" />
@@ -70,7 +74,15 @@ export function Shell({ children }: { children: ReactNode }) {
             </button>
           </div>
         </nav>
-        <main>{children}</main>
+        <main>
+          <div className="track-mobile">
+            <span className="small muted">{trackName}調參工作站</span>
+            <button className="track-btn" type="button" onClick={() => setTrack(null)}>
+              換機構
+            </button>
+          </div>
+          {children}
+        </main>
       </div>
     </>
   )

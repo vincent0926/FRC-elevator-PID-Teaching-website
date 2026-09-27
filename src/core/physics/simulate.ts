@@ -1,4 +1,4 @@
-import { Slot0Controller, type AntiWindup, type Slot0Gains } from '../controller/slot0'
+import { Slot0Controller, type AntiWindup, type GravityType, type Slot0Gains } from '../controller/slot0'
 import { trapezoidProfile, type TrapezoidProfile } from '../profile'
 import { applyCurrentLimit, stepRK4, type PlantParams, type PlantState } from './elevator'
 
@@ -44,6 +44,8 @@ export interface SimInput {
   output?: OutputConfig
   /** 積分防飽和（教學選項，預設沒有） */
   antiWindup?: AntiWindup
+  /** 控制器的重力型態（手臂用 armCosine）；受控體的重力由 plant.gravityCosine 決定，兩者可以故意不一樣（教學情境） */
+  gravityType?: GravityType
 }
 
 export interface OutputConfig {
@@ -172,6 +174,7 @@ export function simulate(input: SimInput): SimResult {
   const coastMode = input.output?.neutralMode === 'coast'
 
   const controller = new Slot0Controller({ ...input.gains }, p.batteryVoltage, input.antiWindup ?? { mode: 'none' })
+  controller.gravityType = input.gravityType ?? 'constant'
   const voltageLimit = input.voltageLimit ?? true
   const slotOf: (0 | 1)[] = []
   const sensor = input.sensor
