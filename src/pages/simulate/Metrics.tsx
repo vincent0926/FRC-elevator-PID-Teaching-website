@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
 import type { MoveMetrics } from '../../core/physics/simulate'
-import { describeSpec, diagnoseMove, moveFailures, SPEC_LABEL, type Spec } from '../../core/physics/spec'
+import { describeSpec, diagnoseMove, fmtPos, moveFailures, SPEC_LABEL, type Spec, type SpecUnit } from '../../core/physics/spec'
 
 /** 3F 指標表：每次移動一列，比較對象的指標並排 */
 
-const cm = (v: number) => `${(v * 100).toFixed(1)} cm`
 
-function MetricsRow({ m, label, spec }: { m: MoveMetrics; label: string; spec: Spec }) {
+function MetricsRow({ m, label, spec, unit = 'm' }: { m: MoveMetrics; label: string; spec: Spec; unit?: SpecUnit }) {
+  const cm = (v: number) => fmtPos(v, unit)
   return (
     <tr>
       <td>{label}</td>
@@ -30,7 +30,26 @@ function MoveResult({ m, spec }: { m: MoveMetrics; spec: Spec }) {
   return <td className={f.length ? 'fail' : 'pass'}>{f.length ? `✗ ${f.map((k) => SPEC_LABEL[k]).join('、')}` : '✓ 通過'}</td>
 }
 
-export function MetricsTable({ moves, other, otherLabel, spec, editor }: { moves: MoveMetrics[]; other: MoveMetrics[] | null; otherLabel: string; spec: Spec; editor?: ReactNode }) {
+export function MetricsTable({
+  moves,
+  other,
+  otherLabel,
+  spec,
+  editor,
+  unit = 'm',
+  moveLabels,
+}: {
+  moves: MoveMetrics[]
+  other: MoveMetrics[] | null
+  otherLabel: string
+  spec: Spec
+  editor?: ReactNode
+  /** 位置單位：電梯 m、手臂 rad（顯示度） */
+  unit?: SpecUnit
+  /** 每次移動的名稱（預設「往上／往下」） */
+  moveLabels?: [string, string]
+}) {
+  const dirs = moveLabels ?? ['往上', '往下']
   const hints: string[] = []
   for (const m of moves) {
     if (m.saturationFraction > spec.saturation) hints.push('輸出電壓貼到電池電壓：馬達已經全力，調 PID 沒用，先降低 Motion Magic 速度或加速度。')
@@ -39,7 +58,7 @@ export function MetricsTable({ moves, other, otherLabel, spec, editor }: { moves
     if (m.supplyLimitFraction > spec.saturation) hints.push('觸發 Supply 電流限制：從電池拿的電流被限制，加速變慢。保護斷路器用的，設太低電梯會變肉。')
     if (m.holdVoltageRipple > spec.ripple) hints.push('到位後電壓一直抖：可能在振盪（kP 太大、控制週期太長、延遲），或 kD 把雜訊放大了。')
   }
-  const moveLabel = (m: MoveMetrics, i: number) => `${i === 0 ? '往上' : '往下'} → ${m.goal.toFixed(2)} m${moves.some((x) => x.slot === 1) ? `（Slot ${m.slot}）` : ''}`
+  const moveLabel = (m: MoveMetrics, i: number) => `${dirs[i === 0 ? 0 : 1]} → ${unit === 'rad' ? fmtPos(m.goal, 'rad', 0) : `${m.goal.toFixed(2)} m`}${moves.some((x) => x.slot === 1) ? `（Slot ${m.slot}）` : ''}`
   return (
     <div className="panel" style={{ marginTop: 20 }}>
       <h2>指標</h2>
@@ -61,10 +80,10 @@ export function MetricsTable({ moves, other, otherLabel, spec, editor }: { moves
           </thead>
           <tbody>
             {moves.map((m, i) => (
-              <MetricsRow key={i} m={m} label={moveLabel(m, i)} spec={spec} />
+              <MetricsRow key={i} m={m} label={moveLabel(m, i)} spec={spec} unit={unit} />
             ))}
             {other?.map((m, i) => (
-              <MetricsRow key={'o' + i} m={m} label={`${otherLabel}：${i === 0 ? '往上' : '往下'}`} spec={spec} />
+              <MetricsRow key={'o' + i} m={m} label={`${otherLabel}：${dirs[i === 0 ? 0 : 1]}`} spec={spec} unit={unit} />
             ))}
           </tbody>
         </table>
@@ -81,11 +100,11 @@ export function MetricsTable({ moves, other, otherLabel, spec, editor }: { moves
         ——整體通過要每一次都過，所以先看是哪一次、哪一項沒過。
       </p>
       {moves.map((m, i) =>
-        diagnoseMove(m, spec).length ? (
+        diagnoseMove(m, spec, unit).length ? (
           <div key={i} className="move-diag">
             <b className="small">{moveLabel(m, i)}</b>
             <ul className="small">
-              {diagnoseMove(m, spec).map((d) => (
+              {diagnoseMove(m, spec, unit).map((d) => (
                 <li key={d.key}>
                   <b>{d.label}</b> {d.actual}（標準 ≤ {d.limit}）→ 可能：{d.cause} → 先試：{d.next}
                 </li>
@@ -95,7 +114,7 @@ export function MetricsTable({ moves, other, otherLabel, spec, editor }: { moves
         ) : null,
       )}
       <p className="small muted" style={{ margin: '10px 0 0' }}>
-        達標標準（教學用，不是 FRC 官方標準）：{describeSpec(spec)}。
+        達標標準（教學用，不是 FRC 官方標準）：{describeSpec(spec, unit)}。
       </p>
       {editor}
       {[...new Set(hints)].map((h) => (

@@ -14,9 +14,29 @@ export function loadJson<T>(key: string, fallback: T): T {
   }
 }
 
-export function saveJson(key: string, value: unknown): void {
+/** 回傳有沒有存成功（私密視窗、空間滿了會失敗）；失敗不影響使用，只是重新整理後會回到上次存的值 */
+export function saveJson(key: string, value: unknown): boolean {
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** sessionStorage：這個分頁關掉就忘記（機構選擇用：每次進站都要選，重新整理不用重選） */
+export function loadSession(key: string): string | null {
+  try {
+    return sessionStorage.getItem(PREFIX + key)
+  } catch {
+    return null
+  }
+}
+
+export function saveSession(key: string, value: string | null): void {
+  try {
+    if (value === null) sessionStorage.removeItem(PREFIX + key)
+    else sessionStorage.setItem(PREFIX + key, value)
   } catch {
     // 儲存失敗不影響使用
   }

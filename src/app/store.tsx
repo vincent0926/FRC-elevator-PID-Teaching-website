@@ -3,7 +3,7 @@ import { computeFeedforward, kPFromVoltsPerCm, type FeedforwardResult } from '..
 import type { AlignedLog, FieldMapping } from '../core/log/fieldMap'
 import { DEFAULT_MECHANISM, ElevatorMechanismSchema, ParameterSetSchema, type ElevatorMechanism, type ParameterSet } from '../schema/parameterSet'
 import { DEFAULT_SPEC, isSpec, type Spec } from '../core/physics/spec'
-import { loadJson, saveJson } from '../storage/local'
+import { loadJson, loadSession, saveJson, saveSession } from '../storage/local'
 import { decodeMechanism, SHARE_PARAM } from '../core/shareLink'
 
 /**
@@ -16,6 +16,8 @@ import { decodeMechanism, SHARE_PARAM } from '../core/shareLink'
 export type PageId = 'home' | 'calc' | 'tune' | 'sim' | 'learn'
 export const PAGES: PageId[] = ['home', 'calc', 'tune', 'sim', 'learn']
 export type SimSource = 'theory' | 'tuning' | 'custom'
+/** 網站的兩條線：電梯、手臂。null = 還沒選（每次進站都要選，同一個分頁重新整理不用重選） */
+export type Track = 'elevator' | 'arm'
 
 export const UNIT0_ITEMS = 5
 
@@ -42,6 +44,8 @@ export interface Calibration {
 }
 
 interface Store {
+  track: Track | null
+  setTrack: (t: Track | null) => void
   mechanism: ElevatorMechanism
   setMechanism: (m: ElevatorMechanism) => void
   voltsPerCm: number
@@ -152,6 +156,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [spec, setSpec] = usePersisted<Spec>('spec', DEFAULT_SPEC, isSpec)
   const [compareSet, setCompareSet] = useState<{ id?: number; label: string; params: ParameterSet } | null>(null)
   const [shared, setShared] = useState<Store['shared']>(null)
+  // 分享連結是電梯的機構資料，打開時直接進電梯，不用再選
+  const [track, setTrackState] = useState<Track | null>(() => {
+    if (new URLSearchParams(location.search).get(SHARE_PARAM)) return 'elevator'
+    const t = loadSession('track')
+    return t === 'elevator' || t === 'arm' ? t : null
+  })
+  // 手動選機構（或換機構）一律回到總覽：換了機構，原本停的樓層可能還沒做（例如手臂 4F）
+  const setTrack = useCallback((t: Track | null) => {
+    setTrackState(t)
+    saveSession('track', t)
+    if (t) {
+      if (location.hash !== '#home') location.hash = 'home'
+      setPage('home')
+    }
+    window.scrollTo(0, 0)
+  }, [])
 
   // 分享連結（?m=）：載入機構資料後把查詢字串拿掉，重新整理才不會又蓋掉一次
   useEffect(() => {
@@ -200,6 +220,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const markLesson = useCallback((id: string) => setLessonsDone({ ...lessonsDone, [id]: true }), [lessonsDone, setLessonsDone])
 
   const value: Store = {
+    track,
+    setTrack,
     mechanism,
     setMechanism,
     voltsPerCm,

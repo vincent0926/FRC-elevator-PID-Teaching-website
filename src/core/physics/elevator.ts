@@ -21,6 +21,10 @@ import type { FeedforwardResult } from '../feedforward'
 
 export interface PlantParams {
   kG: number
+  /** 手臂：重力項是 kG·cos(位置)，位置是角度（rad，0 = 水平）。電梯不設 */
+  gravityCosine?: boolean
+  /** 手臂：編碼器的 0 不在水平時，真實重力是 kG·cos(位置 + offset)（教學用：零點設錯） */
+  gravityCosineOffset?: number
   /** kG 隨高度變化（V/m）：拖鏈、線材重量轉移，或定力彈簧不定力。前饋的 kG 是常數，這部分只能靠回授 */
   kGSlope?: number
   /** kGSlope 的基準高度（這裡 kG 剛好等於 kG） */
@@ -156,6 +160,7 @@ const hasFriction = (p: PlantParams) => p.frictionKs > 0 || (p.frictionKsDown ??
 
 /** 重力項（含隨高度變化與換級跳變） */
 export function gravity(p: PlantParams, pos: number): number {
+  if (p.gravityCosine) return p.kG * Math.cos(pos + (p.gravityCosineOffset ?? 0))
   let g = p.kG + (p.kGSlope ?? 0) * (pos - (p.kGRefPosition ?? 0))
   if (p.kGStep && pos > p.kGStep.position) g += p.kGStep.delta
   return g

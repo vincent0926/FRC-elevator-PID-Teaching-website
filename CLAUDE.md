@@ -1,6 +1,6 @@
 # elevator-tuner：給 Claude Code 的專案說明
 
-FRC 9427 的電梯前饋與 PID 學習網站。目標是讓隊員**搞懂**前饋和 PID，最後能自己把電梯調好，不是抄數字。
+FRC 9427 的電梯與單關節手臂前饋與 PID 學習網站（進站先選機構）。目標是讓隊員**搞懂**前饋和 PID，最後能自己把電梯調好，不是抄數字。
 完整計畫書在 Google 文件；已定案的設計決策在 `docs/decisions.md`，改架構前先讀。
 
 ## 指令
@@ -19,20 +19,21 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
   - `units.ts` SI ↔ Phoenix 6 轉數制；`motors.ts` 馬達常數；`feedforward.ts` kG、kV、kA、等效質量
   - `profile.ts` Motion Magic 梯形軌跡；`controller/slot0.ts` Slot0 控制公式（含積分防飽和教學選項）
   - `physics/` 受控體（控制輸入 u 以電壓 [V] 表示，不是「電壓是力」）與 RK4 閉迴路模擬、達標標準 `spec.ts`、穩健性測試 `robustness.ts`、模型校正 `calibrate.ts`
+  - `arm/` 手臂前饋 `feedforward.ts`（kG·cos θ、轉動慣量）、受控體 `plant.ts`（共用 physics 的 simulate，`gravityCosine`）
   - `challenge.ts` 3F 挑戰模式出題與判斷；`twoPoint.ts` 兩點法量 kS、kG；`ratioSweep.ts` 1F 齒比掃描；`shareLink.ts` 分享機構資料的網址編碼；`paramDiff.ts` 參數組逐項比較
   - `log/` .wpilog 串流解析、寫入器、欄位對應與對齊
   - `analysis/` 步驟 0 資料檢查 `checks.ts`、切段 `segment.ts`、迴歸 `regression.ts`、診斷規則 `diagnose.ts`（決策 21–29）、SysId 比較 `sysid.ts`
   - `codegen/` Java 範本與 JSON 設定檔（**唯一做單位換算輸出的地方**）、`zip.ts` 不壓縮的 ZIP 寫入器
-- `src/schema/`：zod。`ParameterSet` 是全站唯一的參數格式
+- `src/schema/`：zod。`ParameterSet` 是電梯的參數格式，`armParameterSet.ts` 是手臂的（角度 rad，0 = 水平）
 - `src/workers/`：`log.worker.ts`、`sim.worker.ts`，資料用 Transferable Float64Array 傳
-- `src/pages/`：`home/`、`calculate/`（1F，含教學關卡 `lessons.tsx`、齒比掃描與分享 `RatioSweep.tsx`、完整子系統下載 `subsystemExport.ts`：用 `?raw` 直接打包 robot-example，改範例常數名稱要一起改）、`tuning/`（2F）、`simulate/`（3F，受控體開關 `plantKnobs.ts`、教學情境 `simScenarios.ts`、側視圖 `ElevatorView.tsx`、達標標準 `SpecEditor.tsx`、積分防飽和 `AntiWindupEditor.tsx`、照順序調 `TuningGuide.tsx`／`tuningSteps.ts`、挑戰、校正、穩健性測試各一個 Panel）、`learn/`（4F，單元一 `Unit1.tsx`、單元二 `Unit2.tsx`、單元三常見的坑 `Unit3.tsx`、單元四期末檢核 `Unit4.tsx`／`assessment.ts`、兩點法 `MeasureKsKg.tsx`、SysId 比較；程式片段 `snippets.ts` 摘自 robot-example，改範例要一起改）
-- `src/components/`：Chart（uPlot）、NumberField、Quiz、Exercise（填空練習）、ParamCard、ParamLibrary（參數庫，IndexedDB `src/storage/db.ts`）、Workflow（理論 → 鑑別 → 調參 → 驗證流程）；`src/app/`：store、Shell（井道導覽）、更新提示
+- `src/pages/`：`home/`、`calculate/`（1F，含教學關卡 `lessons.tsx`、齒比掃描與分享 `RatioSweep.tsx`、完整子系統下載 `subsystemExport.ts`：用 `?raw` 直接打包 robot-example，改範例常數名稱要一起改）、`tuning/`（2F）、`simulate/`（3F，受控體開關 `plantKnobs.ts`、教學情境 `simScenarios.ts`、側視圖 `ElevatorView.tsx`、達標標準 `SpecEditor.tsx`、積分防飽和 `AntiWindupEditor.tsx`、照順序調 `TuningGuide.tsx`／`tuningSteps.ts`、挑戰、校正、穩健性測試各一個 Panel）、`arm/`（手臂線：`armStore.tsx` 狀態、`ArmCalcPage`／`armLessons.tsx` 1F、`ArmSimPage`／`armSim.ts`／`armScenarios.ts`／`ArmView.tsx` 3F、2F／4F 暫時是 `ArmComingSoon`）、`learn/`（4F，單元一 `Unit1.tsx`、單元二 `Unit2.tsx`、單元三常見的坑 `Unit3.tsx`、單元四期末檢核 `Unit4.tsx`／`assessment.ts`、兩點法 `MeasureKsKg.tsx`、SysId 比較；程式片段 `snippets.ts` 摘自 robot-example，改範例要一起改）
+- `src/components/`：Chart（uPlot）、NumberField、Quiz、Exercise（填空練習）、ParamCard、ParamLibrary（參數庫，IndexedDB `src/storage/db.ts`）、Workflow（理論 → 鑑別 → 調參 → 驗證流程）；`src/app/`：store（含 `track`：電梯或手臂，存在 sessionStorage）、`Chooser.tsx` 進站選機構、Shell（井道導覽、換機構）、更新提示
 - `robot-example/`：機器人端 Java 範例（AdvantageKit + Phoenix 6，隊上 IO 架構）
 - `prototype/v0.1.html`：舊的單檔原型，只當參考
 
 ## 規則
 
-- 內部一律 SI（m、m/s、kg、V）。座標是**鼓輪線位移**；`controlTop` 只影響位置換算，不影響轉數制增益
+- 內部一律 SI（m、m/s、kg、V；手臂角度 rad，0 = 水平、往上為正，畫面顯示度）。座標是**鼓輪線位移**；`controlTop` 只影響位置換算，不影響轉數制增益
 - 前饋公式：`kG = (m_G·g − F_cb)·r/G · R/(n·kT)`、`kV = G/(r·Kv)`、`kA = m_A·r·R/(G·n·kT)`；`m_G = Σmᵢkᵢ`、`m_A = Σmᵢkᵢ²`
 - 控制器照 Phoenix 6：前饋用**參考**速度與加速度，只有 P、D 用誤差；kS 正負號跟 v_ref
 - kS、kI 預設 0（kS 可以在 1F 填量到的值）；參數缺值時要警告並用安全預設，**不可默默讀成 0**

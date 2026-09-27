@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SPEC, SPEC_PRESETS, describeSpec, diagnoseMove, isSpec, moveFailures } from './spec'
+import { ARM_DEFAULT_SPEC, ARM_SPEC_PRESETS, DEFAULT_SPEC, SPEC_PRESETS, describeSpec, diagnoseMove, fmtPos, isSpec, moveFailures } from './spec'
 import type { MoveMetrics } from './simulate'
 
 const move = (o: Partial<MoveMetrics>): MoveMetrics =>
@@ -32,7 +32,7 @@ describe('逐次移動的診斷', () => {
     const m = move({ overshoot: 0.02, settlingTime: null, saturationFraction: 0.1 })
     const d = diagnoseMove(m, DEFAULT_SPEC)
     expect(d.map((x) => x.key)).toEqual(['overshoot', 'settling', 'saturation'])
-    expect(d[0].actual).toBe('2.0 cm')
+    expect(d[0].actual).toBe('2 cm')
     expect(d[1].actual).toBe('沒穩定')
     for (const x of d) {
       expect(x.cause.length).toBeGreaterThan(5)
@@ -41,5 +41,17 @@ describe('逐次移動的診斷', () => {
   })
   it('都過就沒有診斷', () => {
     expect(diagnoseMove(move({}), DEFAULT_SPEC)).toEqual([])
+  })
+})
+
+describe('手臂用角度顯示', () => {
+  it('fmtPos：公尺顯示公分、弧度顯示度', () => {
+    expect(fmtPos(0.012)).toBe('1.2 cm')
+    expect(fmtPos(Math.PI / 180, 'rad')).toBe('1°')
+  })
+  it('手臂的標準都是合法的，說明用度', () => {
+    for (const p of ARM_SPEC_PRESETS) expect(isSpec(p.spec)).toBe(true)
+    expect(describeSpec(ARM_DEFAULT_SPEC, 'rad')).toContain('超調 ≤ 2°')
+    expect(diagnoseMove(move({ overshoot: 0.1 }), ARM_DEFAULT_SPEC, 'rad')[0].actual).toBe('5.7°')
   })
 })

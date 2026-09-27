@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { convert, jd, phoenix6_2026, toRobotConfig } from './index'
+import { convert, convertArm, jd, phoenix6_2026, toRobotConfig } from './index'
 import { DEFAULT_MECHANISM, ParameterSetSchema, type ParameterSet } from '../../schema/parameterSet'
 import { RobotConfigSchema } from '../../schema/robotConfig'
 
@@ -69,5 +69,16 @@ describe('codegen', () => {
     expect(jd(0.123456789)).toBe('0.123457')
     expect(jd(1e-7)).toMatch(/^0\.0+10*$/)
     expect(() => jd(NaN)).toThrow()
+  })
+})
+
+describe('手臂換算成 Phoenix 6 轉數制', () => {
+  it('每圈 2π rad：kV、kP 乘 2π，速度除 2π', () => {
+    const c = convertArm({ feedforward: { kS: 0.1, kG: 0.3, kV: 1, kA: 0.01 }, feedback: { kP: 10, kI: 0, kD: 0.5 }, motionMagic: { cruiseVelocity: Math.PI, acceleration: 2 * Math.PI } })
+    expect(c.slot0.kV).toBeCloseTo(2 * Math.PI)
+    expect(c.slot0.kP).toBeCloseTo(20 * Math.PI)
+    expect(c.slot0.kG).toBeCloseTo(0.3)
+    expect(c.cruiseVelocity).toBeCloseTo(0.5)
+    expect(c.acceleration).toBeCloseTo(1)
   })
 })

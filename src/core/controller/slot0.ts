@@ -17,6 +17,8 @@
  *   izone     誤差超過 iZone 就把積分清成 0，只在接近目標時積分（WPILib PIDController.setIZone 的做法）
  *   backCalc  反算：輸出被限制時，把「想要的 − 實際給的」回饋到積分，讓積分往回退（時間常數 tracking）
  */
+export type GravityType = 'constant' | 'armCosine'
+
 export type AntiWindupMode = 'none' | 'clamp' | 'izone' | 'backCalc'
 export interface AntiWindup {
   mode: AntiWindupMode
@@ -54,6 +56,12 @@ export class Slot0Controller {
   gains: Slot0Gains
   peakVoltage: number
   antiWindup: AntiWindup
+  /**
+   * 重力型態：電梯是常數 kG；手臂（Phoenix 6 GravityType = Arm_Cosine）是 kG·cos(角度)。
+   * 這裡用參考角度算 cos（跟 WPILib ArmFeedforward 用 setpoint 一樣）；Phoenix 6 實際用哪個角度以 CTRE 文件為準，
+   * 跟得上軌跡時兩者幾乎一樣。
+   */
+  gravityType: GravityType = 'constant'
 
   constructor(gains: Slot0Gains, peakVoltage = 12, antiWindup: AntiWindup = { mode: 'none' }) {
     this.gains = gains
@@ -76,7 +84,8 @@ export class Slot0Controller {
     const aw = this.antiWindup
     const clamp = (v: number) => Math.max(-this.peakVoltage, Math.min(this.peakVoltage, v))
 
-    const feedforward = g.kS * Math.sign(ref.vel) + g.kG + g.kV * ref.vel + g.kA * ref.acc
+    const gravity = this.gravityType === 'armCosine' ? g.kG * Math.cos(ref.pos) : g.kG
+    const feedforward = g.kS * Math.sign(ref.vel) + gravity + g.kV * ref.vel + g.kA * ref.acc
     const proportional = g.kP * e
     const derivative = g.kD * eDot
 
