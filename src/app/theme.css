@@ -168,6 +168,23 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .mini-shaft .tgt { border: 1.5px dashed var(--steel) }
 .mini-shaft .cab { background: var(--yellow) }
 .mini-shaft .scale { position: absolute; right: 4px; top: 8px; bottom: 8px; display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums }
+.playbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center }
+.playbar input[type="range"] { flex: 1 1 160px; min-width: 0; accent-color: var(--blue) }
+.playbar .num-w { font-variant-numeric: tabular-nums; min-width: 120px }
+.scen > summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
+.scen-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px }
+.scen-list button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink) }
+.scen-card { margin-top: 14px; border-left: 3px solid var(--yellow); padding: 2px 0 2px 14px; font-size: 14.5px }
+.scen-card h3 { margin: 0 0 6px }
+.scen-card p { margin: 0 0 8px }
+.scen-card dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 0 0 10px; font-size: 13.5px }
+.scen-card dt { color: var(--ink-3); white-space: nowrap }
+.scen-card dd { margin: 0 }
+.toggles { list-style: none; margin: 0; padding: 0 }
+.toggles li { padding: 8px 0; border-top: 1px solid var(--line-2) }
+.toggles li:first-child { border-top: 0 }
+.toggles p { margin: 2px 0 6px 24px }
+.toggles .fields { margin: 4px 0 4px 24px }
 .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel) }
 .metrics div { padding: 10px 14px; border-right: 1px solid var(--line-2); min-width: 0 }
 .metrics div:last-child { border-right: 0 }

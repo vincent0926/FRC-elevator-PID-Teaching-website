@@ -115,3 +115,92 @@ describe('閉迴路模擬', () => {
     expect(r.moves[1].steadyStateError).toBeLessThan(0.001)
   })
 })
+
+describe('真實模型的各項開關（Phase 3 步驟 5：變化方向要符合物理直覺）', () => {
+  const mm = { cruiseVelocity: ff.cruiseVelocity, acceleration: ff.acceleration }
+  const gains = { kS: 0, kG: ff.kG, kV: ff.kV, kA: ff.kA, kP: 30, kI: 0, kD: 0 }
+  const run = (over: Partial<Parameters<typeof simulate>[0]> = {}, plantOver: Partial<PlantParams> = {}) =>
+    simulate({
+      plant: { ...ideal, minPosition: 0, maxPosition: 1.2, ...plantOver },
+      gains,
+      motionMagic: mm,
+      controlPeriod: 0.001,
+      initialPosition: 0.1,
+      moves: [
+        { time: 0.2, goal: 0.9 },
+        { time: 2.5, goal: 0.1 },
+      ],
+      duration: 5,
+      ...over,
+    })
+
+  it('齒輪箱效率：固定電壓下最後速度 = (V − kG/η)/kV', () => {
+    const eta = 0.8
+    const p = { ...ideal, gearboxEfficiency: eta }
+    let s = { pos: 0, vel: 0 }
+    for (let i = 0; i < 3000; i++) s = stepRK4(p, s, 8, 0.001)
+    expect(s.vel).toBeCloseTo((8 - ideal.kG / eta) / ideal.kV, 3)
+  })
+
+  it('齒輪箱效率越低，跟隨誤差越大', () => {
+    expect(run({}, { gearboxEfficiency: 0.7 }).moves[0].maxFollowingError).toBeGreaterThan(run().moves[0].maxFollowingError)
+  })
+
+  it('摩擦不對稱：往上摩擦大時，往上比往下落後更多', () => {
+    const r = run({}, { frictionKs: 0.5, frictionKsDown: 0.05 })
+    expect(r.moves[0].maxFollowingError).toBeGreaterThan(r.moves[1].maxFollowingError * 2)
+  })
+
+  it('Slot 切換：往下的移動用 Slot 1，各自補摩擦後兩個方向都準', () => {
+    const plant = { frictionKs: 0.5, frictionKsDown: 0.1 }
+    const one = run({}, plant)
+    const two = run({ slotByDirection: { up: { kS: 0.5, kG: ff.kG }, down: { kS: 0.1, kG: ff.kG } } }, plant)
+    expect(two.moves.map((m) => m.slot)).toEqual([0, 1])
+    expect(one.moves.map((m) => m.slot)).toEqual([0, 0])
+    expect(two.moves[0].maxFollowingError).toBeLessThan(one.moves[0].maxFollowingError)
+    expect(two.moves[1].maxFollowingError).toBeLessThan(0.005)
+  })
+
+  it('換級 kG 跳變：超過換級高度後停在目標下面', () => {
+    const r = run({ gains: { ...gains, kP: 10 } }, { kGStep: { position: 0.6, delta: 0.3 } })
+    // 穩態 kP·e = 跳變量 → e = 0.3 / 10 = 3 cm
+    expect(r.moves[0].steadyStateError).toBeCloseTo(0.03, 2)
+  })
+
+  it('感測延遲讓 kP 大時更容易振盪', () => {
+    const g = { ...gains, kP: 150, kD: 0 }
+    const noDelay = run({ gains: g })
+    const delayed = run({ gains: g, sensor: { delay: 0.03, positionNoise: 0, velocityNoise: 0 } })
+    expect(delayed.moves[0].overshoot).toBeGreaterThan(noDelay.moves[0].overshoot + 0.005)
+  })
+
+  it('感測雜訊加上 kD 很大，到位後輸出電壓亂跳', () => {
+    const sensor = { delay: 0, positionNoise: 0.0005, velocityNoise: 0.01 }
+    const small = run({ sensor, gains: { ...gains, kD: 0.5 } })
+    const big = run({ sensor, gains: { ...gains, kD: 20 } })
+    expect(big.moves[0].holdVoltageRipple).toBeGreaterThan(small.moves[0].holdVoltageRipple * 5)
+  })
+
+  it('同一組輸入雜訊可重現', () => {
+    const sensor = { delay: 0.005, positionNoise: 0.001, velocityNoise: 0.01, seed: 1 }
+    expect(run({ sensor }).pos[3000]).toBe(run({ sensor }).pos[3000])
+  })
+
+  it('關掉電壓飽和時，輸出可以超過電池電壓', () => {
+    const fast = { cruiseVelocity: 10, acceleration: 40 }
+    const on = run({ motionMagic: fast })
+    const off = run({ motionMagic: fast, voltageLimit: false })
+    expect(Math.max(...on.voltage)).toBeLessThanOrEqual(12 + 1e-9)
+    expect(Math.max(...off.voltage)).toBeGreaterThan(12)
+  })
+
+  it('plantFromMechanism 的單獨開關', () => {
+    const p = plantFromMechanism(DEFAULT_MECHANISM, ff, { realistic: true, currentLimit: false, batterySag: false, frictionKs: 0.3, frictionKsDown: 0.1 })
+    expect(p.statorCurrentLimit).toBeNull()
+    expect(p.batteryResistance).toBe(0)
+    expect(p.frictionKsDown).toBe(0.1)
+    const ideal2 = plantFromMechanism(DEFAULT_MECHANISM, ff, { realistic: false, gearboxEfficiency: 0.5, kGStepDelta: 1 })
+    expect(ideal2.gearboxEfficiency).toBe(1)
+    expect(ideal2.kGStep).toBeUndefined()
+  })
+})
