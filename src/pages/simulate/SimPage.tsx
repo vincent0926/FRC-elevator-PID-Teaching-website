@@ -11,6 +11,8 @@ import { runSimulation } from '../../workers/client'
 import { ExportPanel } from '../calculate/ExportPanel'
 import { CalibrationPanel } from './CalibrationPanel'
 import { ChallengePanel, type ChallengeState } from './ChallengePanel'
+import { ApproxNote, PLANT_ASSUMPTIONS } from '../../components/ApproxNote'
+import { ControllerSettings } from './ControllerSettings'
 import { CustomEditor } from './CustomEditor'
 import { MetricsTable } from './Metrics'
 import { MiniShaft, PlaybackBar, usePlayback } from './MiniShaft'
@@ -141,9 +143,13 @@ export function SimPage() {
       { label: '前饋', color: '--green', values: result.feedforward },
       { label: '回授（P+I+D）', color: '--red', values: result.feedback },
     ]
-    const cur: ChartSeries[] = [{ label: '每顆馬達 Stator 電流', color: '--amber', values: result.statorCurrent }]
+    const perMotor = Math.max(1, mechanism.motorCount)
+    const cur: ChartSeries[] = [
+      { label: '每顆馬達 Stator 電流', color: '--amber', values: result.statorCurrent },
+      { label: '每顆馬達電池端（Supply）電流', color: '--blue', dash: true, values: result.supplyCurrent.map((x) => x / perMotor) },
+    ]
     return { pos, vel, err: errS, volt, cur }
-  }, [result, other, otherSource])
+  }, [result, other, otherSource, mechanism.motorCount])
 
   const editCustom = (patch: (p: ParameterSet) => ParameterSet) => custom && setCustom(patch(custom))
 
@@ -211,7 +217,7 @@ export function SimPage() {
           <p className="lead">上機前先確認參數不會出事。改一個數字看看會怎樣，不用怕撞壞機構。</p>
         </div>
         <span className="phase">
-          {challenge ? '挑戰中（受控體隱藏）' : knobs.calibrated ? '已校正模型' : knobs.realistic ? '真實模型' : '理想模型'}・{location === 'talonfx' ? 'TalonFX 1 kHz' : 'roboRIO 50 Hz'}
+          {challenge ? '挑戰中（受控體隱藏）' : knobs.calibrated ? '已校正模型' : knobs.realistic ? '真實模型' : '理想模型'}・{knobs.realistic && !challenge ? (knobs.controllerType === 'sparkmax' ? 'SPARK MAX' : 'TalonFX') + ' ' : ''}{location === 'talonfx' ? '1 kHz' : 'roboRIO 50 Hz'}
         </span>
       </div>
 
@@ -323,6 +329,8 @@ export function SimPage() {
           </div>
         ) : (
         <PlantPanel
+          statorDefault={mechanism.statorCurrentLimit}
+          travel={mechanism.travel}
           calibration={calibration}
           onCalibrated={() => calibration && applyCalibration(calibration)}
           knobs={knobs}
@@ -384,6 +392,8 @@ function ScenarioPicker({ active, onPick, onLeave }: { active: SimScenario | nul
 }
 
 function PlantPanel({
+  statorDefault,
+  travel,
   calibration,
   onCalibrated,
   knobs,
@@ -395,6 +405,8 @@ function PlantPanel({
   setPeriodOverride,
   continuous,
 }: {
+  statorDefault: number
+  travel: number
   calibration: Calibration | null
   onCalibrated: () => void
   knobs: PlantKnobs
@@ -426,8 +438,16 @@ function PlantPanel({
           ? `重力、kV、慣性、摩擦用「${calibration.logName}」校正過（重播誤差 ${(calibration.rms * 100).toFixed(1)} cm）。改任何一項就變回一般的真實模型。`
           : knobs.realistic
           ? '每一項都可以單獨開關。一次只開一項，看圖怎麼變，就知道它對電梯的影響。'
-          : '沒有摩擦、沒有電流限制，只有重力、慣性和反電動勢（電壓最多到電池電壓）。理論值在這裡應該幾乎完美。'}
+          : '沒有摩擦、沒有電流限制、沒有控制器的其他限制，只有重力、慣性和反電動勢（電壓最多到電池電壓）。理論值在這裡應該幾乎完美。馬達控制器的設定（電流限制、軟體限位、輸出上限）在真實模型裡。'}
       </p>
+      <ApproxNote
+        summary={
+          knobs.calibrated
+            ? '校正只調了重力、kV、慣性、摩擦四個數，其他簡化還在。用來預覽趨勢、抓明顯的錯，數字以實測為準。'
+            : '模擬器用來理解趨勢、先抓出明顯的錯（振盪、飽和、撞限位），不保證跟真的機器人一模一樣。數字以實測為準。'
+        }
+        items={PLANT_ASSUMPTIONS}
+      />
       {knobs.realistic && (
         <ul className="toggles">
           {TOGGLES.map((t) => (
@@ -466,6 +486,7 @@ function PlantPanel({
           ))}
         </ul>
       )}
+      {knobs.realistic && <ControllerSettings knobs={knobs} set={set} statorDefault={statorDefault} travel={travel} />}
       <div className="fields" style={{ marginTop: 12 }}>
         <NumberField label="電池電壓" value={knobs.batteryVoltage} min={6} max={13.5} onChange={(v) => set({ batteryVoltage: v })} unit="V" />
         <span />
@@ -486,7 +507,7 @@ function PlantPanel({
       <div className="seg" role="group" aria-label="控制器位置">
         {(['talonfx', 'roborio'] as const).map((l) => (
           <button key={l} type="button" aria-pressed={location === l && periodOverride === null} onClick={() => setLocation(l)}>
-            {l === 'talonfx' ? 'TalonFX（1 kHz）' : 'roboRIO（50 Hz）'}
+            {l === 'talonfx' ? '馬達控制器內建（1 kHz）' : 'roboRIO（50 Hz）'}
           </button>
         ))}
       </div>

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { convert } from '../core/codegen'
 import type { ParameterSet } from '../schema/parameterSet'
 
@@ -12,7 +13,10 @@ const SOURCE_LABEL: Record<ParameterSet['source'], string> = {
 
 const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
-export function ParamCard({ ps, notes }: { ps: ParameterSet; notes?: Partial<Record<string, string>> }) {
+/**
+ * tags：每個參數旁邊的小標籤（1F 用來標「算／量／決定」），key 是參數名稱。
+ */
+export function ParamCard({ ps, notes, tags }: { ps: ParameterSet; notes?: Partial<Record<string, string>>; tags?: Partial<Record<string, ReactNode>> }) {
   const c = convert(ps)
   const { kS, kG, kV, kA } = ps.feedforward
   const { kP, kI, kD } = ps.feedback
@@ -35,7 +39,10 @@ export function ParamCard({ ps, notes }: { ps: ParameterSet; notes?: Partial<Rec
       <dl className="readout">
         {rows.map(([k, v, u, rot]) => (
           <div key={k} style={{ display: 'contents' }}>
-            <dt>{k}</dt>
+            <dt>
+              {k}
+              {tags?.[k]}
+            </dt>
             <dd>{v}</dd>
             <span className="u">{u}</span>
             <span className="rot">{rot}</span>

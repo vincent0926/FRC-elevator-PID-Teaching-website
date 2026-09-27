@@ -188,4 +188,43 @@ export const SIM_SCENARIOS: SimScenario[] = [
       location: 'talonfx',
     }),
   },
+  {
+    id: 'softLimit',
+    title: '目標超過軟體限位',
+    concept:
+      '軟體限位設在行程 60%，目標卻是 75%。電梯到了限位，控制器就把往上的輸出關掉（neutral）；可是電梯停著要靠 kG 往上撐，輸出一關就往下掉，掉到限位下面又打開，所以會在限位附近一直抖。',
+    lookFor: '位置停在 60% 左右上下抖；電壓圖在 0 和 kG 之間跳；指標表下面有「軟體限位擋住了」。',
+    tryNext: '把目標改到限位以下（例如 0.7 m），或把限位調高。限位是保護用的，正常動作不應該碰到它。',
+    setup: (t) => ({
+      params: params(t, '情境：軟體限位', { ff: { kS: FRICTION } }),
+      knobs: { realistic: true, softLimit: true, softForward: Math.round(t.mechanism.travel * 0.6 * 100) / 100, softReverse: 0 },
+      location: 'talonfx',
+    }),
+  },
+  {
+    id: 'supplyLimit',
+    title: 'Supply 電流限制設太低',
+    concept:
+      'Supply 電流限制管的是從電池拿多少電，用來保護斷路器。設成每顆 15 A 時，加速段需要的電流拿不到，控制器降電壓，電梯追不上軌跡。',
+    lookFor: '電流圖：藍色虛線（電池端電流）在加速時被壓平在 15 A；位置在加速段落後。',
+    tryNext: '把 Supply 限制調到 40 A 左右，或乾脆關掉只留 Stator 限制，比較加速段的跟隨誤差。',
+    setup: (t) => ({
+      params: params(t, '情境：Supply 限制太低', { ff: { kS: FRICTION } }),
+      knobs: { realistic: true, supplyLimit: true, supplyLimitA: 15 },
+      location: 'talonfx',
+    }),
+  },
+  {
+    id: 'sparkNoComp',
+    title: 'SPARK MAX 沒開電壓補償',
+    concept:
+      'SPARK MAX 的閉迴路輸出是佔空比，不是伏特。kG 是用 12 V 算的，電池只剩 10.5 V 又沒開電壓補償時，同樣的佔空比只給 kG 的 88%，電梯撐不住，停得比目標低。',
+    lookFor: '停住時位置在目標下面，而且電池越低差越多；回授輸出一直偏正（在幫 kG 補）。',
+    tryNext: '到「馬達控制器」打開電壓補償，或換成 TalonFX 比較（Phoenix 6 的 VoltageOut 本來就是伏特）。',
+    setup: (t) => ({
+      params: params(t, '情境：SPARK MAX 沒電壓補償', { ff: { kS: FRICTION }, fb: { kP: kPFromVoltsPerCm(0.1) } }),
+      knobs: { realistic: true, batteryVoltage: 10.5, controllerType: 'sparkmax', voltageComp: false },
+      location: 'talonfx',
+    }),
+  },
 ]

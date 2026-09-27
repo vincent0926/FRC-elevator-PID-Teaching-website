@@ -2,7 +2,9 @@ import type { ElevatorMechanism } from '../../schema/parameterSet'
 import type { FeedforwardResult } from '../feedforward'
 
 /**
- * 電梯受控體，以「伏特」為力的單位（除以 kA 就是加速度）：
+ * 電梯受控體。控制輸入 u 以電壓 [V] 表示，方程式每一項都換算成「相當於多少伏特」
+ * （不是說電壓是力，而是把控制輸入統一寫成電壓，讓電氣模型與機械模型直接接起來；
+ *  真正的力 F = (u − kV·v)·n·kT·G/(R·r)）：
  *
  *   kA · a = u_eff − kV · v − kG − kS_friction · sgn(v)
  *
@@ -37,6 +39,8 @@ export interface PlantParams {
   motorCount: number
   /** 每顆馬達 Stator 電流上限（A）；null 表示不限制 */
   statorCurrentLimit: number | null
+  /** 每顆馬達 Supply（電池端）電流上限（A）；TalonFX 才有，沒給表示不限制 */
+  supplyCurrentLimit?: number | null
   batteryVoltage: number
   /** 電池加線路內阻（Ω）；理想模型為 0 */
   batteryResistance: number
@@ -62,6 +66,10 @@ export interface PlantOptions {
   gearboxEfficiency?: number
   /** 連續式換級時 kG 跳多少（V），在行程一半換級 */
   kGStepDelta?: number
+  /** Stator 電流上限（A），沒給就用機構資料的值 */
+  statorCurrentLimit?: number
+  /** Supply 電流上限（A），null 或沒給表示不限制 */
+  supplyCurrentLimit?: number | null
 }
 
 export function plantFromMechanism(m: ElevatorMechanism, ff: FeedforwardResult, opt: PlantOptions): PlantParams {
@@ -77,7 +85,8 @@ export function plantFromMechanism(m: ElevatorMechanism, ff: FeedforwardResult, 
     kGStep: opt.realistic && opt.kGStepDelta ? { position: m.travel / 2, delta: opt.kGStepDelta } : undefined,
     motorResistance: ff.motorResistance,
     motorCount: m.motorCount,
-    statorCurrentLimit: opt.realistic && (opt.currentLimit ?? true) ? m.statorCurrentLimit : null,
+    statorCurrentLimit: opt.realistic && (opt.currentLimit ?? true) ? (opt.statorCurrentLimit ?? m.statorCurrentLimit) : null,
+    supplyCurrentLimit: opt.realistic ? (opt.supplyCurrentLimit ?? null) : null,
     batteryVoltage: opt.batteryVoltage ?? 12.5,
     batteryResistance: opt.realistic && (opt.batterySag ?? true) ? 0.02 : 0,
     minPosition: 0,
@@ -98,17 +107,44 @@ export interface Drive {
   /** 每顆馬達 Stator 電流 */
   statorCurrent: number
   currentLimited: boolean
+  /** 被 Supply 電流限制壓下來 */
+  supplyLimited: boolean
 }
 
-export function applyCurrentLimit(p: PlantParams, u: number, vel: number): Drive {
+/**
+ * 控制器輸出 u 之後，馬達真正拿到的電壓與電流。
+ *
+ * - Stator 電流 I = (u − kV·v) / R；超過 Stator 上限時控制器降電壓，讓 |I| = 上限
+ * - Supply（電池端）電流 ≈ I × u / V電池（佔空比 × Stator 電流），只在馬達出力（u 與 I 同號）時限制。
+ *   限制時解 R·I² + b·I = I_sup·V電池（b 是反電動勢在出力方向的分量）
+ * - coast：輸出 neutral 且設成 Coast，馬達等於斷路，電流是 0（Brake 則是短路，等於 u = 0）
+ */
+export function applyCurrentLimit(p: PlantParams, u: number, vel: number, coast = false): Drive {
   const backEmf = p.kV * vel
-  let current = (u - backEmf) / p.motorResistance
+  if (coast) return { effectiveVoltage: backEmf, statorCurrent: 0, currentLimited: false, supplyLimited: false }
+  const R = p.motorResistance
+  let current = (u - backEmf) / R
   let limited = false
+  let supplyLimited = false
   if (p.statorCurrentLimit !== null && Math.abs(current) > p.statorCurrentLimit) {
     current = Math.sign(current) * p.statorCurrentLimit
     limited = true
   }
-  return { effectiveVoltage: limited ? backEmf + current * p.motorResistance : u, statorCurrent: current, currentLimited: limited }
+  const lim = p.supplyCurrentLimit
+  if (lim != null && lim > 0 && current !== 0) {
+    const dir = Math.sign(current)
+    const uEff = backEmf + current * R
+    const supply = (current * uEff) / p.batteryVoltage
+    if (supply > lim) {
+      const b = dir * backEmf
+      const a = (-b + Math.sqrt(b * b + 4 * R * lim * p.batteryVoltage)) / (2 * R)
+      if (a < Math.abs(current)) {
+        current = dir * a
+        supplyLimited = true
+      }
+    }
+  }
+  return { effectiveVoltage: limited || supplyLimited ? backEmf + current * R : u, statorCurrent: current, currentLimited: limited, supplyLimited }
 }
 
 /** 移動方向 dir（+1 往上、−1 往下）的摩擦 */
@@ -125,8 +161,8 @@ export function gravity(p: PlantParams, pos: number): number {
   return g
 }
 
-export function acceleration(p: PlantParams, s: PlantState, u: number): number {
-  const { effectiveVoltage } = applyCurrentLimit(p, u, s.vel)
+export function acceleration(p: PlantParams, s: PlantState, u: number, coast = false): number {
+  const { effectiveVoltage } = applyCurrentLimit(p, u, s.vel, coast)
   let net = (p.gearboxEfficiency ?? 1) * (effectiveVoltage - p.kV * s.vel) - gravity(p, s.pos)
   if (hasFriction(p)) {
     if (Math.abs(s.vel) > STICK_VELOCITY) {
@@ -141,21 +177,21 @@ export function acceleration(p: PlantParams, s: PlantState, u: number): number {
 }
 
 /** 固定輸入電壓 u 下前進 dt（RK4），並處理機械上下限與靜摩擦。 */
-export function stepRK4(p: PlantParams, s: PlantState, u: number, dt: number): PlantState {
-  const a1 = acceleration(p, s, u)
+export function stepRK4(p: PlantParams, s: PlantState, u: number, dt: number, coast = false): PlantState {
+  const a1 = acceleration(p, s, u, coast)
   const s2 = { pos: s.pos + 0.5 * dt * s.vel, vel: s.vel + 0.5 * dt * a1 }
-  const a2 = acceleration(p, s2, u)
+  const a2 = acceleration(p, s2, u, coast)
   const s3 = { pos: s.pos + 0.5 * dt * s2.vel, vel: s.vel + 0.5 * dt * a2 }
-  const a3 = acceleration(p, s3, u)
+  const a3 = acceleration(p, s3, u, coast)
   const s4 = { pos: s.pos + dt * s3.vel, vel: s.vel + dt * a3 }
-  const a4 = acceleration(p, s4, u)
+  const a4 = acceleration(p, s4, u, coast)
 
   let pos = s.pos + (dt / 6) * (s.vel + 2 * s2.vel + 2 * s3.vel + s4.vel)
   let vel = s.vel + (dt / 6) * (a1 + 2 * a2 + 2 * a3 + a4)
 
   // 靜摩擦：速度穿越 0 而且力不夠大時停住
   if (hasFriction(p) && (Math.sign(vel) !== Math.sign(s.vel) || Math.abs(vel) < STICK_VELOCITY)) {
-    if (acceleration(p, { pos, vel: 0 }, u) === 0) vel = 0
+    if (acceleration(p, { pos, vel: 0 }, u, coast) === 0) vel = 0
   }
 
   if (pos < p.minPosition) {

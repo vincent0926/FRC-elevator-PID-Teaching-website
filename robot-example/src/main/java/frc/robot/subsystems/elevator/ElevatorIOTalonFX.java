@@ -32,6 +32,10 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   private static final int FOLLOWER_ID = 21;
   private static final String CAN_BUS = "rio";
   private static final double STATOR_CURRENT_LIMIT = 60.0;
+  private static final double SUPPLY_CURRENT_LIMIT = 40.0;
+  /** 輸出上限（V）。第一次上機可以先設小一點，確認沒問題再放寬；比 kG 小就撐不住電梯 */
+  private static final double PEAK_FORWARD_VOLTAGE = 12.0;
+  private static final double PEAK_REVERSE_VOLTAGE = -12.0;
   private static final double MIN_METERS = 0.0;
   private static final double MAX_METERS = 1.2;
 
@@ -85,6 +89,11 @@ public class ElevatorIOTalonFX implements ElevatorIO {
     // 單元零第 4 步：限制
     config.CurrentLimits.StatorCurrentLimit = STATOR_CURRENT_LIMIT;
     config.CurrentLimits.StatorCurrentLimitEnable = true;
+    // 電池端電流限制：保護斷路器、避免電池電壓掉太多。低速時佔空比小，要比 Stator 低才會作用
+    config.CurrentLimits.SupplyCurrentLimit = SUPPLY_CURRENT_LIMIT;
+    config.CurrentLimits.SupplyCurrentLimitEnable = true;
+    config.Voltage.PeakForwardVoltage = PEAK_FORWARD_VOLTAGE;
+    config.Voltage.PeakReverseVoltage = PEAK_REVERSE_VOLTAGE;
     config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = MAX_METERS / ElevatorGains.METERS_PER_ROTATION;
     config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
     config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = MIN_METERS / ElevatorGains.METERS_PER_ROTATION;

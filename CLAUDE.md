@@ -18,7 +18,7 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
 - `src/core/`：純 TypeScript，**不可 import React 或 DOM**，Web Worker 與測試都直接用
   - `units.ts` SI ↔ Phoenix 6 轉數制；`motors.ts` 馬達常數；`feedforward.ts` kG、kV、kA、等效質量
   - `profile.ts` Motion Magic 梯形軌跡；`controller/slot0.ts` Slot0 控制公式
-  - `physics/` 受控體（伏特為力的單位）與 RK4 閉迴路模擬、達標標準 `spec.ts`、穩健性測試 `robustness.ts`、模型校正 `calibrate.ts`
+  - `physics/` 受控體（控制輸入 u 以電壓 [V] 表示，不是「電壓是力」）與 RK4 閉迴路模擬、達標標準 `spec.ts`、穩健性測試 `robustness.ts`、模型校正 `calibrate.ts`
   - `challenge.ts` 3F 挑戰模式出題與判斷
   - `log/` .wpilog 串流解析、寫入器、欄位對應與對齊
   - `analysis/` 步驟 0 資料檢查 `checks.ts`、切段 `segment.ts`、迴歸 `regression.ts`、診斷規則 `diagnose.ts`（決策 21–29）、SysId 比較 `sysid.ts`

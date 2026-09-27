@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react'
 import { Chart, type ChartSeries } from '../../components/Chart'
+import { ApproxNote } from '../../components/ApproxNote'
 import type { QuizDef } from '../../components/Quiz'
 import { PROFILE_SAFETY_FACTOR, type FeedforwardResult } from '../../core/feedforward'
 import { motorModel } from '../../core/motors'
@@ -46,7 +47,8 @@ function Physics({ m, ff }: LessonCtx) {
         為什麼次方不一樣？鼓輪拉 1 公分，第 i 級升高 kᵢ 公分，重力做的功是 mᵢ·g·kᵢ，所以重力乘一次 kᵢ；
         第 i 級的速度是 kᵢ 倍，動能 ½·mᵢ·(kᵢ·v)² 裡有 kᵢ²，所以慣性乘兩次。直接把質量相加，kG 和 kA 都會算錯。
       </p>
-      <table className="tbl" style={{ margin: '8px 0 12px' }}>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="tbl" style={{ margin: '8px 0 12px' }}>
         <thead>
           <tr>
             <th>項目</th>
@@ -80,6 +82,7 @@ function Physics({ m, ff }: LessonCtx) {
           </tr>
         </tbody>
       </table>
+      </div>
       <p>
         重力在鼓輪上是 m_G·g − 配重 = <b>{f(ff.netGravityForce, 1)} N</b>。經過半徑 {f(m.drumRadius * 1000, 1)} mm 的鼓輪和 {f(m.gearRatio, 2)}:1 的齒比，
         分給 {m.motorCount} 顆馬達，每顆只要出 <b>{f(torquePerMotor, 3)} N·m</b> 就能撐住。
@@ -98,7 +101,8 @@ function Motor({ m }: LessonCtx) {
       <div className="formula">{`V = I · R + ω / Kv        電壓 = 推電流 + 抵銷反電動勢
 τ = kT · I                扭矩只跟電流有關`}</div>
       <p>這三個常數可以從馬達規格表的四個數字（堵轉扭矩、堵轉電流、空轉轉速、空轉電流）算出來：</p>
-      <table className="tbl" style={{ margin: '8px 0 12px' }}>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="tbl" style={{ margin: '8px 0 12px' }}>
         <tbody>
           <tr>
             <td>{mm.label} 繞組電阻 R = 12 V ÷ 堵轉電流 {mm.stallCurrent} A</td>
@@ -114,6 +118,7 @@ function Motor({ m }: LessonCtx) {
           </tr>
         </tbody>
       </table>
+      </div>
       <p>
         重點：<b>轉得越快，反電動勢吃掉的電壓越多</b>，剩下能推電流、產生扭矩的電壓越少。所以電梯跑得越快，能用來加速的力越小，最高速度也有上限。
       </p>
@@ -123,6 +128,8 @@ function Motor({ m }: LessonCtx) {
 
 function Derive({ m, ff }: LessonCtx) {
   const mm = motorModel(m.motor)
+  // 扣掉反電動勢後，每 1 V 對應的力（N/V）
+  const newtonsPerVolt = (m.motorCount * mm.kT * m.gearRatio) / (mm.R * m.drumRadius)
   return (
     <>
       <p>把第 1、2 關串起來。前饋就是「照物理算，要讓電梯這樣動需要多少伏特」：</p>
@@ -140,6 +147,23 @@ kA：每 1 m/s² 推動慣性要的電壓
         控制器每個週期輸出 <code>kS·sgn(v) + kG + kV·v + kA·a</code>，其中 v、a 是 Motion Magic 軌跡的<b>參考</b>速度和加速度，不是量到的值。
         kS 是摩擦，理論上算不出來，先填 0，上機後由調參建議量出來。
       </p>
+      <div className="note">
+        <b>為什麼參數的單位都是伏特？</b>控制輸入 u 以電壓 [V] 表示。這裡不是說「電壓是力」，而是將馬達控制輸入統一表示成電壓，使電氣模型與機械模型可以直接連接：
+        扣掉反電動勢之後剩下的電壓推動電流，電流產生扭矩，扭矩經過齒輪和鼓輪變成力。
+        <div className="formula" style={{ margin: '8px 0 4px' }}>{`力 F = (u − kV·v) × n·kT·G / (R·r)
+     = (u − kV·v) × ${f(newtonsPerVolt, 1)} N/V     （你的電梯）
+檢查：kG × ${f(newtonsPerVolt, 1)} = ${f(ff.kG * newtonsPerVolt, 1)} N ＝ 重力 − 配重 ${f(ff.netGravityForce, 1)} N`}</div>
+        所以 kG、kS 是「要多少伏特才撐得住／推得動」，kV、kA 是「每 1 m/s、每 1 m/s² 要多少伏特」。
+      </div>
+      <ApproxNote
+        summary="理論值是用簡化的物理算的，上機後 kG、kA 要再量、kS 一定要量（1F 最下面有對照表）。"
+        items={[
+          '質量是你填的數字：CAD 或估計的質量常常少算螺絲、線材、護板。',
+          '馬達用規格表的常數（R、kT、Kv），真的馬達熱了會變。',
+          '沒有算摩擦（kS）和齒輪箱效率，所以真的 kG 通常比理論大一點。',
+          '串級式等效質量假設每一級都照速度比同步移動，沒有繩子、鏈條的伸長和晃動。',
+        ]}
+      />
       <p>
         能跑多快？計算電壓 {f(m.calcVoltage, 1)} V 扣掉 kG 後全部拿來抵反電動勢：最高速度 ({f(m.calcVoltage, 1)} − {f(ff.kG)}) ÷ {f(ff.kV)} ={' '}
         <b>{f(ff.maxVelocity, 2)} m/s</b>。Motion Magic 先用上限的 {PROFILE_SAFETY_FACTOR * 100}%，留電壓給 PID 修正。
