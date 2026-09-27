@@ -1,11 +1,16 @@
 package frc.robot.subsystems.elevator;
 
+import static edu.wpi.first.units.Units.Second;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
+
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -19,6 +24,9 @@ public class Elevator extends SubsystemBase {
   private static final double STALL_CURRENT_AMPS = 50.0;
   private static final double STALL_VELOCITY = 0.02;
   private static final double FAULT_TIME_SEC = 0.3;
+  // TODO 依行程修改：SysId 測試到這兩個高度就自動停（留足夠的煞車距離）
+  private static final double SYSID_MIN_METERS = 0.10;
+  private static final double SYSID_MAX_METERS = 1.05;
 
   private final ElevatorIO io;
   private final ElevatorIOInputsAutoLogged inputs = new ElevatorIOInputsAutoLogged();
@@ -28,9 +36,25 @@ public class Elevator extends SubsystemBase {
   private double goalMeters = 0.0;
   private double faultSince = Double.NaN;
   private boolean safetyStopped = false;
+  private boolean sysIdActive = false;
+  private final SysIdRoutine sysId;
 
   public Elevator(ElevatorIO io) {
     this.io = io;
+    // 單元二：電梯行程短，步階電壓和 ramp 都比預設小；每個測試最多 5 秒
+    sysId =
+        new SysIdRoutine(
+            new SysIdRoutine.Config(
+                Volts.per(Second).of(0.5),
+                Volts.of(3.0),
+                Seconds.of(5.0),
+                state -> Logger.recordOutput("Elevator/SysIdState", state.toString())),
+            new SysIdRoutine.Mechanism(
+                voltage -> {
+                  if (!safetyStopped) io.setVoltage(voltage.in(Volts));
+                },
+                null, // 用 AdvantageKit 記錄，不用 SysId 自己的 log
+                this));
   }
 
   @Override
@@ -45,7 +69,8 @@ public class Elevator extends SubsystemBase {
       goalMeters = inputs.positionMeters;
     }
 
-    boolean followingBad = Math.abs(inputs.closedLoopReferenceMeters - inputs.positionMeters) > MAX_FOLLOWING_ERROR_METERS;
+    // SysId 用開迴路電壓，沒有軌跡可以比，只檢查失速
+    boolean followingBad = !sysIdActive && Math.abs(inputs.closedLoopReferenceMeters - inputs.positionMeters) > MAX_FOLLOWING_ERROR_METERS;
     boolean stalled = Math.abs(inputs.statorCurrentAmps) > STALL_CURRENT_AMPS && Math.abs(inputs.velocityMetersPerSec) < STALL_VELOCITY;
     if (DriverStation.isEnabled() && (followingBad || stalled)) {
       if (Double.isNaN(faultSince)) faultSince = Timer.getFPGATimestamp();
@@ -89,5 +114,31 @@ public class Elevator extends SubsystemBase {
       c = c.andThen(moveTo(f * travelMeters).withTimeout(4.0)).andThen(run(() -> {}).withTimeout(2.0));
     }
     return c.withName("Elevator.tuningRoutine");
+  }
+
+  /**
+   * SysId 準靜態測試（單元二）：電壓每秒加 0.5 V，量 kS、kG、kV。
+   * 往上的測試從靠近底部開始、往下的從靠近頂部開始；接近行程兩端會自動停。
+   * 綁在 whileTrue，放開按鈕就停。
+   */
+  public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return sysIdCommand(sysId.quasistatic(direction), direction);
+  }
+
+  /** SysId 動態測試（單元二）：直接給 3 V，量 kA。 */
+  public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+    return sysIdCommand(sysId.dynamic(direction), direction);
+  }
+
+  private Command sysIdCommand(Command test, SysIdRoutine.Direction direction) {
+    boolean up = direction == SysIdRoutine.Direction.kForward;
+    return test.until(() -> up ? inputs.positionMeters > SYSID_MAX_METERS : inputs.positionMeters < SYSID_MIN_METERS)
+        .beforeStarting(() -> sysIdActive = true)
+        .finallyDo(
+            () -> {
+              sysIdActive = false;
+              io.stop();
+            })
+        .withName("Elevator.sysId");
   }
 }

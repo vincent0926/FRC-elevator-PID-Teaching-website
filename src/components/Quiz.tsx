@@ -55,3 +55,31 @@ export function Quiz({ quiz, done, onCorrect }: { quiz: QuizDef; done?: boolean;
     </div>
   )
 }
+
+/** 一組檢核題，全部答對才算完成（教學單元用） */
+export function QuizSet({ quizzes, done, onDone }: { quizzes: QuizDef[]; done?: boolean; onDone?: () => void }) {
+  const [right, setRight] = useState<boolean[]>(() => quizzes.map(() => !!done))
+  const n = right.filter(Boolean).length
+  return (
+    <div>
+      {quizzes.map((q, i) => (
+        <Quiz
+          key={q.question}
+          quiz={q}
+          done={done}
+          onCorrect={() => {
+            const next = [...right]
+            next[i] = true
+            setRight(next)
+            if (next.every(Boolean)) onDone?.()
+          }}
+        />
+      ))}
+      {!done && quizzes.length > 1 && (
+        <p className="small muted" style={{ margin: '8px 0 0' }}>
+          已答對 {n} / {quizzes.length} 題，全部答對才算完成這個單元。
+        </p>
+      )}
+    </div>
+  )
+}
