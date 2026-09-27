@@ -30,7 +30,7 @@ interface ArmStore {
 
 const Ctx = createContext<ArmStore | null>(null)
 
-function usePersisted<T>(key: string, initial: T, validate?: (v: unknown) => v is T, onSaved?: (ok: boolean) => void): [T, (v: T) => void] {
+function usePersisted<T>(key: string, initial: T, validate?: (v: unknown) => v is T, onSaved?: (key: string, ok: boolean) => void): [T, (v: T) => void] {
   const [value, setValue] = useState<T>(() => {
     const v = loadJson<unknown>(key, initial)
     return validate && !validate(v) ? initial : (v as T)
@@ -39,7 +39,7 @@ function usePersisted<T>(key: string, initial: T, validate?: (v: unknown) => v i
     (v: T) => {
       // 先更新畫面（不等存檔），再回報有沒有存成功
       setValue(v)
-      onSaved?.(saveJson(key, v))
+      onSaved?.(key, saveJson(key, v))
     },
     [key, onSaved],
   )
@@ -66,8 +66,10 @@ export function buildArmTheory(arm: ArmMechanism, ff: ArmFeedforwardResult, volt
 }
 
 export function ArmStoreProvider({ children }: { children: ReactNode }) {
-  const [unsaved, setUnsaved] = useState(false)
-  const onSaved = useCallback((ok: boolean) => setUnsaved(!ok), [])
+  // 每個 key 各自記：一個存失敗、另一個存成功，提醒不能被蓋掉
+  const [unsavedByKey, setUnsavedByKey] = useState<Record<string, boolean>>({})
+  const onSaved = useCallback((key: string, ok: boolean) => setUnsavedByKey((cur) => (cur[key] === !ok ? cur : { ...cur, [key]: !ok })), [])
+  const unsaved = Object.values(unsavedByKey).some(Boolean)
   const [arm, setArm] = usePersisted('armMechanism', DEFAULT_ARM, isArm, onSaved)
   const [voltsPerDeg, setVoltsPerDeg] = usePersisted('armVoltsPerDeg', 0.3, isNum, onSaved)
   const [custom, setCustom] = usePersisted<ArmParameterSet | null>('armCustom', null, isArmParamsOrNull, onSaved)
