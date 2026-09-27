@@ -3,6 +3,7 @@ import { useStore } from '../../app/store'
 import { ParamCard } from '../../components/ParamCard'
 import { Quiz } from '../../components/Quiz'
 import { ExportPanel } from './ExportPanel'
+import { ParamLibrary } from '../../components/ParamLibrary'
 import { LESSONS } from './lessons'
 import { MechanismForm } from './MechanismForm'
 import { PARAM_ROWS, KIND_INFO } from './paramSources'
@@ -55,7 +56,7 @@ export function CalcPage() {
                     {isOpen && (
                       <div className="body">
                         <div className="goal">學習目標：{l.goal}</div>
-                        <l.Body m={mechanism} ff={ff} kP={theory.feedback.kP} />
+                        <l.Body m={mechanism} ff={ff} kP={theory.feedback.kP} done={lessonsDone[l.id]} />
                         <Quiz key={l.id} quiz={l.quiz} done={lessonsDone[l.id]} onCorrect={() => markLesson(l.id)} />
                       </div>
                     )}
@@ -112,6 +113,9 @@ export function CalcPage() {
           </p>
           <hr style={{ border: 0, borderTop: '1px solid var(--line-2)', margin: '18px 0' }} />
           <ExportPanel ps={theory} />
+          <hr style={{ border: 0, borderTop: '1px solid var(--line-2)', margin: '18px 0' }} />
+          <h3>參數庫</h3>
+          <ParamLibrary current={theory} currentLabel="理論值" defaultTag="theory" />
         </aside>
       </div>
 

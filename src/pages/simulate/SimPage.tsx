@@ -15,8 +15,11 @@ import { ApproxNote, PLANT_ASSUMPTIONS } from '../../components/ApproxNote'
 import { ControllerSettings } from './ControllerSettings'
 import { CustomEditor } from './CustomEditor'
 import { MetricsTable } from './Metrics'
-import { MiniShaft, PlaybackBar, usePlayback } from './MiniShaft'
+import { SpecEditor } from './SpecEditor'
+import { ElevatorView } from './ElevatorView'
+import { PlaybackBar, usePlayback } from './MiniShaft'
 import { RobustnessPanel } from './RobustnessPanel'
+import { ParamLibrary } from '../../components/ParamLibrary'
 import { buildSimInput, DEFAULT_KNOBS, TOGGLES, type PlantKnobs } from './plantKnobs'
 import { SIM_SCENARIOS, type SimScenario } from './simScenarios'
 
@@ -55,7 +58,7 @@ const calibratedKnobs = (c: Calibration): PlantKnobs => ({
 })
 
 export function SimPage() {
-  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration } = useStore()
+  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration, pendingScenario, openScenario, spec, setSpec, compareSet, setCompareSet } = useStore()
   const [knobs, setKnobs] = useState<PlantKnobs>(DEFAULT_KNOBS)
   const [location, setLocation] = useState<ControllerLocation>('talonfx')
   const [periodOverride, setPeriodOverride] = useState<number | null>(null)
@@ -68,6 +71,8 @@ export function SimPage() {
   const [challenge, setChallenge] = useState<(ChallengeState & { submitted: ParameterSet }) | null>(null)
   // 送出後等模擬結果出來才判斷勝負
   const judging = useRef(false)
+  const specRef = useRef(spec)
+  specRef.current = spec
   const pb = usePlayback(result)
 
   const sets: Record<SimSource, ParameterSet | null> = { theory, tuning, custom }
@@ -79,7 +84,10 @@ export function SimPage() {
   const hidden = challenge?.hidden
   const simKnobs = useMemo(() => (hidden ? hiddenKnobs(hidden) : knobs), [hidden, knobs])
 
-  const setup = useMemo(() => ({ mechanism, ff, knobs: simKnobs, controlPeriod, goal: safeGoal }), [mechanism, ff, simKnobs, controlPeriod, safeGoal])
+  const setup = useMemo(
+    () => ({ mechanism, ff, knobs: simKnobs, controlPeriod, goal: safeGoal, tolerance: spec.steadyState }),
+    [mechanism, ff, simKnobs, controlPeriod, safeGoal, spec.steadyState],
+  )
   // 穩健性測試用同一個物件，參數沒變時舊結果才會繼續顯示
   const robustBase = useMemo(() => buildSimInput(setup, ps), [setup, ps])
 
@@ -92,7 +100,7 @@ export function SimPage() {
         setError(null)
         if (judging.current) {
           judging.current = false
-          setChallenge((c) => (c ? { ...c, status: nextStatus(passesSpec(r.moves), c.attempts, c.max) } : c))
+          setChallenge((c) => (c ? { ...c, status: nextStatus(passesSpec(r.moves, specRef.current), c.attempts, c.max) } : c))
         }
       })
       .catch((e: Error) => alive && e.message !== 'stale' && setError(e.message))
@@ -101,7 +109,13 @@ export function SimPage() {
     }
   }, [setup, ps])
 
-  const otherPs = otherSource ? sets[otherSource] : null
+  // 參數庫選的參數組優先（挑戰模式不疊）
+  const libCompare = challenge ? null : compareSet
+  const otherPs = libCompare ? libCompare.params : otherSource ? sets[otherSource] : null
+  const otherLabel = libCompare ? `「${libCompare.label}」` : otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : ''
+  useEffect(() => {
+    if (compareSet) setCompare(true)
+  }, [compareSet])
   useEffect(() => {
     if (!compare || !otherPs) return
     let alive = true
@@ -116,7 +130,6 @@ export function SimPage() {
   const other = compare && otherPs ? otherRaw : null
   const charts = useMemo(() => {
     if (!result) return null
-    const otherLabel = otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : ''
     // 疊圖的時間軸可能不同（巡航速度不同），長度對不上時截短或補 NaN
     const fit = (a: Float64Array) => {
       const v = new Float64Array(result.t.length).fill(NaN)
@@ -149,7 +162,7 @@ export function SimPage() {
       { label: '每顆馬達電池端（Supply）電流', color: '--blue', dash: true, values: result.supplyCurrent.map((x) => x / perMotor) },
     ]
     return { pos, vel, err: errS, volt, cur }
-  }, [result, other, otherSource, mechanism.motorCount])
+  }, [result, other, otherLabel, mechanism.motorCount])
 
   const editCustom = (patch: (p: ParameterSet) => ParameterSet) => custom && setCustom(patch(custom))
 
@@ -164,7 +177,7 @@ export function SimPage() {
     setScenario(s)
   }
   const startChallenge = (level: ChallengeLevel) => {
-    const probe = (h: HiddenPlant, p: ParameterSet) => passesSpec(simulate(buildSimInput({ ...setup, knobs: hiddenKnobs(h) }, p)).moves)
+    const probe = (h: HiddenPlant, p: ParameterSet) => passesSpec(simulate(buildSimInput({ ...setup, knobs: hiddenKnobs(h) }, p)).moves, spec)
     // 出題：理論值就過了的不要；參考解答也過不了的也不要
     const hidden = makeChallenge(Math.floor(Math.random() * 1e9), level, (h) => {
       const sol = referenceSolution(h, ff)
@@ -200,6 +213,16 @@ export function SimPage() {
   const applyCalibration = (c: Calibration) => {
     setKnobs(calibratedKnobs(c))
   }
+
+  // 其他頁面（4F 常見的坑）要求載入某個情境
+  useEffect(() => {
+    if (!pendingScenario) return
+    const sc = SIM_SCENARIOS.find((x) => x.id === pendingScenario)
+    openScenario(null)
+    if (sc) loadScenario(sc)
+    // loadScenario 每次 render 都是新的函式，只在 pendingScenario 變的時候跑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingScenario])
 
   const leaveScenario = () => {
     setScenario(null)
@@ -255,11 +278,16 @@ export function SimPage() {
             <em>m</em>
           </span>
         </label>
-        {otherSource && (
+        {otherPs && (
           <label className="check">
             <input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} />
-            疊上{SOURCES.find((s) => s.id === otherSource)!.label}比較
+            疊上{otherLabel}比較
           </label>
+        )}
+        {libCompare && (
+          <button className="linkbtn small" type="button" onClick={() => setCompareSet(null)}>
+            不疊參數庫的，改回{otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : '原本的'}
+          </button>
         )}
       </div>
 
@@ -271,7 +299,7 @@ export function SimPage() {
       )}
 
       <div className="simwrap">
-        <MiniShaft result={result} travel={mechanism.travel} goal={safeGoal} idx={pb.idx} />
+        <ElevatorView result={result} mechanism={mechanism} goal={safeGoal} idx={pb.idx} />
         <div className="panel stack">
           <PlaybackBar result={result} pb={pb} />
           {charts && result && (
@@ -289,7 +317,15 @@ export function SimPage() {
         </div>
       </div>
 
-      {result && <MetricsTable moves={result.moves} other={other?.moves ?? null} otherLabel={otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : ''} />}
+      {result && (
+        <MetricsTable
+          moves={result.moves}
+          other={other?.moves ?? null}
+          otherLabel={otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : ''}
+          spec={spec}
+          editor={!challenge && <SpecEditor spec={spec} setSpec={setSpec} />}
+        />
+      )}
 
       <div className="grid2" style={{ marginTop: 20 }}>
         <div className="panel">
@@ -350,8 +386,17 @@ export function SimPage() {
 
       {!challenge && (
         <>
-          <RobustnessPanel base={robustBase} mechanism={mechanism} ff={ff} realistic={knobs.realistic} />
+          <RobustnessPanel base={robustBase} mechanism={mechanism} ff={ff} realistic={knobs.realistic} spec={spec} />
           <CalibrationPanel onApply={applyCalibration} />
+          <details className="panel scen" style={{ marginTop: 20 }}>
+            <summary>
+              <b>參數庫</b>
+              <span className="small muted">存下調好的參數組（理論值、模擬最佳、實機最終），逐項比較或疊圖。</span>
+            </summary>
+            <div style={{ marginTop: 12 }}>
+              <ParamLibrary current={ps} currentLabel={SOURCES.find((s) => s.id === source)!.label} defaultTag="simBest" />
+            </div>
+          </details>
         </>
       )}
     </section>

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { computeFeedforward, kPFromVoltsPerCm, type FeedforwardResult } from '../core/feedforward'
 import type { AlignedLog, FieldMapping } from '../core/log/fieldMap'
 import { DEFAULT_MECHANISM, ElevatorMechanismSchema, ParameterSetSchema, type ElevatorMechanism, type ParameterSet } from '../schema/parameterSet'
+import { DEFAULT_SPEC, isSpec, type Spec } from '../core/physics/spec'
 import { loadJson, saveJson } from '../storage/local'
 
 /**
@@ -71,6 +72,15 @@ interface Store {
   setLastLog: (l: { log: AlignedLog; name: string } | null) => void
   page: PageId
   go: (p: PageId) => void
+  /** 達標標準（3F 指標、穩健性測試、挑戰模式共用），可以依賽季需求調 */
+  spec: Spec
+  setSpec: (s: Spec) => void
+  /** 從其他頁面要求 3F 載入某個教學情境（3F 載入後清掉） */
+  pendingScenario: string | null
+  openScenario: (id: string | null) => void
+  /** 參數庫選來在 3F 疊圖比較的參數組（只在記憶體） */
+  compareSet: { label: string; params: ParameterSet } | null
+  setCompareSet: (c: { label: string; params: ParameterSet } | null) => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -134,6 +144,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [baseline, setBaseline] = usePersisted<ParameterSet | null>('baseline', null, isParamsOrNull)
   const [calibration, setCalibration] = usePersisted<Calibration | null>('calibration', null, isCalibrationOrNull)
   const [lastLog, setLastLog] = useState<{ log: AlignedLog; name: string } | null>(null)
+  const [pendingScenario, setPendingScenario] = useState<string | null>(null)
+  const [spec, setSpec] = usePersisted<Spec>('spec', DEFAULT_SPEC, isSpec)
+  const [compareSet, setCompareSet] = useState<{ label: string; params: ParameterSet } | null>(null)
 
   useEffect(() => {
     const on = () => setPage(pageFromHash())
@@ -146,6 +159,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setPage(p)
     window.scrollTo(0, 0)
   }, [])
+
+  const openScenario = useCallback(
+    (id: string | null) => {
+      setPendingScenario(id)
+      if (id) go('sim')
+    },
+    [go],
+  )
 
   const ff = useMemo(() => computeFeedforward(mechanism), [mechanism])
   const theory = useMemo(() => buildTheory(mechanism, ff, voltsPerCm), [mechanism, ff, voltsPerCm])
@@ -181,6 +202,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLastLog,
     page,
     go,
+    pendingScenario,
+    openScenario,
+    compareSet,
+    setCompareSet,
+    spec,
+    setSpec,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

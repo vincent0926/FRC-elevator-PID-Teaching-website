@@ -6,9 +6,9 @@
 | 檔案 | 用途 |
 |---|---|
 | `ElevatorIO.java` | 硬體介面。`ElevatorIOInputs` 的欄位名稱就是網站欄位對應認得的名稱 |
-| `ElevatorIOTalonFX.java` | TalonFX 實作：MotionMagicVoltage、電流限制、軟體上下限、往下用 Slot 1；Slot 0 參數可用 LoggedTunableNumber 即時調 |
+| `ElevatorIOTalonFX.java` | TalonFX 實作：MotionMagicVoltage、Stator／Supply 電流限制、軟體上下限、輸出上限、往下用 Slot 1；Slot 0 參數可用 LoggedTunableNumber 即時調 |
 | `util/LoggedTunableNumber.java` | 在 AdvantageScope / Elastic 即時改的數字（`/Tuning/…`）；比賽前把 `TUNING_MODE` 改成 false |
-| `Elevator.java` | 子系統：跟隨誤差過大或失速時自動停止；`tuningRoutine()` 錄調參日誌用；`sysIdQuasistatic()`、`sysIdDynamic()` 跑 SysId（單元二） |
+| `Elevator.java` | 子系統：跟隨誤差過大或失速時自動停止；`homeCommand()` 低電壓碰擋歸零；`tuningRoutine()` 錄調參日誌用；`sysIdQuasistatic()`、`sysIdDynamic()` 跑 SysId（單元二） |
 | `ElevatorGains.java` | **由網站產生**（1F「下載 Java」），進版本控制，是參數的最終依據 |
 | `ElevatorGainsLoader.java` | 讀 `deploy/elevator-gains.json` 覆寫參數；缺欄位時警告並用 `ElevatorGains` 的值，不會讀成 0 |
 | `deploy/elevator-gains.json` | **由網站產生**（1F「下載 JSON 設定檔」），不想重新編譯時用 |
@@ -23,6 +23,8 @@ controller.povLeft().whileTrue(elevator.sysIdDynamic(SysIdRoutine.Direction.kRev
 ```
 
 `Elevator.java` 的 `SYSID_MIN_METERS`、`SYSID_MAX_METERS` 依行程修改，接近時測試自動停。
+
+網站 1F／3F 的「下載完整子系統（.zip）」會把這些檔案打包，常數（電流限制、軟體限位、SysId 範圍、參數）換成你填的機構。
 
 ## 需要
 

@@ -27,6 +27,10 @@ public class Elevator extends SubsystemBase {
   // TODO 依行程修改：SysId 測試到這兩個高度就自動停（留足夠的煞車距離）
   private static final double SYSID_MIN_METERS = 0.10;
   private static final double SYSID_MAX_METERS = 1.05;
+  // 歸零：用很小的電壓往下碰擋，電流升高而且停住就是到底了
+  private static final double HOMING_VOLTS = -1.0;
+  private static final double HOMING_STALL_AMPS = 20.0;
+  private static final double HOMING_TIMEOUT_SEC = 3.0;
 
   private final ElevatorIO io;
   private final ElevatorIOInputsAutoLogged inputs = new ElevatorIOInputsAutoLogged();
@@ -36,7 +40,8 @@ public class Elevator extends SubsystemBase {
   private double goalMeters = 0.0;
   private double faultSince = Double.NaN;
   private boolean safetyStopped = false;
-  private boolean sysIdActive = false;
+  /** 開迴路動作中（SysId、歸零）：沒有軌跡可以比，跳過跟隨誤差保護 */
+  private boolean openLoopActive = false;
   private final SysIdRoutine sysId;
 
   public Elevator(ElevatorIO io) {
@@ -70,7 +75,7 @@ public class Elevator extends SubsystemBase {
     }
 
     // SysId 用開迴路電壓，沒有軌跡可以比，只檢查失速
-    boolean followingBad = !sysIdActive && Math.abs(inputs.closedLoopReferenceMeters - inputs.positionMeters) > MAX_FOLLOWING_ERROR_METERS;
+    boolean followingBad = !openLoopActive && Math.abs(inputs.closedLoopReferenceMeters - inputs.positionMeters) > MAX_FOLLOWING_ERROR_METERS;
     boolean stalled = Math.abs(inputs.statorCurrentAmps) > STALL_CURRENT_AMPS && Math.abs(inputs.velocityMetersPerSec) < STALL_VELOCITY;
     if (DriverStation.isEnabled() && (followingBad || stalled)) {
       if (Double.isNaN(faultSince)) faultSince = Timer.getFPGATimestamp();
@@ -117,6 +122,33 @@ public class Elevator extends SubsystemBase {
   }
 
   /**
+   * 歸零（單元零第 3 步）：開機時的位置不一定是 0。
+   * 關掉軟體限位、用 −1 V 慢慢往下，電流超過 20 A 而且速度接近 0 就是碰到硬擋，把位置設成 0。
+   * 3 秒內沒碰到就放棄、不改位置（Dashboard 會看到這個指令被中斷）。
+   */
+  public Command homeCommand() {
+    return run(() -> io.setVoltage(HOMING_VOLTS))
+        .until(() -> Math.abs(inputs.statorCurrentAmps) > HOMING_STALL_AMPS && Math.abs(inputs.velocityMetersPerSec) < 0.01)
+        .beforeStarting(
+            () -> {
+              openLoopActive = true;
+              io.setSoftLimitsEnabled(false);
+            })
+        .finallyDo(
+            interrupted -> {
+              io.stop();
+              if (!interrupted) {
+                io.resetPosition(0.0);
+                goalMeters = 0.0;
+              }
+              io.setSoftLimitsEnabled(true);
+              openLoopActive = false;
+            })
+        .withTimeout(HOMING_TIMEOUT_SEC)
+        .withName("Elevator.home");
+  }
+
+  /**
    * SysId 準靜態測試（單元二）：電壓每秒加 0.5 V，量 kS、kG、kV。
    * 往上的測試從靠近底部開始、往下的從靠近頂部開始；接近行程兩端會自動停。
    * 綁在 whileTrue，放開按鈕就停。
@@ -133,10 +165,10 @@ public class Elevator extends SubsystemBase {
   private Command sysIdCommand(Command test, SysIdRoutine.Direction direction) {
     boolean up = direction == SysIdRoutine.Direction.kForward;
     return test.until(() -> up ? inputs.positionMeters > SYSID_MAX_METERS : inputs.positionMeters < SYSID_MIN_METERS)
-        .beforeStarting(() -> sysIdActive = true)
+        .beforeStarting(() -> openLoopActive = true)
         .finallyDo(
             () -> {
-              sysIdActive = false;
+              openLoopActive = false;
               io.stop();
             })
         .withName("Elevator.sysId");

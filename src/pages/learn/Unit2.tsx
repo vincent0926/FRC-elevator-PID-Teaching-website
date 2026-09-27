@@ -120,6 +120,23 @@ export function Unit2() {
       </p>
       <SysIdCompare />
 
+      <h3>8. 為什麼會跟理論值不一樣</h3>
+      <ul className="small ul">
+        <li><b>質量估計</b>：CAD 或目測的質量常常少算螺絲、線材、護板、遊戲物件 → kG、kA 偏大。</li>
+        <li><b>摩擦</b>：理論沒算，量到的 kS 跟滑軌、鏈條鬆緊有關；摩擦不對稱會讓 kG 也偏一點。</li>
+        <li><b>齒輪箱效率</b>：理論假設 100%，實際 80–95%，kG 會比理論大。</li>
+        <li><b>電池電壓</b>：測試時電池低，壓降讓同樣的指令給不到那麼多電壓，量到的 kV、kG 偏大。錄之前電池 12.5 V 以上。</li>
+        <li><b>座標</b>：SysId 用的位置欄位如果是最上層高度，kV、kA 會差一個速度比（單元三第 1 點）。</li>
+      </ul>
+
+      <h3>9. 回模擬驗證</h3>
+      <ol className="small ul">
+        <li>上面的比較工具按「用 SysId 前饋到 3F 模擬」：拿 SysId 的 kS、kG、kV、kA 當自訂參數。</li>
+        <li>另外錄一段一般的閉迴路日誌（單元一的 tuningRoutine），在 2F 匯入。</li>
+        <li>到 3F 下面的「模型校正」用這份日誌校正，存成「已校正模型」。校正出來的倍率跟 SysId 和理論的比例應該差不多。</li>
+        <li>用已校正模型跑 SysId 參數：指標都綠了再上機。模擬還是近似模型，上機後照 2F 的建議微調。</li>
+      </ol>
+
       <h3>檢核</h3>
       <QuizSet quizzes={QUIZZES} done={lessonsDone['unit2']} onDone={() => markLesson('unit2')} />
     </div>

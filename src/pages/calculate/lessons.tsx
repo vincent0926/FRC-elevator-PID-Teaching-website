@@ -1,10 +1,12 @@
 import { useMemo, type ReactNode } from 'react'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { ApproxNote } from '../../components/ApproxNote'
+import { Exercise } from '../../components/Exercise'
 import type { QuizDef } from '../../components/Quiz'
 import { PROFILE_SAFETY_FACTOR, type FeedforwardResult } from '../../core/feedforward'
 import { motorModel } from '../../core/motors'
 import { plantFromMechanism } from '../../core/physics/elevator'
+import type { Slot0Gains } from '../../core/controller/slot0'
 import { simulate } from '../../core/physics/simulate'
 import type { ElevatorMechanism } from '../../schema/parameterSet'
 
@@ -17,6 +19,8 @@ export interface LessonCtx {
   m: ElevatorMechanism
   ff: FeedforwardResult
   kP: number
+  /** 這一關已經完成（練習直接顯示答案） */
+  done?: boolean
 }
 
 export interface Lesson {
@@ -30,7 +34,7 @@ export interface Lesson {
 
 const f = (v: number, d = 3) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
-function Physics({ m, ff }: LessonCtx) {
+function Physics({ m, ff, done }: LessonCtx) {
   const kTop = m.stages[m.stages.length - 1].speedRatio
   const torquePerMotor = (ff.netGravityForce * m.drumRadius) / m.gearRatio / m.motorCount
   return (
@@ -38,6 +42,39 @@ function Physics({ m, ff }: LessonCtx) {
       <p>
         電梯要動，馬達要克服三種力：<b>重力</b>（一直往下拉，停著也要撐）、<b>慣性</b>（加速、減速時才需要）、<b>摩擦</b>（方向跟移動相反，大小差不多固定）。
       </p>
+      <p>串級式電梯的上層跑得比鼓輪快：鼓輪拉 1 公分，第 i 級升高 kᵢ 公分（kᵢ 是速度比）。那「換算到鼓輪上」要算多少質量？</p>
+      <Exercise
+        solvedAlready={done}
+        prompt={
+          <>
+            練習用的電梯：第 1 級 5 kg（速度比 1）、第 2 級 3 kg（速度比 2），最上層夾著 2 kg 的遊戲物件。
+            撐住重力要當成多少 kg（m_G）？加速時要推動多少 kg（m_A）？
+          </>
+        }
+        fields={[
+          {
+            label: '重力等效質量 m_G',
+            answer: 15,
+            unit: 'kg',
+            mistakes: [
+              { value: 10, msg: '你直接把質量相加了。上層升得比鼓輪快，要乘速度比。' },
+              { value: 25, msg: '你乘了速度比的平方。重力只乘一次：鼓輪拉 1 cm，第 i 級升高 kᵢ cm，重力做的功是 mᵢ·g·kᵢ。' },
+              { value: 13, msg: '遊戲物件掛在最上層，也要乘最上層的速度比 2。' },
+            ],
+          },
+          {
+            label: '慣性等效質量 m_A',
+            answer: 25,
+            unit: 'kg',
+            mistakes: [
+              { value: 10, msg: '你直接把質量相加了。上層跑得比較快，動能比較大。' },
+              { value: 15, msg: '慣性要乘速度比的平方：動能 ½·mᵢ·(kᵢ·v)² 裡有 kᵢ²。' },
+              { value: 19, msg: '遊戲物件在最上層，也要乘 2² = 4。' },
+              { value: 21, msg: '遊戲物件要乘速度比的平方 4，不是 2。' },
+            ],
+          },
+        ]}
+      >
       <p>
         串級式電梯的上層跑得比鼓輪快。第 i 級的速度是鼓輪線速度的 kᵢ 倍，所以把每一級「換算」到鼓輪上：
       </p>
@@ -89,6 +126,7 @@ function Physics({ m, ff }: LessonCtx) {
       </p>
       <div className="formula">{`馬達扭矩 = 力 × 半徑 ÷ 齒比 ÷ 馬達數
          = ${f(ff.netGravityForce, 1)} × ${f(m.drumRadius, 4)} ÷ ${f(m.gearRatio, 2)} ÷ ${m.motorCount} = ${f(torquePerMotor, 3)} N·m`}</div>
+      </Exercise>
     </>
   )
 }
@@ -220,6 +258,131 @@ function WhyPid({ m, ff, kP }: LessonCtx) {
         最後差 <b>{f(data.err, 2)} cm</b>：kP 要有誤差才會出力，缺的 0.2·kG 伏特要靠誤差 × kP 補上。這就是為什麼<b>不要一直加 kP 或用 kI 硬補</b>，
         而是把 kG 調準。kI 配 Motion Magic 還容易積分飽和，所以預設 0。
       </p>
+      <PidVsFf m={m} ff={ff} kP={kP} />
+      <KiCompare m={m} ff={ff} kP={kP} />
+    </>
+  )
+}
+
+export interface CompareCase {
+  label: string
+  color: string
+  gains: Slot0Gains
+  batteryVoltage?: number
+}
+
+/** 同一台電梯（真實模型、摩擦 0.15 V）跑同一個移動，比較不同參數：給教學關卡畫圖用 */
+export function compareMoves(m: ElevatorMechanism, ff: FeedforwardResult, cases: CompareCase[]) {
+  const low = m.travel * 0.1
+  const high = m.travel * 0.75
+  const runs = cases.map((c) =>
+    simulate({
+      plant: plantFromMechanism(m, ff, { realistic: true, frictionKs: 0.15, batteryVoltage: c.batteryVoltage ?? 12.5 }),
+      gains: c.gains,
+      motionMagic: { cruiseVelocity: ff.cruiseVelocity, acceleration: ff.acceleration },
+      controlPeriod: 0.001,
+      initialPosition: low,
+      moves: [{ time: 0.3, goal: high }],
+      duration: 3,
+    }),
+  )
+  const step = 5
+  const n = Math.ceil(runs[0].t.length / step)
+  const t = Float64Array.from({ length: n }, (_, i) => runs[0].t[i * step])
+  const series: ChartSeries[] = [
+    { label: '目標（軌跡）', color: '--steel', dash: true, values: Float64Array.from({ length: n }, (_, i) => runs[0].refPos[i * step]) },
+    ...runs.map((r, k) => ({ label: cases[k].label, color: cases[k].color, values: Float64Array.from({ length: n }, (_, i) => r.pos[i * step]) })),
+  ]
+  return { t, series, metrics: runs.map((r) => r.moves[0]) }
+}
+
+function CompareTable({ labels, metrics }: { labels: string[]; metrics: ReturnType<typeof compareMoves>['metrics'] }) {
+  const cm = (v: number) => `${(v * 100).toFixed(1)} cm`
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table className="tbl" style={{ margin: '8px 0 12px' }}>
+        <thead>
+          <tr>
+            <th>設定</th>
+            <th className="num">最大跟隨誤差</th>
+            <th className="num">超調</th>
+            <th className="num">最後差多少</th>
+          </tr>
+        </thead>
+        <tbody>
+          {labels.map((l, i) => (
+            <tr key={l}>
+              <td>{l}</td>
+              <td className="num">{cm(metrics[i].maxFollowingError)}</td>
+              <td className="num">{cm(metrics[i].overshoot)}</td>
+              <td className="num">{cm(metrics[i].steadyStateError)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/** 純 PID vs 前饋 + PID */
+export function pidVsFfCases(ff: FeedforwardResult, kP: number): CompareCase[] {
+  const noFf = { kS: 0, kG: 0, kV: 0, kA: 0, kI: 0, kD: 0 }
+  return [
+    { label: `只有 PID（kP ${Math.round(kP)}）`, color: '--red', gains: { ...noFf, kP } },
+    { label: `只有 PID，kP 加到 ${Math.round(kP * 4)}`, color: '--amber', gains: { ...noFf, kP: kP * 4 } },
+    { label: `前饋 + PID（kP ${Math.round(kP)}）`, color: '--blue', gains: { kS: 0.15, kG: ff.kG, kV: ff.kV, kA: ff.kA, kP, kI: 0, kD: 0 } },
+  ]
+}
+
+/** kG 少 20% 時：只有 kP、加 kI、加 kI 但電池低（積分飽和）、把 kG 修好 */
+export function kiCases(ff: FeedforwardResult, kP: number): CompareCase[] {
+  const base = { kS: 0.15, kG: ff.kG * 0.8, kV: ff.kV, kA: ff.kA, kP, kI: 0, kD: 0 }
+  return [
+    { label: 'kG 少 20%，只有 kP', color: '--red', gains: base },
+    { label: 'kG 少 20%，加 kI 300', color: '--amber', gains: { ...base, kI: 300 } },
+    { label: 'kG 少 20%，加 kI 300，電池 9 V', color: '--violet', gains: { ...base, kI: 300 }, batteryVoltage: 9 },
+    { label: '把 kG 修好，只有 kP', color: '--blue', gains: { ...base, kG: ff.kG } },
+  ]
+}
+
+function PidVsFf({ m, ff, kP }: LessonCtx) {
+  const cases = useMemo(() => pidVsFfCases(ff, kP), [ff, kP])
+  const data = useMemo(() => compareMoves(m, ff, cases), [m, ff, cases])
+  return (
+    <>
+      <h3>純 PID vs 前饋 + PID</h3>
+      <p>
+        同一台電梯從行程 10% 移到 75%。只有 PID 時，控制器要先看到誤差才會出力，所以一路落後；停下來時還要靠誤差撐住重力。
+        把 kP 加大，落後少一點，但永遠補不完，而且 kP 太大時一有延遲就會抖（3F 情境「kP 太大」）。垂直的機構，重力一直都在，這就是 WPILib 文件一直強調「只靠回授對垂直機構很差」的原因。
+      </p>
+      <Chart x={data.t} series={data.series} height={220} yLabel="位置（m）" />
+      <CompareTable labels={cases.map((c) => c.label)} metrics={data.metrics} />
+    </>
+  )
+}
+
+function KiCompare({ m, ff, kP }: LessonCtx) {
+  const cases = useMemo(() => kiCases(ff, kP), [ff, kP])
+  const data = useMemo(() => compareMoves(m, ff, cases), [m, ff, cases])
+  return (
+    <>
+      <h3>為什麼 kI 通常不需要，什麼時候才加</h3>
+      <p>
+        kG 少了 20%。只有 kP 時停得比目標低；加上 kI，平常看起來會慢慢補回去；但只要輸出頂到上限（下圖電池只剩 9 V），誤差一直累積在積分裡，
+        追上軌跡時放不掉，就衝過頭。把 kG 修好，只用 kP 就停得準，也不怕電池低。
+      </p>
+      <Chart x={data.t} series={data.series} height={220} yLabel="位置（m）" />
+      <CompareTable labels={cases.map((c) => c.label)} metrics={data.metrics} />
+      <ul className="small">
+        <li>
+          <b>先不要加 kI</b>：穩態誤差幾乎都是 kG 不準（修 kG）或摩擦卡住（kS）。前饋準了，kP 就夠。
+        </li>
+        <li>
+          <b>什麼時候才考慮</b>：kG、kS 都照 2F 調好，停下來還是穩定差一點點（例如負載一直在變），而且確定不會長時間頂到輸出上限。這時加很小的 kI，
+          並限制積分的範圍（roboRIO 的 WPILib PIDController 用 setIZone、setIntegratorRange）。
+        </li>
+        <li>夾不夾遊戲物件差很多時，與其靠 kI，不如換一組 kG（用 Slot 或程式判斷有沒有夾東西）。</li>
+      </ul>
     </>
   )
 }

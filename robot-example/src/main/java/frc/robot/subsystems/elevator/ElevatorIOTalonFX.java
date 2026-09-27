@@ -4,6 +4,7 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
+import com.ctre.phoenix6.configs.SoftwareLimitSwitchConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
@@ -62,6 +63,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   // 單元一：Slot 0 的參數可以在 AdvantageScope / Elastic 即時改（Phoenix 6 轉數制）。
   // 預設值是開機時載入的參數（ElevatorGains 或 JSON）。Slot 1 不做即時調整，避免兩邊搞混。
   private final Slot0Configs slot0;
+  private final SoftwareLimitSwitchConfigs softLimits;
   private final LoggedTunableNumber kS, kG, kV, kA, kP, kI, kD;
 
   public ElevatorIOTalonFX() {
@@ -99,6 +101,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
     config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = MIN_METERS / ElevatorGains.METERS_PER_ROTATION;
     config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
     apply(leader, config);
+    softLimits = config.SoftwareLimitSwitch;
 
     // 跟隨者不需要自己的閉迴路設定，只要煞車模式和電流限制
     TalonFXConfiguration followerConfig = new TalonFXConfiguration();
@@ -170,5 +173,10 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   @Override
   public void resetPosition(double meters) {
     leader.setPosition(meters / ElevatorGains.METERS_PER_ROTATION);
+  }
+
+  @Override
+  public void setSoftLimitsEnabled(boolean enabled) {
+    leader.getConfigurator().apply(softLimits.withForwardSoftLimitEnable(enabled).withReverseSoftLimitEnable(enabled));
   }
 }
