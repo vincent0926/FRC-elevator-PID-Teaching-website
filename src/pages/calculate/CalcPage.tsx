@@ -5,6 +5,8 @@ import { Quiz } from '../../components/Quiz'
 import { ExportPanel } from './ExportPanel'
 import { LESSONS } from './lessons'
 import { MechanismForm } from './MechanismForm'
+import { PARAM_ROWS, KIND_INFO } from './paramSources'
+import { ParamSources } from './ParamSources'
 
 const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
@@ -67,8 +69,16 @@ export function CalcPage() {
         <aside className="panel card-param" aria-live="polite">
           <ParamCard
             ps={theory}
+            tags={Object.fromEntries(
+              PARAM_ROWS.map((r) => [
+                r.name,
+                <span key={r.name} className={'src-mini src-' + r.kind} title={KIND_INFO[r.kind].label}>
+                  {KIND_INFO[r.kind].short}
+                </span>,
+              ]),
+            )}
             notes={{
-              kS: '理論算不出，上機量測',
+              kS: '公式算不出，一定要上機量',
               kI: '預設 0，穩態誤差交給 kG',
               kD: '到位後振盪時再加',
               cruise: `上限 ${f(ff.maxVelocity, 2)} 的 75%`,
@@ -94,9 +104,19 @@ export function CalcPage() {
               複製成自訂再模擬
             </button>
           </div>
+          <p className="small muted" style={{ margin: '8px 0 0' }}>
+            參數名稱旁的小字是它怎麼來的：算、算＋量、量、決定。
+            <button className="linkbtn" type="button" onClick={() => document.getElementById('param-sources')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>
+              看對照表
+            </button>
+          </p>
           <hr style={{ border: 0, borderTop: '1px solid var(--line-2)', margin: '18px 0' }} />
           <ExportPanel ps={theory} />
         </aside>
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <ParamSources />
       </div>
     </section>
   )

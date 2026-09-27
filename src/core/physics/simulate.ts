@@ -10,6 +10,11 @@ import { applyCurrentLimit, stepRK4, type PlantParams, type PlantState } from '.
  * 量測可以加延遲與雜訊（控制器看到的是延遲、加雜訊後的位置和速度；圖上畫的是真實位置）。
  * 有 slotByDirection 時照 Phoenix 6 的 Slot 切換：往上的移動用 Slot 0、往下用 Slot 1，
  * 在下達指令那一刻決定，之後保持到下一個指令。
+ *
+ * output 模擬馬達控制器本身的限制（控制公式算完之後才套用，跟真的控制器一樣）：
+ *   輸出上限（TalonFX PeakForward/ReverseVoltage；SPARK MAX 輸出範圍，佔空比）
+ *   軟體限位（到了就把那個方向的輸出設成 neutral，依 Brake / Coast 決定馬達短路或斷路）
+ *   SPARK MAX 沒開電壓補償時，指令照 12 V 換成佔空比，電池沒電時實際電壓跟著變小
  */
 
 export interface Move {
@@ -35,6 +40,52 @@ export interface SimInput {
   voltageLimit?: boolean
   /** 依移動方向切換 Slot（往上 Slot 0、往下 Slot 1），覆蓋 gains 的 kS、kG */
   slotByDirection?: { up: { kS: number; kG: number }; down: { kS: number; kG: number } }
+  /** 馬達控制器的輸出設定；沒給就是 TalonFX、不限輸出、沒有軟體限位、Brake */
+  output?: OutputConfig
+}
+
+export interface OutputConfig {
+  controller: 'talonfx' | 'sparkmax'
+  /**
+   * 往上、往下的最大輸出（都是正數）。
+   * TalonFX：伏特（PeakForwardVoltage / −PeakReverseVoltage）；SPARK MAX：佔空比 0–1（closed loop 輸出範圍）
+   */
+  peakForward?: number
+  peakReverse?: number
+  /** 軟體限位（m，用控制器看到的位置判斷） */
+  softLimit?: { forward: number; reverse: number }
+  neutralMode?: 'brake' | 'coast'
+  /** SPARK MAX 電壓補償（V）；null 表示沒開，佔空比 = 指令 / 12 V、實際電壓 = 佔空比 × 電池電壓 */
+  voltageCompensation?: number | null
+}
+
+/** SPARK MAX 沒開電壓補償時，控制器把「伏特」換成佔空比用的名目電壓 */
+export const NOMINAL_VOLTAGE = 12
+
+/**
+ * 控制器算出指令電壓 cmd 之後，馬達控制器實際輸出多少。
+ * 回傳 neutral 表示被軟體限位擋下（輸出 0，依 neutralMode 短路或斷路）。
+ */
+export function applyOutputStage(cmd: number, measPos: number, supplyVoltage: number, o: OutputConfig | undefined): { u: number; clamped: boolean; neutral: boolean } {
+  if (!o) return { u: cmd, clamped: false, neutral: false }
+  let u = cmd
+  let clamped = false
+  if (o.controller === 'sparkmax') {
+    const comp = o.voltageCompensation ?? null
+    let duty = u / (comp ?? NOMINAL_VOLTAGE)
+    const hi = Math.min(1, o.peakForward ?? 1)
+    const lo = -Math.min(1, o.peakReverse ?? 1)
+    if (duty > hi) (duty = hi), (clamped = true)
+    if (duty < lo) (duty = lo), (clamped = true)
+    // 開了電壓補償：佔空比 × 補償電壓，但不會超過電池電壓
+    u = comp ? Math.max(-supplyVoltage, Math.min(supplyVoltage, duty * comp)) : duty * supplyVoltage
+  } else {
+    if (o.peakForward !== undefined && u > o.peakForward) (u = o.peakForward), (clamped = true)
+    if (o.peakReverse !== undefined && u < -o.peakReverse) (u = -o.peakReverse), (clamped = true)
+  }
+  const sl = o.softLimit
+  if (sl && ((measPos >= sl.forward && u > 0) || (measPos <= sl.reverse && u < 0))) return { u: 0, clamped, neutral: true }
+  return { u, clamped, neutral: false }
 }
 
 /** 可重現的亂數（mulberry32 + Box–Muller），同一組輸入每次模擬結果都一樣 */
@@ -67,6 +118,10 @@ export interface MoveMetrics {
   slot: 0 | 1
   /** 到位後（軌跡結束 0.3 s 起）輸出電壓的標準差（V）：kD 放大雜訊時會變大 */
   holdVoltageRipple: number
+  /** 被軟體限位擋住（輸出 neutral）的時間比例 */
+  softLimitFraction: number
+  /** 觸發 Supply 電流限制的時間比例 */
+  supplyLimitFraction: number
 }
 
 export interface SimResult {
@@ -81,6 +136,8 @@ export interface SimResult {
   feedback: Float64Array
   statorCurrent: Float64Array
   supplyVoltage: Float64Array
+  /** 所有馬達加起來的電池端電流（A）：正的是從電池拿電，負的是回充 */
+  supplyCurrent: Float64Array
   moves: MoveMetrics[]
 }
 
@@ -103,10 +160,14 @@ export function simulate(input: SimInput): SimResult {
     feedback: new Float64Array(steps),
     statorCurrent: new Float64Array(steps),
     supplyVoltage: new Float64Array(steps),
+    supplyCurrent: new Float64Array(steps),
     moves: [],
   }
   const saturated = new Uint8Array(steps)
   const limited = new Uint8Array(steps)
+  const softBlocked = new Uint8Array(steps)
+  const supplyLimitedArr = new Uint8Array(steps)
+  const coastMode = input.output?.neutralMode === 'coast'
 
   const controller = new Slot0Controller({ ...input.gains }, p.batteryVoltage)
   const voltageLimit = input.voltageLimit ?? true
@@ -126,6 +187,8 @@ export function simulate(input: SimInput): SimResult {
   let ff = 0
   let fb = 0
   let sat = false
+  let neutral = false
+  let softBlockedNow = false
   let ref = { pos: s.pos, vel: 0, acc: 0 }
   let supplyVoltage = p.batteryVoltage
 
@@ -158,16 +221,22 @@ export function simulate(input: SimInput): SimResult {
       ref = profile ? profile.sample(t - profileStart) : { pos: holdGoal, vel: 0, acc: 0 }
       controller.peakVoltage = voltageLimit ? supplyVoltage : Infinity
       const c = controller.calculate(ref, meas, dt * ratio)
-      u = c.output
+      const stage = applyOutputStage(c.output, meas.pos, supplyVoltage, input.output)
+      u = stage.u
+      // 輸出剛好是 0 也算 neutral（Phoenix 6 輸出為 0 時套用 NeutralMode）；軟體限位另外記
+      neutral = stage.neutral || stage.u === 0
+      softBlockedNow = stage.neutral
       ff = c.feedforward
       fb = c.feedback
-      sat = c.saturated
+      sat = c.saturated || stage.clamped
     }
 
-    const drive = applyCurrentLimit(p, u, s.vel)
+    const coast = neutral && coastMode
+    const drive = applyCurrentLimit(p, u, s.vel, coast)
     // 供電電流 ≈ Stator 電流 × 佔空比，用它估電池壓降
-    const supplyCurrent = p.motorCount * Math.abs(drive.statorCurrent * (drive.effectiveVoltage / Math.max(supplyVoltage, 1)))
-    supplyVoltage = p.batteryVoltage - p.batteryResistance * supplyCurrent
+    // 有正負號：正的是從電池拿電，負的是回充（煞車往下時）
+    const supplyCurrent = p.motorCount * drive.statorCurrent * (drive.effectiveVoltage / Math.max(supplyVoltage, 1))
+    supplyVoltage = p.batteryVoltage - p.batteryResistance * Math.abs(supplyCurrent)
 
     out.t[i] = t
     out.pos[i] = s.pos
@@ -180,10 +249,13 @@ export function simulate(input: SimInput): SimResult {
     out.feedback[i] = fb
     out.statorCurrent[i] = drive.statorCurrent
     out.supplyVoltage[i] = supplyVoltage
+    out.supplyCurrent[i] = supplyCurrent
     saturated[i] = sat ? 1 : 0
     limited[i] = drive.currentLimited ? 1 : 0
+    softBlocked[i] = softBlockedNow ? 1 : 0
+    supplyLimitedArr[i] = drive.supplyLimited ? 1 : 0
 
-    s = stepRK4(p, s, u, dt)
+    s = stepRK4(p, s, u, dt, coast)
   }
 
   for (let k = 0; k < moves.length; k++) {
@@ -203,6 +275,8 @@ export function simulate(input: SimInput): SimResult {
     let peakI = 0
     let satCount = 0
     let limCount = 0
+    let softCount = 0
+    let supCount = 0
     let rs = 0
     let rs2 = 0
     let rn = 0
@@ -217,6 +291,8 @@ export function simulate(input: SimInput): SimResult {
       peakI = Math.max(peakI, Math.abs(out.statorCurrent[i]))
       satCount += saturated[i]
       limCount += limited[i]
+      softCount += softBlocked[i]
+      supCount += supplyLimitedArr[i]
       if (out.t[i] >= profileEnd) {
         overshoot = Math.max(overshoot, (x - m.goal) * dir)
         if (Math.abs(x - m.goal) > tol) lastOutside = i
@@ -239,6 +315,8 @@ export function simulate(input: SimInput): SimResult {
       currentLimitFraction: limCount / n,
       slot: slotOf[k] ?? 0,
       holdVoltageRipple: rn > 1 ? Math.sqrt(Math.max(0, rs2 / rn - (rs / rn) ** 2)) : 0,
+      softLimitFraction: softCount / n,
+      supplyLimitFraction: supCount / n,
     })
   }
   return out

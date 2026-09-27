@@ -58,7 +58,7 @@ describe('穩健性測試（步驟 10）', () => {
   })
 
   it('規格判斷', () => {
-    const ok = { goal: 1, profileDuration: 1, overshoot: 0, settlingTime: 0.1, steadyStateError: 0, maxFollowingError: 0.01, peakStatorCurrent: 30, saturationFraction: 0, currentLimitFraction: 0, slot: 0 as const, holdVoltageRipple: 0 }
+    const ok = { goal: 1, profileDuration: 1, overshoot: 0, settlingTime: 0.1, steadyStateError: 0, maxFollowingError: 0.01, peakStatorCurrent: 30, saturationFraction: 0, currentLimitFraction: 0, slot: 0 as const, holdVoltageRipple: 0, softLimitFraction: 0, supplyLimitFraction: 0 }
     expect(passesSpec([ok])).toBe(true)
     expect(moveFailures({ ...ok, settlingTime: null, overshoot: 0.02 }, DEFAULT_SPEC)).toEqual(['overshoot', 'settling'])
   })

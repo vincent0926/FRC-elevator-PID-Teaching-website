@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore, type Calibration } from '../../app/store'
+import { ApproxNote } from '../../components/ApproxNote'
 import { Chart } from '../../components/Chart'
 import { randomHiddenPlant } from '../../core/challenge'
 import type { AlignedLog } from '../../core/log/fieldMap'
@@ -70,6 +71,15 @@ export function CalibrationPanel({ onApply }: { onApply: (c: Calibration) => voi
         理論模型是用 1F 填的資料算的，真的電梯多少不一樣。把實機日誌的輸出電壓直接餵給模擬（開迴路重播），調整重力、kV、等效質量、摩擦讓位置對得上，
         就得到「已校正模型」。之後在模擬裡預覽調參建議，結果比較接近真的機器人。
       </p>
+      <ApproxNote
+        summary="校正後的模型還是近似：它只把四個數對到這一份日誌，換了高度範圍、電池或負載就可能不準。"
+        items={[
+          '只擬合重力（kG）、kV、等效質量（kA）、摩擦（kS，往上往下當成一樣）四個數；齒輪箱效率、隨高度變化的力會被混進這四個數裡。',
+          '擬合用的是這份日誌移動過的範圍和速度，範圍外（例如更快的 Motion Magic）是外插。',
+          '重播用日誌記錄的輸出電壓（50 Hz 零階保持），兩筆之間的變化看不到。',
+          '位置誤差 < 1 cm 只代表「這份日誌」對得上，不代表每一次都對。',
+        ]}
+      />
       <div className="row">
         <button className="btn small" type="button" disabled={!lastLog} onClick={() => lastLog && setSrc({ log: lastLog.log, name: lastLog.name })}>
           {lastLog ? `用 2F 匯入的「${lastLog.name}」校正` : '還沒在 2F 匯入日誌'}

@@ -204,3 +204,83 @@ describe('真實模型的各項開關（Phase 3 步驟 5：變化方向要符合
     expect(ideal2.kGStep).toBeUndefined()
   })
 })
+
+describe('馬達控制器的限制（Current Limit、Soft Limit、Peak Output、Neutral Mode）', () => {
+  const mm = { cruiseVelocity: ff.cruiseVelocity, acceleration: ff.acceleration }
+  const gains = { kS: 0, kG: ff.kG, kV: ff.kV, kA: ff.kA, kP: 50, kI: 0, kD: 0 }
+  const plant = { ...ideal, minPosition: 0, maxPosition: 1.2 }
+  const run = (over: Partial<Parameters<typeof simulate>[0]> = {}, plantOver: Partial<PlantParams> = {}) =>
+    simulate({
+      plant: { ...plant, ...plantOver },
+      gains,
+      motionMagic: mm,
+      controlPeriod: 0.001,
+      initialPosition: 0.1,
+      moves: [
+        { time: 0.2, goal: 0.9 },
+        { time: 2.5, goal: 0.1 },
+      ],
+      duration: 5,
+      ...over,
+    })
+
+  it('Supply 電流限制：每顆馬達的電池端電流不超過上限，加速變慢', () => {
+    const free = run()
+    const lim = run({}, { supplyCurrentLimit: 15 })
+    const perMotorMax = Math.max(...lim.supplyCurrent) / plant.motorCount
+    expect(perMotorMax).toBeLessThan(15 * 1.02)
+    expect(Math.max(...free.supplyCurrent) / plant.motorCount).toBeGreaterThan(15)
+    expect(lim.moves[0].supplyLimitFraction).toBeGreaterThan(0)
+    expect(lim.moves[0].maxFollowingError).toBeGreaterThan(free.moves[0].maxFollowingError)
+  })
+
+  it('Supply 限制比 Stator 限制寬鬆時不會觸發（低速時佔空比小）', () => {
+    const r = run({}, { statorCurrentLimit: 40, supplyCurrentLimit: 200 })
+    expect(r.moves[0].supplyLimitFraction).toBe(0)
+  })
+
+  it('軟體限位：目標在限位外面時，電梯停在限位附近，不會衝到目標', () => {
+    const r = run({ output: { controller: 'talonfx', softLimit: { forward: 0.7, reverse: 0 } } })
+    const maxPos = Math.max(...r.pos)
+    // 到限位時還有速度，會衝過 1–3 cm：控制器只是在限位把輸出關掉，不會提前煞車
+    expect(maxPos).toBeLessThan(0.75)
+    expect(maxPos).toBeGreaterThan(0.69)
+    expect(r.moves[0].softLimitFraction).toBeGreaterThan(0)
+    expect(r.moves[0].steadyStateError).toBeGreaterThan(0.15)
+  })
+
+  it('軟體限位擋住時：Coast 比 Brake 往下掉得多（Brake 靠反電動勢煞住）', () => {
+    const soft = { forward: 0.7, reverse: 0 }
+    const brake = run({ output: { controller: 'talonfx', softLimit: soft, neutralMode: 'brake' } })
+    const coast = run({ output: { controller: 'talonfx', softLimit: soft, neutralMode: 'coast' } })
+    // 到限位後的最低點：Coast 放掉的時候重力直接拉下去
+    const minAfter = (r: typeof brake) => Math.min(...Array.from(r.pos.slice(1500, 2400)))
+    expect(minAfter(coast)).toBeLessThan(minAfter(brake))
+  })
+
+  it('輸出上限：往上最多 6 V 時，跑得比較慢、會飽和', () => {
+    const free = run()
+    const capped = run({ output: { controller: 'talonfx', peakForward: 6, peakReverse: 12 } })
+    expect(Math.max(...capped.voltage)).toBeLessThanOrEqual(6 + 1e-9)
+    expect(capped.moves[0].saturationFraction).toBeGreaterThan(0.1)
+    expect(capped.moves[0].maxFollowingError).toBeGreaterThan(free.moves[0].maxFollowingError + 0.02)
+  })
+
+  it('輸出上限：往下限制 1 V（比 kG 還小）時，往下只能靠重力，下降被限制住', () => {
+    const r = run({ output: { controller: 'talonfx', peakForward: 12, peakReverse: 1 } })
+    expect(Math.min(...r.voltage)).toBeGreaterThanOrEqual(-1 - 1e-9)
+  })
+
+  it('SPARK MAX 沒開電壓補償：電池 10.5 V 時電壓少一截，停得比有補償低', () => {
+    const low = { ...plant, batteryVoltage: 10.5 }
+    const noComp = run({ plant: low, gains: { ...gains, kP: 10 }, output: { controller: 'sparkmax', voltageCompensation: null } })
+    const comp = run({ plant: low, gains: { ...gains, kP: 10 }, output: { controller: 'sparkmax', voltageCompensation: 10 } })
+    // 沒補償：kG 只剩 10.5/12，靜止時停在目標下面
+    expect(noComp.moves[0].steadyStateError).toBeGreaterThan(comp.moves[0].steadyStateError + 0.003)
+  })
+
+  it('SPARK MAX 輸出範圍用佔空比：50% 在 12 V 電池 = 6 V', () => {
+    const r = run({ plant: { ...plant, batteryVoltage: 12 }, output: { controller: 'sparkmax', peakForward: 0.5, peakReverse: 1, voltageCompensation: 12 } })
+    expect(Math.max(...r.voltage)).toBeLessThanOrEqual(6 + 1e-9)
+  })
+})

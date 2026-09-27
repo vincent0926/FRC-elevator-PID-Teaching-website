@@ -260,3 +260,21 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .challenge.won { border-left-color: var(--green) }
 .challenge.lost { border-left-color: var(--red) }
 @media (max-width: 720px) { .robust-sum { grid-template-columns: minmax(0, 1fr) } }
+.ctrl { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-2) }
+.toggles code { font-size: 11.5px; color: var(--ink-3); margin-left: 4px; word-break: break-all }
+.src-tag { display: inline-block; font-size: 12px; border-radius: 999px; padding: 1px 9px; border: 1px solid; white-space: nowrap; font-weight: 500 }
+.src-mini { display: inline-block; font-size: 10.5px; border-radius: 3px; padding: 0 4px; margin-left: 6px; border: 1px solid; vertical-align: 2px; font-weight: 500 }
+.src-calc { color: var(--green); border-color: var(--green); background: var(--green-soft) }
+.src-calcThenMeasure { color: var(--blue); border-color: var(--blue); background: var(--blue-soft) }
+.src-measure { color: var(--amber); border-color: var(--amber); background: var(--amber-soft) }
+.src-choose { color: var(--violet); border-color: var(--violet); background: var(--panel-2) }
+.src-kinds { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px }
+.src-kinds li { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px; align-items: baseline }
+.src-tbl td, .src-tbl th { vertical-align: top; font-size: 13px }
+@media (max-width: 720px) { .src-kinds li { grid-template-columns: minmax(0, 1fr) } }
+.approx { border-left: 3px solid var(--amber); background: var(--amber-soft); border-radius: 4px; padding: 8px 12px; font-size: 13px; color: var(--ink); margin: 10px 0 }
+.approx > b { margin-right: 4px }
+.approx details { margin-top: 4px }
+.approx summary { cursor: pointer; color: var(--ink-2) }
+.approx ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink-2) }
+.approx li { margin: 3px 0 }

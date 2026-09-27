@@ -117,4 +117,29 @@ describe('3F 教學情境', () => {
     expect(r.moves[0].steadyStateError).toBeCloseTo(0.8 / theory.feedback.kP, 2)
     expect(r.moves[1].steadyStateError).toBeLessThan(0.005)
   })
+
+  it('目標超過軟體限位：停在限位附近，到不了目標', () => {
+    const r = run('softLimit')
+    const fwd = Math.round(mechanism.travel * 0.6 * 100) / 100
+    expect(r.moves[0].softLimitFraction).toBeGreaterThan(0)
+    expect(Math.max(...r.pos)).toBeLessThan(fwd + 0.05)
+    expect(r.moves[0].steadyStateError).toBeGreaterThan(goal - fwd - 0.05)
+    // 限位調高就沒事
+    const ok = run('softLimit', { knobs: { softForward: mechanism.travel } })
+    expect(ok.moves[0].softLimitFraction).toBe(0)
+  })
+
+  it('Supply 限制太低：觸發限流、跟隨誤差比 40 A 大', () => {
+    const low = run('supplyLimit')
+    const ok = run('supplyLimit', { knobs: { supplyLimitA: 40 } })
+    expect(low.moves[0].supplyLimitFraction).toBeGreaterThan(0.02)
+    expect(low.moves[0].maxFollowingError).toBeGreaterThan(ok.moves[0].maxFollowingError)
+  })
+
+  it('SPARK MAX 沒開電壓補償：停得比開了補償低', () => {
+    const noComp = run('sparkNoComp')
+    const comp = run('sparkNoComp', { knobs: { voltageComp: true, voltageCompV: 10 } })
+    expect(noComp.moves[0].steadyStateError).toBeGreaterThan(0.01)
+    expect(comp.moves[0].steadyStateError).toBeLessThan(noComp.moves[0].steadyStateError / 2)
+  })
 })

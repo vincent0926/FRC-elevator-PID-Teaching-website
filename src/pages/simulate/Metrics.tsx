@@ -28,6 +28,8 @@ export function MetricsTable({ moves, other, otherLabel }: { moves: MoveMetrics[
   for (const m of moves) {
     if (m.saturationFraction > DEFAULT_SPEC.saturation) hints.push('輸出電壓貼到電池電壓：馬達已經全力，調 PID 沒用，先降低 Motion Magic 速度或加速度。')
     if (m.currentLimitFraction > DEFAULT_SPEC.saturation) hints.push('觸發 Stator 電流限制：加速度太大或機構太重，屬於物理限制。')
+    if (m.softLimitFraction > 0) hints.push('軟體限位擋住了：位置到了限位，控制器把那個方向的輸出關掉（neutral）。目標設在限位外面就到不了，會在限位附近抖。')
+    if (m.supplyLimitFraction > DEFAULT_SPEC.saturation) hints.push('觸發 Supply 電流限制：從電池拿的電流被限制，加速變慢。保護斷路器用的，設太低電梯會變肉。')
     if (m.holdVoltageRipple > DEFAULT_SPEC.ripple) hints.push('到位後電壓一直抖：可能在振盪（kP 太大、控制週期太長、延遲），或 kD 把雜訊放大了。')
   }
   const moveLabel = (m: MoveMetrics, i: number) => `${i === 0 ? '往上' : '往下'} → ${m.goal.toFixed(2)} m${moves.some((x) => x.slot === 1) ? `（Slot ${m.slot}）` : ''}`
