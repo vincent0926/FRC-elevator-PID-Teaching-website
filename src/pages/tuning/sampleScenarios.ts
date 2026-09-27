@@ -2,6 +2,7 @@ import { round3, type IssueKey } from '../../core/analysis/diagnose'
 import type { Slot0Gains } from '../../core/controller/slot0'
 import type { FeedforwardResult } from '../../core/feedforward'
 import type { PlantOptions } from '../../core/physics/elevator'
+import type { SimInput } from '../../core/physics/simulate'
 import type { ParameterSet } from '../../schema/parameterSet'
 
 /**
@@ -16,6 +17,8 @@ export interface ScenarioBuild {
   plant?: PlantOptions
   /** 閉迴路週期，預設 TalonFX 1 ms */
   controlPeriod?: number
+  /** 控制器看到的感測延遲與雜訊 */
+  sensor?: SimInput['sensor']
 }
 
 export interface Scenario {
@@ -96,6 +99,20 @@ export const SCENARIOS: Scenario[] = [
     lookFor: '前饋都對，但這台電梯的重力隨高度變（拖鏈越拉越長），常數 kG 補不到。軌跡跑完後有時停在差 2 cm 的地方不動：誤差乘上 kP 推不動靜摩擦。',
     expect: 'kP',
     build: (p) => ({ gains: { ...base(p), kP: 2 }, motionMagic: p.motionMagic, plant: { realistic: true, kGVariation: 0.5 } }),
+  },
+  {
+    id: 'noisyKd',
+    label: 'kD 太大（放大雜訊）',
+    lookFor: '到位後輸出電壓一直抖，但位置幾乎沒動：不是振盪，是 kD 把速度的雜訊放大了。這時要降 kD，不是降 kP。',
+    expect: 'oscillation',
+    build: (p) => ({ gains: { ...base(p), kD: 40 }, motionMagic: p.motionMagic, sensor: { delay: 0.002, positionNoise: 0.001, velocityNoise: 0.02 } }),
+  },
+  {
+    id: 'asymFriction',
+    label: '摩擦往上往下不一樣',
+    lookFor: '往上摩擦 0.35 V、往下 0.05 V，kS 設平均 0.2 V。診斷會說 kG 不對：kG 補上不對稱的一半之後，剛好在靜摩擦範圍正中間，不需要多用 Slot 1。',
+    expect: 'kG',
+    build: (p) => ({ gains: { ...base(p), kS: 0.2 }, motionMagic: { cruiseVelocity: p.motionMagic.cruiseVelocity * 0.8, acceleration: p.motionMagic.acceleration * 0.8 }, plant: { realistic: true, frictionKs: 0.35, frictionKsDown: 0.05 } }),
   },
   {
     id: 'saturate',

@@ -29,19 +29,23 @@ function theoryOf(m: ElevatorMechanism) {
   return { ff, theory }
 }
 
-async function run(m: ElevatorMechanism, b: ScenarioBuild, opts: { moves?: Move[]; seed?: number; duration?: number } = {}) {
+/** robot：機器人上真正跑的參數（預設 = b.gains）；b.gains 是使用者選的參數組 */
+async function run(m: ElevatorMechanism, b: ScenarioBuild, opts: { moves?: Move[]; seed?: number; duration?: number } = {}, robot = b.gains) {
   const ff = computeFeedforward(m)
-  const bytes = makeSampleLog({ mechanism: m, ff, ...b, ...opts })
+  const bytes = makeSampleLog({ mechanism: m, ff, ...b, gains: robot, ...opts })
   const scan = await scanWpilog([bytes])
   const map = suggestMapping(scan.entries)
   const series = await extractSeries([bytes], Object.values(map).flatMap((r) => (r.entry ? [r.entry] : [])))
   const log = alignSeries(series, map)
   const checks = runDataChecks(log, { statorCurrentLimit: m.statorCurrentLimit })
-  if (!checks.ok) return { checks, d: null, est: null, refusedBy: oscillationBehindRefusal(log, b.gains)?.key ?? null }
+  if (!checks.ok) {
+    const refusal = oscillationBehindRefusal(log, b.gains)
+    return { checks, d: null, est: null, refusedBy: refusal?.key ?? null, refusal }
+  }
   // 前饋欄位推得回來；kP、kD 推不準時用「使用者選的參數組」，這裡用機器人上真正的值
   const est = estimateRobotGains(log, b.gains)
   const d = diagnose(log, checks, est?.gains ?? b.gains, b.motionMagic, { statorCurrentLimit: m.statorCurrentLimit, controlPeriod: b.controlPeriod })
-  return { checks, d, est, refusedBy: null }
+  return { checks, d, est, refusedBy: null, refusal: null }
 }
 
 // 步驟 0 擋下時，如果看得出是振盪，也算找對
@@ -53,6 +57,35 @@ describe('診斷：練習用情境', () => {
   it.each(SCENARIOS.map((s) => [s.id, s] as const))('%s', async (_, sc) => {
     const r = await run(m, sc.build(theory, ff))
     expect(primaryOf(r)).toBe(sc.expect)
+  })
+
+  it('kD 放大雜訊：建議降 kD，不是降 kP', async () => {
+    const r = await run(m, SCENARIOS.find((s) => s.id === 'noisyKd')!.build(theory, ff))
+    // kD 放大的雜訊常常頂到電流限制，步驟 0 就擋下；擋下時也要指出是 kD
+    const issue = r.d?.primary ?? r.refusal
+    const c = issue?.change
+    expect(c?.kind === 'gain' && c.param).toBe('kD')
+    if (c?.kind === 'gain') expect(c.to).toBeLessThan(c.from * 0.5)
+  })
+
+  it('kD 放大雜訊，但日誌推不出 kD（用理論值 kD = 0 當參數組）：仍然指出是 kD，不叫你降 kP', async () => {
+    const b = SCENARIOS.find((s) => s.id === 'noisyKd')!.build(theory, ff)
+    const r = await run(m, { ...b, gains: { ...b.gains, kD: 0 } }, {}, { ...b.gains })
+    const issue = r.d?.primary ?? r.refusal
+    expect(issue?.summary).toContain('kD')
+    expect(issue?.change?.kind === 'gain' && issue.change.param === 'kP').toBe(false)
+  })
+
+  it('摩擦不對稱：照建議改 kG 之後就沒有問題了（不需要 Slot 1）', async () => {
+    const b = SCENARIOS.find((s) => s.id === 'asymFriction')!.build(theory, ff)
+    const r = await run(m, b)
+    const c = r.d!.primary!.change!
+    if (c.kind !== 'gain' || c.param !== 'kG') throw new Error('應該先改 kG')
+    // 最佳 kG = 真 kG + (往上摩擦 − 往下摩擦) / 2
+    expect(c.to).toBeCloseTo(ff.kG + 0.15, 1)
+    expect(r.d!.notes.some((n) => n.includes('Slot 1'))).toBe(true)
+    const r2 = await run(m, { ...b, gains: { ...b.gains, kG: c.to } })
+    expect(r2.d!.primary).toBeNull()
   })
 
   it('從日誌推回的前饋參數跟機器人上一樣', async () => {
