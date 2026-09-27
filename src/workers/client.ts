@@ -1,6 +1,7 @@
 import type { FeedforwardResult } from '../core/feedforward'
 import type { RobustRanges, RobustResult } from '../core/physics/robustness'
 import type { SimInput, SimResult } from '../core/physics/simulate'
+import type { Spec } from '../core/physics/spec'
 import type { ElevatorMechanism } from '../schema/parameterSet'
 import type { ScanResult, Series } from '../core/log/reader'
 import type { SimRequest, SimResponse } from './sim.worker'
@@ -55,7 +56,7 @@ let robustSeq = 0
  * 穩健性測試：幾十次模擬在 Worker 裡一次跑完，只傳回最差那一次的曲線。
  * 用自己的 Worker，跑的時候畫面上的即時模擬不用排隊；又按一次時直接終止舊的那個。
  */
-export function runRobustnessTest(base: SimInput, mechanism: ElevatorMechanism, ff: FeedforwardResult, ranges: RobustRanges): Promise<RobustResult> {
+export function runRobustnessTest(base: SimInput, mechanism: ElevatorMechanism, ff: FeedforwardResult, ranges: RobustRanges, spec?: Spec): Promise<RobustResult> {
   if (robust) {
     robust.worker.terminate()
     robust.reject(new Error('stale'))
@@ -81,7 +82,7 @@ export function runRobustnessTest(base: SimInput, mechanism: ElevatorMechanism, 
       done()
       reject(new Error(e.message || '模擬 Worker 發生錯誤'))
     }
-    worker.postMessage({ id, kind: 'robust', base, mechanism, ff, ranges } satisfies SimRequest)
+    worker.postMessage({ id, kind: 'robust', base, mechanism, ff, ranges, spec } satisfies SimRequest)
   })
 }
 

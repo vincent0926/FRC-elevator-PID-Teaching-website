@@ -27,16 +27,25 @@ public class Elevator extends SubsystemBase {
   // TODO 依行程修改：SysId 測試到這兩個高度就自動停（留足夠的煞車距離）
   private static final double SYSID_MIN_METERS = 0.10;
   private static final double SYSID_MAX_METERS = 1.05;
+  // 歸零：用很小的電壓往下碰擋，電流升高而且停住就是到底了
+  private static final double HOMING_VOLTS = -1.0;
+  private static final double HOMING_STALL_AMPS = 20.0;
+  private static final double HOMING_TIMEOUT_SEC = 3.0;
 
   private final ElevatorIO io;
   private final ElevatorIOInputsAutoLogged inputs = new ElevatorIOInputsAutoLogged();
   private final Alert disconnected = new Alert("電梯馬達沒有連線", AlertType.kError);
   private final Alert tripped = new Alert("電梯保護觸發：已停止，Disable 後重新 Enable 才會解除", AlertType.kError);
+  private final Alert softLimitsLost = new Alert("軟體限位沒有恢復：電梯停止，會一直重試到成功", AlertType.kError);
+  private final Alert homingWrongWay = new Alert("歸零時電梯往上跑：馬達方向設反了，先做單元零第 2 步", AlertType.kError);
 
   private double goalMeters = 0.0;
   private double faultSince = Double.NaN;
   private boolean safetyStopped = false;
-  private boolean sysIdActive = false;
+  /** 開迴路動作中（SysId、歸零）：沒有軌跡可以比，跳過跟隨誤差保護 */
+  private boolean openLoopActive = false;
+  /** 歸零後軟體限位沒寫回去：一直停住並重試，成功才解除 */
+  private boolean softLimitsDisabled = false;
   private final SysIdRoutine sysId;
 
   public Elevator(ElevatorIO io) {
@@ -68,9 +77,12 @@ public class Elevator extends SubsystemBase {
       faultSince = Double.NaN;
       goalMeters = inputs.positionMeters;
     }
+    if (softLimitsDisabled && !openLoopActive) softLimitsDisabled = !io.setSoftLimitsEnabled(true);
+    softLimitsLost.set(softLimitsDisabled && !openLoopActive);
+    if (softLimitsDisabled && !openLoopActive) safetyStopped = true;
 
     // SysId 用開迴路電壓，沒有軌跡可以比，只檢查失速
-    boolean followingBad = !sysIdActive && Math.abs(inputs.closedLoopReferenceMeters - inputs.positionMeters) > MAX_FOLLOWING_ERROR_METERS;
+    boolean followingBad = !openLoopActive && Math.abs(inputs.closedLoopReferenceMeters - inputs.positionMeters) > MAX_FOLLOWING_ERROR_METERS;
     boolean stalled = Math.abs(inputs.statorCurrentAmps) > STALL_CURRENT_AMPS && Math.abs(inputs.velocityMetersPerSec) < STALL_VELOCITY;
     if (DriverStation.isEnabled() && (followingBad || stalled)) {
       if (Double.isNaN(faultSince)) faultSince = Timer.getFPGATimestamp();
@@ -92,6 +104,15 @@ public class Elevator extends SubsystemBase {
 
   public double getPositionMeters() {
     return inputs.positionMeters;
+  }
+
+  private boolean homingStalled() {
+    return Math.abs(inputs.statorCurrentAmps) > HOMING_STALL_AMPS && Math.abs(inputs.velocityMetersPerSec) < 0.01;
+  }
+
+  /** 歸零時往上跑超過 5 cm/s：方向設反了 */
+  private boolean movingUp() {
+    return inputs.velocityMetersPerSec > 0.05;
   }
 
   public boolean atGoal(double toleranceMeters) {
@@ -117,6 +138,42 @@ public class Elevator extends SubsystemBase {
   }
 
   /**
+   * 歸零（單元零第 3 步）：開機時的位置不一定是 0。
+   * 關掉軟體限位、用 −1 V 慢慢往下，電流超過 20 A 而且速度接近 0 就是碰到硬擋，把位置設成 0。
+   * 3 秒內沒碰到就放棄、不改位置（Dashboard 會看到這個指令被中斷）。
+   *
+   * <p>一定要先做完單元零第 2 步（確認正電壓往上）。方向設反時電梯會往上跑，
+   * 這裡偵測到往上的速度就立刻停、不改位置；保護觸發時也一樣。
+   */
+  public Command homeCommand() {
+    return run(() -> {
+          if (!safetyStopped) io.setVoltage(HOMING_VOLTS);
+        })
+        .until(() -> safetyStopped || movingUp() || homingStalled())
+        .beforeStarting(
+            () -> {
+              openLoopActive = true;
+              homingWrongWay.set(false);
+              softLimitsDisabled = true;
+              io.setSoftLimitsEnabled(false);
+            })
+        .finallyDo(
+            interrupted -> {
+              io.stop();
+              homingWrongWay.set(movingUp());
+              // 只有真的碰到底才把位置設成 0
+              if (!interrupted && !safetyStopped && !movingUp() && homingStalled()) {
+                io.resetPosition(0.0);
+                goalMeters = 0.0;
+              }
+              softLimitsDisabled = !io.setSoftLimitsEnabled(true);
+              openLoopActive = false;
+            })
+        .withTimeout(HOMING_TIMEOUT_SEC)
+        .withName("Elevator.home");
+  }
+
+  /**
    * SysId 準靜態測試（單元二）：電壓每秒加 0.5 V，量 kS、kG、kV。
    * 往上的測試從靠近底部開始、往下的從靠近頂部開始；接近行程兩端會自動停。
    * 綁在 whileTrue，放開按鈕就停。
@@ -133,10 +190,10 @@ public class Elevator extends SubsystemBase {
   private Command sysIdCommand(Command test, SysIdRoutine.Direction direction) {
     boolean up = direction == SysIdRoutine.Direction.kForward;
     return test.until(() -> up ? inputs.positionMeters > SYSID_MAX_METERS : inputs.positionMeters < SYSID_MIN_METERS)
-        .beforeStarting(() -> sysIdActive = true)
+        .beforeStarting(() -> openLoopActive = true)
         .finallyDo(
             () -> {
-              sysIdActive = false;
+              openLoopActive = false;
               io.stop();
             })
         .withName("Elevator.sysId");

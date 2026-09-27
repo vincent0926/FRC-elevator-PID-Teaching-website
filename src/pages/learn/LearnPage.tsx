@@ -1,6 +1,7 @@
 import { UNIT0_ITEMS, useStore } from '../../app/store'
 import { Unit1 } from './Unit1'
 import { Unit2 } from './Unit2'
+import { Unit3 } from './Unit3'
 
 /**
  * 4F 實機資料教學。單元零必修，全部勾完才開放單元一、二。
@@ -113,6 +114,14 @@ export function LearnPage() {
         </summary>
         {!unlocked && <LockNote onGo={() => document.getElementById('unit0')?.scrollIntoView({ behavior: 'smooth' })} />}
         <Unit2 />
+      </details>
+
+      <details className="unit">
+        <summary>
+          <h2 style={{ margin: 0 }}>單元三：常見的坑</h2>
+          <span className={'tag' + (lessonsDone['unit3'] ? ' done' : '')}>{lessonsDone['unit3'] ? '已完成' : '可以先讀'}</span>
+        </summary>
+        <Unit3 />
       </details>
     </section>
   )

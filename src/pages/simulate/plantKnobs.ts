@@ -106,6 +106,8 @@ export interface SimSetup {
   controlPeriod: number
   /** 目標高度（m），會先往上到這裡，再回到行程 10% 處 */
   goal: number
+  /** 到位判定的範圍（m），跟達標標準的穩態誤差一樣 */
+  tolerance?: number
 }
 
 export function buildSimInput(setup: SimSetup, ps: ParameterSet): SimInput {
@@ -143,6 +145,7 @@ export function buildSimInput(setup: SimSetup, ps: ParameterSet): SimInput {
       { time: t2, goal: low },
     ],
     duration: Math.min(30, t2 + down.duration + 1.5),
+    tolerance: setup.tolerance,
     sensor:
       real && knobs.sensor
         ? { delay: knobs.sensorDelay, positionNoise: knobs.sensorNoise, velocityNoise: knobs.sensorNoise * VELOCITY_NOISE_PER_POSITION }

@@ -38,4 +38,13 @@ public interface ElevatorIO {
 
   /** 把目前位置設成指定高度（歸零用）。 */
   default void resetPosition(double meters) {}
+
+  /**
+   * 暫時開關軟體限位（歸零時要關掉，不然開機位置不對時會被擋住）。
+   *
+   * @return 設定有沒有成功寫進馬達控制器
+   */
+  default boolean setSoftLimitsEnabled(boolean enabled) {
+    return true;
+  }
 }

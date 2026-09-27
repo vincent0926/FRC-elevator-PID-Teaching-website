@@ -3,15 +3,17 @@ import { useStore } from '../../app/store'
 import { ParamCard } from '../../components/ParamCard'
 import { Quiz } from '../../components/Quiz'
 import { ExportPanel } from './ExportPanel'
+import { ParamLibrary } from '../../components/ParamLibrary'
 import { LESSONS } from './lessons'
 import { MechanismForm } from './MechanismForm'
 import { PARAM_ROWS, KIND_INFO } from './paramSources'
 import { ParamSources } from './ParamSources'
+import { RatioSweep, ShareMechanism } from './RatioSweep'
 
 const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
 export function CalcPage() {
-  const { mechanism, setMechanism, voltsPerCm, setVoltsPerCm, ff, theory, lessonsDone, markLesson, setCustom, setSimSource, go } = useStore()
+  const { mechanism, setMechanism, voltsPerCm, setVoltsPerCm, ff, theory, lessonsDone, markLesson, setCustom, setSimSource, go, shared, dismissShared } = useStore()
   const [open, setOpen] = useState<string | null>(() => LESSONS.find((l) => !lessonsDone[l.id])?.id ?? null)
   const done = LESSONS.filter((l) => lessonsDone[l.id]).length
 
@@ -35,6 +37,23 @@ export function CalcPage() {
         </span>
       </div>
 
+      {shared && (
+        <div className={shared.ok ? 'ok' : 'warn'} style={{ marginBottom: 12 }}>
+          {shared.text}
+          {shared.prev && (
+            <>
+              {' '}
+              <button className="linkbtn" type="button" onClick={() => dismissShared(true)}>
+                復原成我原本的
+              </button>
+            </>
+          )}{' '}
+          <button className="linkbtn" type="button" onClick={() => dismissShared(false)}>
+            知道了
+          </button>
+        </div>
+      )}
+
       <div className="grid2">
         <div className="stack">
           <MechanismForm m={mechanism} onChange={setMechanism} voltsPerCm={voltsPerCm} onVoltsPerCm={setVoltsPerCm} />
@@ -55,7 +74,7 @@ export function CalcPage() {
                     {isOpen && (
                       <div className="body">
                         <div className="goal">學習目標：{l.goal}</div>
-                        <l.Body m={mechanism} ff={ff} kP={theory.feedback.kP} />
+                        <l.Body m={mechanism} ff={ff} kP={theory.feedback.kP} done={lessonsDone[l.id]} />
                         <Quiz key={l.id} quiz={l.quiz} done={lessonsDone[l.id]} onCorrect={() => markLesson(l.id)} />
                       </div>
                     )}
@@ -112,8 +131,31 @@ export function CalcPage() {
           </p>
           <hr style={{ border: 0, borderTop: '1px solid var(--line-2)', margin: '18px 0' }} />
           <ExportPanel ps={theory} />
+          <hr style={{ border: 0, borderTop: '1px solid var(--line-2)', margin: '18px 0' }} />
+          <h3>參數庫</h3>
+          <ParamLibrary current={theory} currentLabel="理論值" defaultTag="theory" />
         </aside>
       </div>
+
+      <details className="panel scen" style={{ marginTop: 20 }}>
+        <summary>
+          <b>齒比怎麼選</b>
+          <span className="small muted">只換齒比，看跑完全程要多久、停在半空要吃多少電流。</span>
+        </summary>
+        <div style={{ marginTop: 12 }}>
+          <RatioSweep />
+        </div>
+      </details>
+
+      <details className="panel scen" style={{ marginTop: 12 }}>
+        <summary>
+          <b>分享這台電梯</b>
+          <span className="small muted">把機構資料放進網址傳給隊友，打開就是同一台電梯。</span>
+        </summary>
+        <div style={{ marginTop: 12 }}>
+          <ShareMechanism />
+        </div>
+      </details>
 
       <div style={{ marginTop: 20 }}>
         <ParamSources />

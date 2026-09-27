@@ -28,6 +28,8 @@ export interface ChartProps {
   /** 標示的時段（x 軸單位） */
   bands?: [number, number][]
   xLabel?: string
+  /** 圖例裡 x 的名稱（預設「時間」） */
+  xName?: string
 }
 
 /** uPlot 只認 null 為斷點，NaN 會弄壞 y 軸範圍 */
@@ -42,7 +44,7 @@ function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'
 }
 
-export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, xLabel = 's' }: ChartProps) {
+export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, xLabel = 's', xName = '時間' }: ChartProps) {
   const box = useRef<HTMLDivElement>(null)
   const plot = useRef<uPlot | null>(null)
 
@@ -69,7 +71,7 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
           { ...axis(), label: yLabel, labelSize: yLabel ? 16 : 0, labelFont: '11px ' + cssVar('--font'), size: 52 },
         ],
         series: [
-          { label: '時間' },
+          { label: xName },
           ...series.map((s) => ({
             label: s.label,
             stroke: cssVar(s.color),
@@ -120,7 +122,7 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
       plot.current?.destroy()
       plot.current = null
     }
-  }, [x, series, height, yLabel, syncKey, bands, xLabel])
+  }, [x, series, height, yLabel, syncKey, bands, xLabel, xName])
 
   return (
     <figure className="chart-box" style={{ margin: 0 }}>

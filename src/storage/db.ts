@@ -10,11 +10,21 @@ const DB_VERSION = 1
 const HISTORY = 'paramHistory'
 export const HISTORY_LIMIT = 50
 
+/** 參數庫的標籤：自己存的才有標籤；輸出程式時自動記的沒有（超過上限會被刪） */
+export type ParamTag = 'theory' | 'simBest' | 'final' | 'other'
+export const PARAM_TAGS: { id: ParamTag; label: string }[] = [
+  { id: 'theory', label: '理論值' },
+  { id: 'simBest', label: '模擬最佳' },
+  { id: 'final', label: '實機最終' },
+  { id: 'other', label: '其他' },
+]
+
 export interface HistoryEntry {
   id?: number
   savedAt: string
   label: string
   params: ParameterSet
+  tag?: ParamTag
 }
 
 function open(): Promise<IDBDatabase> {
@@ -48,15 +58,16 @@ export async function listHistory(): Promise<HistoryEntry[]> {
   return (req.result as HistoryEntry[]).filter((e) => ParameterSetSchema.safeParse(e.params).success).reverse()
 }
 
-export async function addHistory(label: string, params: ParameterSet): Promise<void> {
+export async function addHistory(label: string, params: ParameterSet, tag?: ParamTag): Promise<void> {
   const db = await open()
   const tx = db.transaction(HISTORY, 'readwrite')
   const store = tx.objectStore(HISTORY)
-  store.add({ savedAt: new Date().toISOString(), label, params } satisfies HistoryEntry)
-  const keysReq = store.getAllKeys()
-  keysReq.onsuccess = () => {
-    const keys = keysReq.result
-    for (let i = 0; i < keys.length - HISTORY_LIMIT; i++) store.delete(keys[i])
+  store.add({ savedAt: new Date().toISOString(), label, params, ...(tag ? { tag } : {}) } satisfies HistoryEntry)
+  // 只刪自動紀錄（沒有標籤）的舊資料；使用者自己存的參數組不會被刪
+  const allReq = store.getAll()
+  allReq.onsuccess = () => {
+    const auto = (allReq.result as HistoryEntry[]).filter((e) => !e.tag)
+    for (let i = 0; i < auto.length - HISTORY_LIMIT; i++) store.delete(auto[i].id!)
   }
   await done(tx)
   db.close()
