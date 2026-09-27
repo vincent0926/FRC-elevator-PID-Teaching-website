@@ -14,11 +14,13 @@ export function loadJson<T>(key: string, fallback: T): T {
   }
 }
 
-export function saveJson(key: string, value: unknown): void {
+/** 回傳有沒有存成功（私密視窗、空間滿了會失敗）；失敗不影響使用，只是重新整理後會回到上次存的值 */
+export function saveJson(key: string, value: unknown): boolean {
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value))
+    return true
   } catch {
-    // 儲存失敗不影響使用
+    return false
   }
 }
 

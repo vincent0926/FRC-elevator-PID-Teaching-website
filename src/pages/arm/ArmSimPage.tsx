@@ -17,6 +17,7 @@ import { ARM_SCENARIOS, type ArmScenario } from './armScenarios'
 import { DEFAULT_ARM_KNOBS, armStartAngle, buildArmSimInput, type ArmKnobs } from './armSim'
 import { useArm } from './armStore'
 import { ArmView } from './ArmView'
+import { UnsavedNote } from './UnsavedNote'
 
 /** 手臂 3F 模擬：理論值／自訂、理想／真實模型、重力型態、教學情境、照順序調、指標（角度） */
 
@@ -224,13 +225,9 @@ export function ArmSimPage() {
             自訂
           </button>
         </div>
-        <label className="check">
-          目標角度
-          <span className="inp" style={{ width: 110 }}>
-            <input type="number" step={5} value={Math.round(goal * R2D * 10) / 10} onChange={(e) => setGoal(Number(e.target.value) * DEG)} />
-            <em>°</em>
-          </span>
-        </label>
+        <div style={{ width: 150 }}>
+          <NumberField label="目標角度" value={goal} onChange={setGoal} unit="°" step={5} display={R2D} min={-180} max={180} />
+        </div>
         <label className="check">
           重力型態
           <span className="inp">
@@ -248,6 +245,7 @@ export function ArmSimPage() {
         )}
       </div>
 
+      <UnsavedNote />
       {error && <div className="warn">模擬失敗：{error}</div>}
       {gravityType === 'constant' && <div className="note">重力型態是「常數 kG」：控制器不會乘 cos θ。程式裡對手臂一定要設 GravityType = Arm_Cosine。</div>}
 

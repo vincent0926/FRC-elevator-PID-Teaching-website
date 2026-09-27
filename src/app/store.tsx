@@ -162,9 +162,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const t = loadSession('track')
     return t === 'elevator' || t === 'arm' ? t : null
   })
+  // 手動選機構（或換機構）一律回到總覽：換了機構，原本停的樓層可能還沒做（例如手臂 4F）
   const setTrack = useCallback((t: Track | null) => {
     setTrackState(t)
     saveSession('track', t)
+    if (t) {
+      if (location.hash !== '#home') location.hash = 'home'
+      setPage('home')
+    }
     window.scrollTo(0, 0)
   }, [])
 

@@ -24,21 +24,24 @@ interface ArmStore {
   setSource: (s: ArmSource) => void
   spec: Spec
   setSpec: (s: Spec) => void
+  /** 最近一次存到瀏覽器失敗：畫面上的值還在，但重新整理會回到上次存的值 */
+  unsaved: boolean
 }
 
 const Ctx = createContext<ArmStore | null>(null)
 
-function usePersisted<T>(key: string, initial: T, validate?: (v: unknown) => v is T): [T, (v: T) => void] {
+function usePersisted<T>(key: string, initial: T, validate?: (v: unknown) => v is T, onSaved?: (ok: boolean) => void): [T, (v: T) => void] {
   const [value, setValue] = useState<T>(() => {
     const v = loadJson<unknown>(key, initial)
     return validate && !validate(v) ? initial : (v as T)
   })
   const set = useCallback(
     (v: T) => {
+      // 先更新畫面（不等存檔），再回報有沒有存成功
       setValue(v)
-      saveJson(key, v)
+      onSaved?.(saveJson(key, v))
     },
-    [key],
+    [key, onSaved],
   )
   return [value, set]
 }
@@ -63,14 +66,16 @@ export function buildArmTheory(arm: ArmMechanism, ff: ArmFeedforwardResult, volt
 }
 
 export function ArmStoreProvider({ children }: { children: ReactNode }) {
-  const [arm, setArm] = usePersisted('armMechanism', DEFAULT_ARM, isArm)
-  const [voltsPerDeg, setVoltsPerDeg] = usePersisted('armVoltsPerDeg', 0.3, isNum)
-  const [custom, setCustom] = usePersisted<ArmParameterSet | null>('armCustom', null, isArmParamsOrNull)
-  const [source, setSource] = usePersisted<ArmSource>('armSource', 'theory', (v): v is ArmSource => v === 'theory' || v === 'custom')
-  const [spec, setSpec] = usePersisted<Spec>('armSpec', ARM_DEFAULT_SPEC, isSpec)
+  const [unsaved, setUnsaved] = useState(false)
+  const onSaved = useCallback((ok: boolean) => setUnsaved(!ok), [])
+  const [arm, setArm] = usePersisted('armMechanism', DEFAULT_ARM, isArm, onSaved)
+  const [voltsPerDeg, setVoltsPerDeg] = usePersisted('armVoltsPerDeg', 0.3, isNum, onSaved)
+  const [custom, setCustom] = usePersisted<ArmParameterSet | null>('armCustom', null, isArmParamsOrNull, onSaved)
+  const [source, setSource] = usePersisted<ArmSource>('armSource', 'theory', (v): v is ArmSource => v === 'theory' || v === 'custom', onSaved)
+  const [spec, setSpec] = usePersisted<Spec>('armSpec', ARM_DEFAULT_SPEC, isSpec, onSaved)
   const ff = useMemo(() => computeArmFeedforward(arm), [arm])
   const theory = useMemo(() => buildArmTheory(arm, ff, voltsPerDeg), [arm, ff, voltsPerDeg])
-  const value: ArmStore = { arm, setArm, voltsPerDeg, setVoltsPerDeg, ff, theory, custom, setCustom, source, setSource, spec, setSpec }
+  const value: ArmStore = { arm, setArm, voltsPerDeg, setVoltsPerDeg, ff, theory, custom, setCustom, source, setSource, spec, setSpec, unsaved }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

@@ -207,10 +207,14 @@ function WhyCosine({ m, ff, kP }: ArmLessonCtx) {
           </tbody>
         </table>
       </div>
-      <p className="small">
-        預估：kG·(1 − cos {f(d.goal * R2D, 0)}°) ÷ kP = {f(ff.kG, 3)} × {f(1 - Math.cos(d.goal), 2)} ÷ {f(kP, 1)} ={' '}
-        {f(((ff.kG * (1 - Math.cos(d.goal))) / kP) * R2D, 2)}°，跟模擬差不多。手臂越重（kG 越大）、kP 越小，差越多。
-      </p>
+      {kP > 0 ? (
+        <p className="small">
+          預估：kG·(1 − cos {f(d.goal * R2D, 0)}°) ÷ kP = {f(ff.kG, 3)} × {f(1 - Math.cos(d.goal), 2)} ÷ {f(kP, 1)} ={' '}
+          {f(((ff.kG * (1 - Math.cos(d.goal))) / kP) * R2D, 2)}°，跟模擬差不多。手臂越重（kG 越大）、kP 越小，差越多。
+        </p>
+      ) : (
+        <p className="small">現在 kP 是 0：沒有回授把多出來的 kG 抵掉，常數 kG 的手臂會一直被往上推到撞上限。回 1F 把「誤差 1 度給幾伏特」填大於 0 再看。</p>
+      )}
     </>
   )
 }

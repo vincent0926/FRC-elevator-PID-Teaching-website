@@ -5,6 +5,8 @@ import type { ArmMechanism } from '../../schema/armParameterSet'
 /** 手臂 1F 機構資料。角度在畫面上用度，內部存弧度。 */
 
 const R2D = 180 / Math.PI
+/** 角度範圍至少要這麼大，才不會上下限顛倒 */
+const MIN_RANGE_DEG = 5
 
 export function ArmForm({ m, onChange, voltsPerDeg, onVoltsPerDeg }: { m: ArmMechanism; onChange: (m: ArmMechanism) => void; voltsPerDeg: number; onVoltsPerDeg: (v: number) => void }) {
   const set = <K extends keyof ArmMechanism>(k: K, v: ArmMechanism[K]) => onChange({ ...m, [k]: v })
@@ -93,8 +95,26 @@ export function ArmForm({ m, onChange, voltsPerDeg, onVoltsPerDeg }: { m: ArmMec
       <fieldset className="fs">
         <h3>角度範圍（0° = 水平，往上為正）</h3>
         <div className="fields">
-          <NumberField label="最小角度（收起）" value={m.minAngle} display={R2D} onChange={(v) => set('minAngle', v)} unit="°" min={-180} max={180} />
-          <NumberField label="最大角度" value={m.maxAngle} display={R2D} onChange={(v) => set('maxAngle', v)} unit="°" min={-180} max={180} hint="超過 90° 就是轉過直立" />
+          <NumberField
+            label="最小角度（收起）"
+            value={m.minAngle}
+            display={R2D}
+            onChange={(v) => set('minAngle', v)}
+            unit="°"
+            min={-180}
+            max={Math.round(m.maxAngle * R2D) - MIN_RANGE_DEG}
+            hint={`要比最大角度小至少 ${MIN_RANGE_DEG}°`}
+          />
+          <NumberField
+            label="最大角度"
+            value={m.maxAngle}
+            display={R2D}
+            onChange={(v) => set('maxAngle', v)}
+            unit="°"
+            min={Math.round(m.minAngle * R2D) + MIN_RANGE_DEG}
+            max={180}
+            hint="超過 90° 就是轉過直立"
+          />
         </div>
       </fieldset>
 

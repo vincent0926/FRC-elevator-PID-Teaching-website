@@ -5,6 +5,7 @@ import { ArmForm } from './ArmForm'
 import { ArmParamCard } from './ArmParamCard'
 import { ARM_LESSONS } from './armLessons'
 import { useArm } from './armStore'
+import { UnsavedNote } from './UnsavedNote'
 
 /** 手臂 1F：機構資料 → 理論參數，加上五個教學關卡 */
 
@@ -37,6 +38,7 @@ export function ArmCalcPage() {
         </span>
       </div>
 
+      <UnsavedNote />
       <div className="grid2">
         <div className="stack">
           <ArmForm m={arm} onChange={setArm} voltsPerDeg={voltsPerDeg} onVoltsPerDeg={setVoltsPerDeg} />
