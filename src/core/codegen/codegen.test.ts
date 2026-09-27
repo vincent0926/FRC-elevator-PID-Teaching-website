@@ -57,7 +57,8 @@ describe('codegen', () => {
     expect(java).toContain(`.withKV(${jd(c.slot0.kV)})`)
     expect(java).toContain('GravityTypeValue.Elevator_Static')
     expect(java).toContain('public static final double GEAR_RATIO = 5.0;')
-    expect(java).not.toContain('Slot1Configs')
+    // 沒有摩擦不對稱時 slot1() 回傳 null，機器人端的讀取器就知道不用切換 Slot
+    expect(java).toMatch(/Slot1Configs slot1\(\) {\s+return null;/)
     // 大括號配對
     expect((java.match(/{/g) ?? []).length).toBe((java.match(/}/g) ?? []).length)
   })

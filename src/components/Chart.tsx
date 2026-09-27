@@ -30,6 +30,14 @@ export interface ChartProps {
   xLabel?: string
 }
 
+/** uPlot 只認 null 為斷點，NaN 會弄壞 y 軸範圍 */
+function withGaps(v: ArrayLike<number>): ArrayLike<number | null> {
+  for (let i = 0; i < v.length; i++) {
+    if (!Number.isFinite(v[i])) return Array.from(v, (y) => (Number.isFinite(y) ? y : null))
+  }
+  return v
+}
+
 function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'
 }
@@ -48,7 +56,8 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
       const ink3 = cssVar('--ink-3')
       const grid = cssVar('--line-2')
       const bandColor = cssVar('--yellow')
-      const axis: uPlot.Axis = { stroke: ink3, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid, width: 1 }, font: '11px ' + cssVar('--font') }
+      // 每個軸各自一份：uPlot 會改寫傳進去的 grid、ticks 物件，共用會讓 y 軸不畫刻度
+      const axis = (): uPlot.Axis => ({ stroke: ink3, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid, width: 1 }, font: '11px ' + cssVar('--font') })
       const opts: uPlot.Options = {
         width: Math.max(200, el.clientWidth),
         height,
@@ -56,8 +65,8 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
         legend: { show: true },
         scales: { x: { time: false } },
         axes: [
-          { ...axis, label: xLabel, labelSize: 14, labelFont: '11px ' + cssVar('--font') },
-          { ...axis, label: yLabel, labelSize: yLabel ? 16 : 0, labelFont: '11px ' + cssVar('--font'), size: 52 },
+          { ...axis(), label: xLabel, labelSize: 14, labelFont: '11px ' + cssVar('--font') },
+          { ...axis(), label: yLabel, labelSize: yLabel ? 16 : 0, labelFont: '11px ' + cssVar('--font'), size: 52 },
         ],
         series: [
           { label: '時間' },
@@ -66,7 +75,8 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
             stroke: cssVar(s.color),
             width: s.width ?? 1.75,
             dash: s.dash ? [6, 4] : undefined,
-            scale: s.scale,
+            // 明確傳 undefined 會蓋掉 uPlot 預設的 'y'，y 軸就畫不出刻度
+            ...(s.scale ? { scale: s.scale } : {}),
             points: { show: false },
           })),
         ],
@@ -89,7 +99,7 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
             }
           : undefined,
       }
-      const data = [x, ...series.map((s) => s.values)] as unknown as uPlot.AlignedData
+      const data = [x, ...series.map((s) => withGaps(s.values))] as unknown as uPlot.AlignedData
       plot.current = new uPlot(opts, data, el)
     }
 

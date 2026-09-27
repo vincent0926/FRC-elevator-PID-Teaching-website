@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "generator": "elevator-tuner",
+  "generatedAt": "2026-09-27T00:00:00.000Z",
+  "source": "theory",
+  "units": "phoenix6-rotations",
+  "sensorToMechanismRatio": 5,
+  "metersPerRotation": 0.1200088393671301,
+  "slot0": {
+    "kS": 0,
+    "kG": 0.5074080677009873,
+    "kV": 0.5967213114754099,
+    "kA": 0.010086836044521885,
+    "kP": 6.000441968356505,
+    "kI": 0,
+    "kD": 0
+  },
+  "motionMagic": {
+    "cruiseVelocity": 13.18780442040329,
+    "acceleration": 108.54283547955983
+  }
+}

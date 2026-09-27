@@ -103,7 +103,7 @@ export const phoenix6_2026: JavaTemplate = {
     const imports = [
       'com.ctre.phoenix6.configs.MotionMagicConfigs',
       'com.ctre.phoenix6.configs.Slot0Configs',
-      ...(c.slot1 ? ['com.ctre.phoenix6.configs.Slot1Configs'] : []),
+      'com.ctre.phoenix6.configs.Slot1Configs',
       'com.ctre.phoenix6.signals.GravityTypeValue',
       'com.ctre.phoenix6.signals.StaticFeedforwardSignValue',
     ]
@@ -129,7 +129,10 @@ public final class ElevatorGains {
   public static final double ACCELERATION = ${jd(c.acceleration)};
 
 ${slotJava('slot0', c.slot0)}
-${c.slot1 ? `\n  /** 往下移動用 Slot 1（摩擦不對稱時） */\n${slotJava('slot1', c.slot1)}\n` : ''}
+
+  /** 往下移動用 Slot 1（摩擦不對稱時）；null 表示上下共用 Slot 0 */
+${c.slot1 ? slotJava('slot1', c.slot1) : '  public static Slot1Configs slot1() {\n    return null;\n  }'}
+
   public static MotionMagicConfigs motionMagic() {
     return new MotionMagicConfigs()
         .withMotionMagicCruiseVelocity(CRUISE_VELOCITY)

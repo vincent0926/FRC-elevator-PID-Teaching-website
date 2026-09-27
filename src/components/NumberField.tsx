@@ -16,6 +16,8 @@ export interface NumberFieldProps {
   display?: number
   digits?: number
   hint?: string
+  /** 表格裡用：標籤只給螢幕閱讀器 */
+  hideLabel?: boolean
 }
 
 function fmt(v: number, digits?: number) {
@@ -23,7 +25,7 @@ function fmt(v: number, digits?: number) {
   return digits === undefined ? String(Number(v.toPrecision(8))) : v.toFixed(digits)
 }
 
-export function NumberField({ label, value, onChange, unit, min, max, step, display = 1, digits, hint }: NumberFieldProps) {
+export function NumberField({ label, value, onChange, unit, min, max, step, display = 1, digits, hint, hideLabel }: NumberFieldProps) {
   const id = useId()
   const [text, setText] = useState(() => fmt(value * display, digits))
   const [focused, setFocused] = useState(false)
@@ -37,7 +39,7 @@ export function NumberField({ label, value, onChange, unit, min, max, step, disp
 
   return (
     <label className="f" htmlFor={id}>
-      {label}
+      {hideLabel ? <span className="sr-only">{label}</span> : label}
       <span className={'inp' + (valid ? '' : ' bad')}>
         <input
           id={id}

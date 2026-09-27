@@ -7,7 +7,7 @@ import type { LogRequest, LogResponse } from './log.worker'
 
 let simWorker: Worker | null = null
 let simSeq = 0
-const simPending = new Map<number, { resolve: (r: SimResult) => void; reject: (e: Error) => void }>()
+const simPending = new Map<number, { channel: string; resolve: (r: SimResult) => void; reject: (e: Error) => void }>()
 
 function getSimWorker(): Worker {
   if (!simWorker) {
@@ -23,15 +23,19 @@ function getSimWorker(): Worker {
   return simWorker
 }
 
-/** 連續拖滑桿時，舊的請求會被標成過期（reject 'stale'），畫面只畫最新的。 */
-export function runSimulation(input: SimInput): Promise<SimResult> {
+/**
+ * 連續拖滑桿時，同一個 channel 的舊請求會被標成過期（reject 'stale'），畫面只畫最新的。
+ * 疊圖比較用不同 channel，兩組模擬互不取消。
+ */
+export function runSimulation(input: SimInput, channel = 'main'): Promise<SimResult> {
   const id = ++simSeq
   for (const [k, p] of simPending) {
+    if (p.channel !== channel) continue
     p.reject(new Error('stale'))
     simPending.delete(k)
   }
   return new Promise((resolve, reject) => {
-    simPending.set(id, { resolve, reject })
+    simPending.set(id, { channel, resolve, reject })
     getSimWorker().postMessage({ id, input } satisfies SimRequest)
   })
 }
