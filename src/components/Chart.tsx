@@ -44,6 +44,12 @@ function withGaps(v: ArrayLike<number>): ArrayLike<number | null> {
   return v
 }
 
+/** 把游標放到時間 t（null 或不是有限數字就移到圖外，不顯示） */
+function placeCursor(u: uPlot, t: number | null) {
+  if (t === null || !Number.isFinite(t)) u.setCursor({ left: -10, top: -10 })
+  else u.setCursor({ left: u.valToPos(t, 'x'), top: u.bbox.height / (2 * devicePixelRatio) })
+}
+
 function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'
 }
@@ -51,6 +57,9 @@ function cssVar(name: string): string {
 export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, xLabel = 's', xName = '時間', note, cursorX = null }: ChartProps) {
   const box = useRef<HTMLDivElement>(null)
   const plot = useRef<uPlot | null>(null)
+  // 目前的播放時間：重畫（換主題）之後要把時間線放回去
+  const cursorRef = useRef<number | null>(cursorX)
+  cursorRef.current = cursorX
 
   useEffect(() => {
     const el = box.current
@@ -108,6 +117,7 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
       }
       const data = [x, ...series.map((s) => withGaps(s.values))] as unknown as uPlot.AlignedData
       plot.current = new uPlot(opts, data, el)
+      placeCursor(plot.current, cursorRef.current)
     }
 
     build()
@@ -131,13 +141,7 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
 
   // 播放時把游標放到目前時間：圖上有一條直線，圖例顯示這一刻每條線的數值
   useEffect(() => {
-    const u = plot.current
-    if (!u) return
-    if (cursorX === null || !Number.isFinite(cursorX)) {
-      u.setCursor({ left: -10, top: -10 })
-      return
-    }
-    u.setCursor({ left: u.valToPos(cursorX, 'x'), top: u.bbox.height / (2 * devicePixelRatio) })
+    if (plot.current) placeCursor(plot.current, cursorX)
   }, [cursorX, x, series])
 
   return (

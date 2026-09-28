@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { stepRK4, type PlantParams } from './elevator'
+import { MAX_SUBSTEPS, stepRK4, type PlantParams } from './elevator'
 import { simulate } from './simulate'
 import { computeFeedforward } from '../feedforward'
 import { DEFAULT_MECHANISM } from '../../schema/parameterSet'
@@ -302,5 +302,18 @@ describe('時間常數比 1 ms 短的機構（齒比大、鼓輪小）', () => {
     })
     expect(r.pos.every(Number.isFinite)).toBe(true)
     expect(Math.abs(r.pos[r.pos.length - 1] - 0.6)).toBeLessThan(0.01)
+  })
+})
+
+describe('極端剛性（要超過 1000 小步）', () => {
+  it('改用隱式小步，不會發散，速度收斂到 u/kV', () => {
+    const p: PlantParams = { ...ideal, kG: 0, kV: 100, kA: 1e-5, statorCurrentLimit: null, minPosition: 0, maxPosition: 1.2 }
+    expect(0.001 / (0.5 * (p.kA / p.kV))).toBeGreaterThan(MAX_SUBSTEPS)
+    let s = { pos: 0.5, vel: 0 }
+    for (let i = 0; i < 100; i++) s = stepRK4(p, s, 12, 0.001)
+    expect(Number.isFinite(s.pos) && Number.isFinite(s.vel)).toBe(true)
+    // 穩態速度 u/kV = 0.12 m/s，0.1 s 後大約往上 1.2 cm
+    expect(s.vel).toBeCloseTo(0.12, 2)
+    expect(s.pos).toBeCloseTo(0.512, 2)
   })
 })
