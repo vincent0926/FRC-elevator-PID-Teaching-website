@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SimResult } from '../../core/physics/simulate'
+import { frameIndex } from './playback'
 
 /**
  * 動畫區：小井道照模擬結果播放電梯位置，虛線框是軌跡目前的目標。
@@ -25,7 +26,8 @@ export function usePlayback(result: SimResult | null): Playback {
   const [speed, setSpeedState] = useState<number>(1)
   const raf = useRef(0)
   const current = state.of === result
-  const idx = current ? state.idx : null
+  // 保險：不管怎麼算出來的，給外面用的索引一定落在結果範圍內
+  const idx = current && result && state.idx !== null ? Math.max(0, Math.min(result.t.length - 1, state.idx)) : null
   const playing = current && state.playing
 
   useEffect(() => () => cancelAnimationFrame(raf.current), [result])
@@ -35,9 +37,11 @@ export function usePlayback(result: SimResult | null): Playback {
     cancelAnimationFrame(raf.current)
     const last = result.t.length - 1
     const dt = result.t[1] - result.t[0] || 0.001
-    const start = performance.now()
+    // rAF 給的時間可能比按下播放時的 performance.now() 還早，用第一格的時間當起點
+    let start: number | null = null
     const frame = (now: number) => {
-      const k = Math.min(last, from + Math.floor(((now - start) / 1000 / dt) * s))
+      if (start === null) start = now
+      const k = frameIndex(from, last, now - start, dt, s)
       const more = k < last
       setState({ of: result, idx: k, playing: more })
       if (more) raf.current = requestAnimationFrame(frame)
@@ -108,7 +112,7 @@ export function MiniShaft({ result, travel, goal, idx }: { result: SimResult | n
 export function PlaybackBar({ result, pb, unit = 'm' }: { result: SimResult | null; pb: Playback; unit?: 'm' | 'rad' }) {
   const last = result ? result.t.length - 1 : 0
   const k = pb.idx ?? last
-  const t = result ? result.t[k] : 0
+  const t = result?.t[k] ?? 0
   return (
     <>
     <div className="playbar">
