@@ -52,7 +52,7 @@ export function ArmView({ result, arm, goal, idx, zeroOffset = 0 }: { result: Si
           目標 <b>{(ref * R2D).toFixed(1)}°</b>
         </span>
         <span>
-          重力要的電壓 <b>kG × {Math.cos(real).toFixed(2)}</b>
+          重力要的電壓 <b>kG × {Math.cos(real).toFixed(2).replace(/^-0\.00$/, '0.00')}</b>
         </span>
         <span className="muted">黃色是手臂，虛線是軌跡要它在的角度，圓點是重心</span>
       </div>

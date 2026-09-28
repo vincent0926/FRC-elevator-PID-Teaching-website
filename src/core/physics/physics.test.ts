@@ -284,3 +284,23 @@ describe('馬達控制器的限制（Current Limit、Soft Limit、Peak Output、
     expect(Math.max(...r.voltage)).toBeLessThanOrEqual(6 + 1e-9)
   })
 })
+
+describe('時間常數比 1 ms 短的機構（齒比大、鼓輪小）', () => {
+  it('RK4 自動切小步，不會發散成 NaN', () => {
+    // 齒比 34、鼓輪半徑 7 mm、三顆 Falcon：kV 約 90、kA 約 0.006，時間常數 66 µs
+    const m = { ...DEFAULT_MECHANISM, motor: 'falcon500' as const, motorCount: 3, gearRatio: 34.2, drumRadius: 0.007, stages: [{ mass: 1.1, speedRatio: 1 }, { mass: 5.3, speedRatio: 2 }], counterweightForce: 115 }
+    const f = computeFeedforward(m)
+    expect(f.kA / f.kV).toBeLessThan(0.0002)
+    const r = simulate({
+      plant: plantFromMechanism(m, f, { realistic: false }),
+      gains: { kS: 0, kG: f.kG, kV: f.kV, kA: f.kA, kP: 50, kI: 0, kD: 0 },
+      motionMagic: { cruiseVelocity: f.cruiseVelocity, acceleration: f.acceleration },
+      controlPeriod: 0.001,
+      initialPosition: 0.1,
+      moves: [{ time: 0.5, goal: 0.6 }],
+      duration: 8,
+    })
+    expect(r.pos.every(Number.isFinite)).toBe(true)
+    expect(Math.abs(r.pos[r.pos.length - 1] - 0.6)).toBeLessThan(0.01)
+  })
+})

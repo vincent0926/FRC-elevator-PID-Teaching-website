@@ -32,46 +32,59 @@ export function ElevatorView({ result, mechanism, goal, idx }: { result: SimResu
   const py = (h: number) => H - BASE - h * scale
   const inset = 9
 
+  const ok = Number.isFinite(x) && Number.isFinite(xRef)
+  const xs = ok ? x : 0
+  const xr = ok ? xRef : 0
+  const clampH = (h: number) => Math.min(worldH, Math.max(0, h))
+  const inner = 8 + inset * railK.length
+  const cw = Math.max(24, W - 2 * inner)
+
   return (
     <div className="elev-view" aria-label="電梯側視圖" role="img">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMax meet">
         {railK.map((r, i) => {
-          const bottom = x * r
+          const bottom = clampH(xs * r)
           const left = 8 + inset * i
+          const y = py(bottom + railLen)
+          if (i === 0) {
+            // 固定架：兩根立柱加上橫桿，不會動
+            return (
+              <g key={i}>
+                <line x1={left} y1={y} x2={left} y2={H - BASE} className="ev-frame" />
+                <line x1={W - left} y1={y} x2={W - left} y2={H - BASE} className="ev-frame" />
+                <line x1={left} y1={y} x2={W - left} y2={y} className="ev-frame" />
+                <text x={left + 3} y={y + 10} className="ev-label">固定架</text>
+              </g>
+            )
+          }
           return (
-            <rect
-              key={i}
-              x={left}
-              y={py(bottom + railLen)}
-              width={W - 2 * left}
-              height={railLen * scale}
-              rx={2}
-              className={i === 0 ? 'ev-frame' : 'ev-stage'}
-            />
+            <g key={i}>
+              <rect x={left} y={y} width={W - 2 * left} height={railLen * scale} rx={2} className="ev-stage" />
+              <text x={left + 3} y={y + 10} className="ev-label">第 {i} 級</text>
+            </g>
           )
         })}
-        {(() => {
-          const left = 8 + inset * railK.length
-          const w = Math.max(24, W - 2 * left)
-          return (
-            <>
-              <rect x={left} y={py(xRef * kTop + CARRIAGE)} width={w} height={CARRIAGE * scale} rx={2} className="ev-target" />
-              <rect x={left} y={py(x * kTop + CARRIAGE)} width={w} height={CARRIAGE * scale} rx={2} className="ev-carriage" />
-              {mechanism.payloadMass > 0 && <rect x={W / 2 - 8} y={py(x * kTop + CARRIAGE) - 11} width={16} height={11} rx={2} className="ev-payload" />}
-            </>
-          )
-        })()}
+        <rect x={inner} y={py(clampH(xr * kTop) + CARRIAGE)} width={cw} height={CARRIAGE * scale} rx={2} className="ev-target" />
+        <rect x={inner} y={py(clampH(xs * kTop) + CARRIAGE)} width={cw} height={CARRIAGE * scale} rx={2} className="ev-carriage" />
+        <text x={W / 2} y={py(clampH(xs * kTop)) - 3} textAnchor="middle" className="ev-label ev-on-carriage">托架</text>
+        {mechanism.payloadMass > 0 && <rect x={W / 2 - 8} y={py(clampH(xs * kTop) + CARRIAGE) - 11} width={16} height={11} rx={2} className="ev-payload" />}
         <rect x={0} y={H - BASE} width={W} height={BASE} className="ev-base" />
       </svg>
       <div className="ev-read">
-        <span>
-          鼓輪線位移 <b>{x.toFixed(2)} m</b>
-        </span>
-        <span>
-          最上層高度 <b>{(x * kTop).toFixed(2)} m</b>
-          {kTop !== 1 && <em>（× {kTop}）</em>}
-        </span>
-        <span className="muted">黃色是托架，虛線是軌跡要它在的位置</span>
+        {ok ? (
+          <>
+            <span>
+              鼓輪線位移 <b>{x.toFixed(2)} m</b>
+            </span>
+            <span>
+              最上層高度 <b>{(x * kTop).toFixed(2)} m</b>
+              {kTop !== 1 && <em>（× {kTop}）</em>}
+            </span>
+          </>
+        ) : (
+          <span className="fail">模擬數值發散，看不到位置：檢查參數（kP、kD 是不是大得不合理）</span>
+        )}
+        <span className="muted">固定架不動，每一級往上疊；黃色是托架，藍色虛線框是軌跡要它在的位置</span>
       </div>
     </div>
   )

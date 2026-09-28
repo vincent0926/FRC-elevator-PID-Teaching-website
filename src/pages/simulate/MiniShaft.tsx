@@ -110,6 +110,7 @@ export function PlaybackBar({ result, pb, unit = 'm' }: { result: SimResult | nu
   const k = pb.idx ?? last
   const t = result ? result.t[k] : 0
   return (
+    <>
     <div className="playbar">
       <button className="btn small" type="button" disabled={!result} onClick={pb.playing ? pb.pause : pb.play}>
         {pb.playing ? '暫停' : '播放'}
@@ -132,8 +133,12 @@ export function PlaybackBar({ result, pb, unit = 'm' }: { result: SimResult | nu
         onChange={(e) => pb.seek(Number(e.target.value))}
       />
       <span className="small muted num-w">
-        {t.toFixed(2)} s・{result ? (unit === 'rad' ? `${((result.pos[k] * 180) / Math.PI).toFixed(1)}°` : `${(result.pos[k] * 100).toFixed(1)} cm`) : ''}
+        {t.toFixed(2)} s・{result && Number.isFinite(result.pos[k]) ? (unit === 'rad' ? `${((result.pos[k] * 180) / Math.PI).toFixed(1)}°` : `${(result.pos[k] * 100).toFixed(1)} cm`) : '—'}
       </span>
     </div>
+    <p className="small muted" style={{ margin: 0 }}>
+      按「播放」：{unit === 'rad' ? '左邊的手臂' : '左邊的電梯'}照模擬的時間動，每張圖上的直線是現在的時間，圖下面的圖例會顯示這一刻每條線的數值。也可以拖時間軸、把滑鼠移到圖上看數值；在圖上左右拖曳可以放大，點兩下還原。
+    </p>
+    </>
   )
 }

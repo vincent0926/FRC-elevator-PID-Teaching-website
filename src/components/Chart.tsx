@@ -30,6 +30,10 @@ export interface ChartProps {
   xLabel?: string
   /** 圖例裡 x 的名稱（預設「時間」） */
   xName?: string
+  /** 圖的說明：看什麼、怎麼判斷（標題下面的小字） */
+  note?: string
+  /** 播放中的時間（x 軸單位）：畫一條直線，圖例顯示這個時間的數值；null = 不畫 */
+  cursorX?: number | null
 }
 
 /** uPlot 只認 null 為斷點，NaN 會弄壞 y 軸範圍 */
@@ -44,7 +48,7 @@ function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'
 }
 
-export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, xLabel = 's', xName = '時間' }: ChartProps) {
+export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, xLabel = 's', xName = '時間', note, cursorX = null }: ChartProps) {
   const box = useRef<HTMLDivElement>(null)
   const plot = useRef<uPlot | null>(null)
 
@@ -63,7 +67,8 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
       const opts: uPlot.Options = {
         width: Math.max(200, el.clientWidth),
         height,
-        cursor: syncKey ? { sync: { key: syncKey, setSeries: false }, drag: { x: true, y: false } } : { drag: { x: true, y: false } },
+        // 只畫垂直的時間線；水平線在播放時會停在圖中間，看起來像一條資料
+        cursor: syncKey ? { y: false, sync: { key: syncKey, setSeries: false }, drag: { x: true, y: false } } : { y: false, drag: { x: true, y: false } },
         legend: { show: true },
         scales: { x: { time: false } },
         axes: [
@@ -124,9 +129,21 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
     }
   }, [x, series, height, yLabel, syncKey, bands, xLabel, xName])
 
+  // 播放時把游標放到目前時間：圖上有一條直線，圖例顯示這一刻每條線的數值
+  useEffect(() => {
+    const u = plot.current
+    if (!u) return
+    if (cursorX === null || !Number.isFinite(cursorX)) {
+      u.setCursor({ left: -10, top: -10 })
+      return
+    }
+    u.setCursor({ left: u.valToPos(cursorX, 'x'), top: u.bbox.height / (2 * devicePixelRatio) })
+  }, [cursorX, x, series])
+
   return (
     <figure className="chart-box" style={{ margin: 0 }}>
       {title && <figcaption className="chart-title">{title}</figcaption>}
+      {note && <p className="chart-note small muted">{note}</p>}
       <div ref={box} />
     </figure>
   )

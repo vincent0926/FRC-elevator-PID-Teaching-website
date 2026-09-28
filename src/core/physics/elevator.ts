@@ -181,8 +181,20 @@ export function acceleration(p: PlantParams, s: PlantState, u: number, coast = f
   return net / p.kA
 }
 
-/** 固定輸入電壓 u 下前進 dt（RK4），並處理機械上下限與靜摩擦。 */
+/**
+ * 固定輸入電壓 u 下前進 dt（RK4），並處理機械上下限與靜摩擦。
+ * 時間常數 kA/kV 比 dt 短時（齒比大、鼓輪小、機構輕）RK4 會發散成 NaN，
+ * 所以自動切成小步：每小步不超過時間常數的一半。
+ */
 export function stepRK4(p: PlantParams, s: PlantState, u: number, dt: number, coast = false): PlantState {
+  const tau = p.kA / Math.max(p.kV * (p.gearboxEfficiency ?? 1), 1e-9)
+  const n = Math.min(1000, Math.max(1, Math.ceil(dt / (0.5 * tau))))
+  let st = s
+  for (let i = 0; i < n; i++) st = rk4Once(p, st, u, dt / n, coast)
+  return st
+}
+
+function rk4Once(p: PlantParams, s: PlantState, u: number, dt: number, coast: boolean): PlantState {
   const a1 = acceleration(p, s, u, coast)
   const s2 = { pos: s.pos + 0.5 * dt * s.vel, vel: s.vel + 0.5 * dt * a1 }
   const a2 = acceleration(p, s2, u, coast)

@@ -201,6 +201,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 /* 圖表 */
 .chart-box { width: 100%; min-width: 0 }
 .chart-title { font-size: 13px; color: var(--ink-2); margin: 0 0 4px; font-weight: 500 }
+.chart-note { margin: 0 0 4px; line-height: 1.5 }
 .uplot { font-family: var(--font) }
 .u-legend { font-size: 12.5px; color: var(--ink-2) }
 .u-legend .u-marker { border-radius: 2px }
@@ -283,7 +284,9 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 
 .elev-view { position: sticky; top: 16px; align-self: start; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 8px 10px; height: 420px; display: flex; flex-direction: column }
 .elev-view svg { flex: 1; min-height: 0 }
-.ev-frame { fill: none; stroke: var(--steel); stroke-width: 2 }
+.ev-frame { fill: none; stroke: var(--steel); stroke-width: 3; stroke-linecap: round }
+.ev-label { font-size: 11px; fill: var(--ink-3) }
+.ev-on-carriage { fill: var(--ink-2) }
 .ev-stage { fill: var(--panel); fill-opacity: .75; stroke: var(--ink-3); stroke-width: 1.5 }
 .ev-carriage { fill: var(--yellow); stroke: var(--ink-2); stroke-width: 1 }
 .ev-target { fill: none; stroke: var(--blue); stroke-width: 1.5; stroke-dasharray: 4 3 }

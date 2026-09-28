@@ -105,8 +105,10 @@ export interface SimSetup {
   ff: FeedforwardResult
   knobs: PlantKnobs
   controlPeriod: number
-  /** 目標高度（m），會先往上到這裡，再回到行程 10% 處 */
+  /** 目標高度（m），會先從起始高度移到這裡，再回到起始高度 */
   goal: number
+  /** 起始高度（m）；沒給就是行程的 10% */
+  start?: number
   /** 到位判定的範圍（m），跟達標標準的穩態誤差一樣 */
   tolerance?: number
   antiWindup?: AntiWindup
@@ -131,7 +133,7 @@ export function buildSimInput(setup: SimSetup, ps: ParameterSet): SimInput {
     kAScale: knobs.kAScale,
   })
   const goal = Math.min(mechanism.travel, Math.max(0, setup.goal))
-  const low = Math.min(mechanism.travel * 0.1, goal)
+  const low = Math.min(mechanism.travel, Math.max(0, setup.start ?? Math.min(mechanism.travel * 0.1, goal)))
   const mm = ps.motionMagic
   const up = trapezoidProfile(low, goal, mm.cruiseVelocity, mm.acceleration)
   const down = trapezoidProfile(goal, low, mm.cruiseVelocity, mm.acceleration)

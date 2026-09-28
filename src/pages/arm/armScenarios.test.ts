@@ -74,3 +74,13 @@ describe('3F 手臂教學情境', () => {
     expect(good.moves[0].holdVoltageRipple).toBeLessThan(0.3)
   })
 })
+
+describe('起始角度', () => {
+  it('可以從指定角度出發，超出範圍時夾在角度範圍內', () => {
+    const f = computeArmFeedforward(DEFAULT_ARM)
+    const base = { arm: DEFAULT_ARM, ff: f, knobs: DEFAULT_ARM_KNOBS, location: 'talonfx' as const, goal: 60 * DEG, gravityType: 'armCosine' as const }
+    const th = buildArmTheory(DEFAULT_ARM, f, 0.3)
+    expect(buildArmSimInput({ ...base, start: 30 * DEG }, th).initialPosition).toBeCloseTo(30 * DEG)
+    expect(buildArmSimInput({ ...base, start: -90 * DEG }, th).initialPosition).toBeCloseTo(DEFAULT_ARM.minAngle)
+  })
+})
