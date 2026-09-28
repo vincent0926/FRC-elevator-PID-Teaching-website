@@ -59,7 +59,6 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
   const plot = useRef<uPlot | null>(null)
   // 目前的播放時間：重畫（換主題）之後要把時間線放回去
   const cursorRef = useRef<number | null>(cursorX)
-  cursorRef.current = cursorX
 
   useEffect(() => {
     const el = box.current
@@ -140,7 +139,9 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
   }, [x, series, height, yLabel, syncKey, bands, xLabel, xName])
 
   // 播放時把游標放到目前時間：圖上有一條直線，圖例顯示這一刻每條線的數值
+  // ref 在 commit 之後才更新：被丟掉的 render 不會影響之後的重畫
   useEffect(() => {
+    cursorRef.current = cursorX
     if (plot.current) placeCursor(plot.current, cursorX)
   }, [cursorX, x, series])
 
