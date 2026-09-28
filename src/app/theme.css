@@ -176,6 +176,25 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .playbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center }
 .playbar input[type="range"] { flex: 1 1 160px; min-width: 0; accent-color: var(--blue) }
 .playbar .num-w { font-variant-numeric: tabular-nums; min-width: 120px }
+/* 3F 親手調參數：播放列正下方 */
+.tune { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); padding: 12px 14px }
+.tune-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px }
+.tune-head h3 { margin: 0; font-size: 15px }
+.tune-head > span { flex: 1 1 240px }
+.tune-head > .btn { flex: none }
+.tune-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px 20px; margin-top: 10px }
+.tune-group h4 { margin: 0 0 6px; font-size: 13px; color: var(--ink-2) }
+.tune-row { display: grid; grid-template-columns: minmax(0, 1fr) 152px; grid-template-areas: "label label" "range num" "ref ref"; gap: 2px 8px; padding: 6px 0; border-top: 1px solid var(--line-2) }
+.tune-row:first-of-type { border-top: 0 }
+.tune-label { grid-area: label; display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline }
+.tune-row input[type="range"] { grid-area: range; width: 100%; min-width: 0; accent-color: var(--blue); align-self: center }
+.tune-row.changed input[type="range"] { accent-color: var(--yellow) }
+.tune-num { grid-area: num }
+.tune-num .inp input { padding: 4px 6px }
+.tune-num .inp em { font-size: 11px; padding-right: 6px }
+.tune-ref { grid-area: ref; display: flex; flex-wrap: wrap; gap: 0 8px; font-variant-numeric: tabular-nums }
+.tune-ref em { font-style: normal; color: var(--ink-2) }
+.tune-row.changed .tune-label b { color: var(--amber) }
 .scen > summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
 .scen-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px }
 .scen-list button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink) }
