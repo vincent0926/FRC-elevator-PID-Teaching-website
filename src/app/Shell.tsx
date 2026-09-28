@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useStore, type PageId } from './store'
 import { loadJson, saveJson } from '../storage/local'
 import { UpdateBanner } from './UpdateBanner'
+import { ErrorBoundary } from './ErrorBoundary'
 import { COURSE_URL, courseChapterUrl } from '../core/deepLink'
 
 /** 井道導覽：樓層由下往上，黃色車廂停在目前頁面。 */
@@ -102,7 +103,7 @@ export function Shell({ children }: { children: ReactNode }) {
               換機構
             </button>
           </div>
-          {children}
+          <ErrorBoundary resetKey={`${track}:${page}`}>{children}</ErrorBoundary>
         </main>
       </div>
     </>
