@@ -16,6 +16,7 @@ import { tuningStepParams } from '../simulate/tuningSteps'
 import { ARM_SCENARIOS, type ArmScenario } from './armScenarios'
 import { DEFAULT_ARM_KNOBS, armStartAngle, buildArmSimInput, type ArmKnobs } from './armSim'
 import { useArm } from './armStore'
+import { useStore } from '../../app/store'
 import { ArmView } from './ArmView'
 import { UnsavedNote } from './UnsavedNote'
 
@@ -130,6 +131,17 @@ export function ArmSimPage() {
     setCompare(true)
     setScenario(s)
   }
+  // 課程深層連結要求載入某個手臂情境
+  const { pendingScenario, openScenario } = useStore()
+  useEffect(() => {
+    if (!pendingScenario) return
+    const sc = ARM_SCENARIOS.find((x) => x.id === pendingScenario)
+    openScenario(null)
+    if (sc) loadScenario(sc)
+    // loadScenario 每次 render 都是新的函式，只在 pendingScenario 變的時候跑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingScenario])
+
   const leaveScenario = () => {
     setScenario(null)
     setKnobs(DEFAULT_ARM_KNOBS)

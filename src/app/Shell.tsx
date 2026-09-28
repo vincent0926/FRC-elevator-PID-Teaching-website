@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useStore, type PageId } from './store'
 import { loadJson, saveJson } from '../storage/local'
 import { UpdateBanner } from './UpdateBanner'
+import { COURSE_URL, courseChapterUrl } from '../core/deepLink'
 
 /** 井道導覽：樓層由下往上，黃色車廂停在目前頁面。 */
 
@@ -20,7 +21,7 @@ function isDark(t: Theme) {
 }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { page, go, track, setTrack } = useStore()
+  const { page, go, track, setTrack, courseChapter, pendingSection, clearPendingSection } = useStore()
   const trackName = track === 'arm' ? '手臂' : '電梯'
   const [theme, setTheme] = useState<Theme>(() => loadJson<Theme>('theme', null))
 
@@ -30,6 +31,18 @@ export function Shell({ children }: { children: ReactNode }) {
     window.dispatchEvent(new Event('themechange'))
   }, [theme])
 
+
+  // 深層連結的 &section=：等頁面畫出來再捲過去，<details> 順便打開
+  useEffect(() => {
+    if (!pendingSection) return
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(pendingSection)
+      if (el instanceof HTMLDetailsElement) el.open = true
+      el?.scrollIntoView({ block: 'start' })
+      clearPendingSection()
+    }, 50)
+    return () => window.clearTimeout(t)
+  }, [page, pendingSection, clearPendingSection])
 
   const toggleTheme = () => {
     const next: Theme = isDark(theme) ? 'light' : 'dark'
@@ -67,6 +80,9 @@ export function Shell({ children }: { children: ReactNode }) {
               </button>
             ))}
           </div>
+          <a className="course-link" href={courseChapter !== null ? courseChapterUrl(courseChapter) : COURSE_URL}>
+            {courseChapter !== null ? `← 回到課程第 ${courseChapter} 章` : 'FRC 9427 程式課程'}
+          </a>
           <div className="shaft-foot">
             <span>v{__APP_VERSION__}</span>
             <button className="theme-btn" type="button" onClick={toggleTheme}>
@@ -75,6 +91,11 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         </nav>
         <main>
+          {courseChapter !== null && (
+            <a className="course-back" href={courseChapterUrl(courseChapter)}>
+              ← 回到課程第 {courseChapter} 章
+            </a>
+          )}
           <div className="track-mobile">
             <span className="small muted">{trackName}調參工作站</span>
             <button className="track-btn" type="button" onClick={() => setTrack(null)}>

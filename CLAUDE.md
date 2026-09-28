@@ -20,6 +20,7 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
   - `profile.ts` Motion Magic 梯形軌跡；`controller/slot0.ts` Slot0 控制公式（含積分防飽和教學選項）
   - `physics/` 受控體（控制輸入 u 以電壓 [V] 表示，不是「電壓是力」）與 RK4 閉迴路模擬、達標標準 `spec.ts`、穩健性測試 `robustness.ts`、模型校正 `calibrate.ts`
   - `arm/` 手臂前饋 `feedforward.ts`（kG·cos θ、轉動慣量）、受控體 `plant.ts`（共用 physics 的 simulate，`gravityCosine`）、範例日誌 `sampleLog.ts`（ArmIO 欄位）
+  - `deepLink.ts` 課程網站的深層連結（`?track=&scenario=&section=&from=course&ch=`），情境與 4F 單元 id 改了要通知課程那邊
   - `challenge.ts` 3F 挑戰模式出題與判斷；`twoPoint.ts` 兩點法量 kS、kG；`ratioSweep.ts` 1F 齒比掃描；`shareLink.ts` 分享機構資料的網址編碼；`paramDiff.ts` 參數組逐項比較
   - `log/` .wpilog 串流解析、寫入器、欄位對應與對齊
   - `analysis/` 步驟 0 資料檢查 `checks.ts`、切段 `segment.ts`、迴歸 `regression.ts`、診斷規則 `diagnose.ts`（決策 21–29）、SysId 比較 `sysid.ts`

@@ -5,6 +5,7 @@ import { DEFAULT_MECHANISM, ElevatorMechanismSchema, ParameterSetSchema, type El
 import { DEFAULT_SPEC, isSpec, type Spec } from '../core/physics/spec'
 import { loadJson, loadSession, saveJson, saveSession } from '../storage/local'
 import { decodeMechanism, SHARE_PARAM } from '../core/shareLink'
+import { hasDeepLink, parseDeepLink, stripDeepLink } from '../core/deepLink'
 
 /**
  * 全站共用狀態。參數組只有一種格式（ParameterSet），三個來源：
@@ -89,6 +90,11 @@ interface Store {
   /** 從分享連結打開時的結果；prev 是被取代的機構資料（可以復原） */
   shared: { ok: boolean; text: string; prev?: ElevatorMechanism } | null
   dismissShared: (undo: boolean) => void
+  /** 從課程第幾章連進來（顯示回課程的連結；存在這個分頁） */
+  courseChapter: number | null
+  /** 深層連結要捲到的區塊 id（捲過去後清掉） */
+  pendingSection: string | null
+  clearPendingSection: () => void
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -131,6 +137,9 @@ export function buildTheory(mechanism: ElevatorMechanism, ff: FeedforwardResult,
   }
 }
 
+/** 課程網站的深層連結（?track=&scenario=&section=&from=course&ch=），打開網頁時讀一次 */
+const DEEP_LINK = typeof location === 'undefined' ? {} : parseDeepLink(location.search)
+
 function pageFromHash(): PageId {
   const h = location.hash.slice(1) as PageId
   return PAGES.includes(h) ? h : 'home'
@@ -152,12 +161,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [baseline, setBaseline] = usePersisted<ParameterSet | null>('baseline', null, isParamsOrNull)
   const [calibration, setCalibration] = usePersisted<Calibration | null>('calibration', null, isCalibrationOrNull)
   const [lastLog, setLastLog] = useState<{ log: AlignedLog; name: string } | null>(null)
-  const [pendingScenario, setPendingScenario] = useState<string | null>(null)
+  const [pendingScenario, setPendingScenario] = useState<string | null>(DEEP_LINK.scenario ?? null)
+  const [pendingSection, setPendingSection] = useState<string | null>(DEEP_LINK.section ?? null)
+  const clearPendingSection = useCallback(() => setPendingSection(null), [])
+  const [courseChapter] = useState<number | null>(() => {
+    if (DEEP_LINK.fromChapter !== undefined) {
+      saveSession('courseChapter', String(DEEP_LINK.fromChapter))
+      return DEEP_LINK.fromChapter
+    }
+    const s = loadSession('courseChapter')
+    return s !== null && /^\d+$/.test(s) ? Number(s) : null
+  })
   const [spec, setSpec] = usePersisted<Spec>('spec', DEFAULT_SPEC, isSpec)
   const [compareSet, setCompareSet] = useState<{ id?: number; label: string; params: ParameterSet } | null>(null)
   const [shared, setShared] = useState<Store['shared']>(null)
   // 分享連結是電梯的機構資料，打開時直接進電梯，不用再選
   const [track, setTrackState] = useState<Track | null>(() => {
+    // 課程連結指定了機構就直接進去，並記在這個分頁
+    if (DEEP_LINK.track) {
+      saveSession('track', DEEP_LINK.track)
+      return DEEP_LINK.track
+    }
     if (new URLSearchParams(location.search).get(SHARE_PARAM)) return 'elevator'
     const t = loadSession('track')
     return t === 'elevator' || t === 'arm' ? t : null
@@ -171,6 +195,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setPage('home')
     }
     window.scrollTo(0, 0)
+  }, [])
+
+  // 課程深層連結：讀過就把參數拿掉，重新整理才不會又載入一次情境
+  useEffect(() => {
+    if (hasDeepLink(DEEP_LINK)) history.replaceState(null, '', stripDeepLink(location.href))
   }, [])
 
   // 分享連結（?m=）：載入機構資料後把查詢字串拿掉，重新整理才不會又蓋掉一次
@@ -257,6 +286,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCompareSet,
     shared,
     dismissShared,
+    courseChapter,
+    pendingSection,
+    clearPendingSection,
     spec,
     setSpec,
   }

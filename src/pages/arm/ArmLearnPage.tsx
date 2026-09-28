@@ -164,7 +164,7 @@ export function ArmLearnPage() {
         </div>
       </details>
 
-      <details className="unit">
+      <details className="unit" id="measure-ks">
         <summary>
           <h2 style={{ margin: 0 }}>量 kS、kG（兩點法，在水平量）</h2>
           <span className="tag">{arm.measuredKs ? `已填 kS ${arm.measuredKs} V` : 'kS 一定要量'}</span>
@@ -173,7 +173,7 @@ export function ArmLearnPage() {
         <ArmTwoPoint kGTheory={ff.kG} onSaveKs={(kS) => setArm(ArmMechanismSchema.parse({ ...arm, measuredKs: Math.round(kS * 1000) / 1000 }))} />
       </details>
 
-      <details className="unit">
+      <details className="unit" id="unit1">
         <summary>
           <h2 style={{ margin: 0 }}>單元一：用 AdvantageKit 錄手臂日誌</h2>
           <span className={'tag' + (lessonsDone['arm-unit1'] ? ' done' : '')}>{lessonsDone['arm-unit1'] ? '已完成' : '可以先讀'}</span>
@@ -201,7 +201,7 @@ export function ArmLearnPage() {
         </div>
       </details>
 
-      <details className="unit">
+      <details className="unit" id="unit2">
         <summary>
           <h2 style={{ margin: 0 }}>單元二：用 SysId 量手臂</h2>
           <span className={'tag' + (lessonsDone['arm-unit2'] ? ' done' : '')}>{lessonsDone['arm-unit2'] ? '已完成' : '選用'}</span>
@@ -227,7 +227,7 @@ export function ArmLearnPage() {
         </div>
       </details>
 
-      <details className="unit">
+      <details className="unit" id="unit3">
         <summary>
           <h2 style={{ margin: 0 }}>單元三：手臂常見的坑</h2>
           <span className={'tag' + (lessonsDone['arm-unit3'] && lessonsDone['arm-unit3b'] ? ' done' : '')}>{lessonsDone['arm-unit3'] && lessonsDone['arm-unit3b'] ? '已完成' : '可以先讀'}</span>
@@ -280,7 +280,7 @@ export function ArmLearnPage() {
         </div>
       </details>
 
-      <details className="unit">
+      <details className="unit" id="unit4">
         <summary>
           <h2 style={{ margin: 0 }}>單元四：期末檢核（沒看過的手臂日誌）</h2>
           <span className={'tag' + (lessonsDone['arm-unit4'] ? ' done' : '')}>{lessonsDone['arm-unit4'] ? '已通過' : '讀完 2F 與單元一到三再做'}</span>
