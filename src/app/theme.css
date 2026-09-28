@@ -237,7 +237,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 @media (max-width: 720px) {
   .app { grid-template-columns: minmax(0, 1fr) }
   .shaft { position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; padding: 0 0 env(safe-area-inset-bottom, 0px); z-index: 5; flex-direction: row }
-  .brand, .shaft-foot, .rail, .car { display: none }
+  .brand, .shaft-foot, .rail, .car, .course-link { display: none }
   .floors { flex-direction: row-reverse; padding: 0; justify-content: space-around }
   .floor { flex-direction: column; gap: 0; height: auto; padding: 8px 4px; justify-content: center; text-align: center }
   .floor .nm { font-size: 12px }
@@ -346,6 +346,10 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .track-btn { background: none; border: 1px solid var(--line); border-radius: 4px; color: inherit; padding: 2px 8px; font-size: 12px; cursor: pointer }
 @media (max-width: 640px) { .chooser-cards { grid-template-columns: minmax(0, 1fr) } }
 .track-mobile { display: none }
+/* 回課程網站：側欄一行、主內容上方一行（手機看不到側欄時也找得到） */
+.course-link { display: block; margin: 0 20px 12px; font-size: 12.5px; color: #93A0AE; text-decoration: none }
+.course-link:hover { color: #DDE3EA; text-decoration: underline }
+.course-back { display: inline-block; margin-bottom: 12px; font-size: 14px; font-weight: 600 }
 @media (max-width: 720px) { .track-mobile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px } }
 .arm-derived { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 12px 0 }
 .arm-derived dt { color: var(--ink-3) }
