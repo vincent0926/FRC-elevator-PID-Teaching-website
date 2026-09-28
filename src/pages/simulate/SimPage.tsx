@@ -14,6 +14,8 @@ import { ChallengePanel, type ChallengeState } from './ChallengePanel'
 import { ApproxNote, PLANT_ASSUMPTIONS, SIM_SCOPE } from '../../components/ApproxNote'
 import { ControllerSettings } from './ControllerSettings'
 import { CustomEditor } from './CustomEditor'
+import { TuneSliders } from '../../components/TuneSliders'
+import type { TuneKey } from './tuneRange'
 import { AntiWindupEditor } from './AntiWindupEditor'
 import { TuningGuide } from './TuningGuide'
 import { tuningStepParams } from './tuningSteps'
@@ -59,6 +61,18 @@ const calibratedKnobs = (c: Calibration): PlantKnobs => ({
   kAScale: c.kAScale,
   calibrated: true,
 })
+
+const ELEVATOR_UNITS: Record<TuneKey, string> = {
+  kS: 'V',
+  kG: 'V',
+  kV: 'V/(m/s)',
+  kA: 'V/(m/s²)',
+  kP: 'V/m',
+  kI: 'V/(m·s)',
+  kD: 'V/(m/s)',
+  cruiseVelocity: 'm/s',
+  acceleration: 'm/s²',
+}
 
 export function SimPage() {
   const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration, pendingScenario, openScenario, spec, setSpec, compareSet, setCompareSet } = useStore()
@@ -168,6 +182,23 @@ export function SimPage() {
   }, [result, other, otherLabel, mechanism.motorCount])
 
   const editCustom = (patch: (p: ParameterSet) => ParameterSet) => custom && setCustom(patch(custom))
+  // 滑桿：看的不是「自訂」時，用畫面上這組參數當起點切到自訂，並疊上原本那組比較
+  const tweak = (patch: (p: ParameterSet) => ParameterSet) => {
+    if (source === 'custom' && custom) {
+      setCustom(patch(custom))
+      return
+    }
+    const label = SOURCES.find((x) => x.id === source)!.label
+    setCustom(patch({ ...ps, source: 'custom', createdAt: new Date().toISOString(), note: `從${label}開始調` }))
+    setSimSource('custom')
+    // 疊圖要比的是剛才看的那組：理論值切過來時自然會比理論值；其他來源（調參建議值）存一份快照來比
+    setCompareSet(source === 'theory' ? null : { label, params: ps })
+    setCompare(true)
+  }
+  const resetToTheory = () => {
+    setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString(), note: '理論值' })
+    setSimSource('custom')
+  }
 
   const loadScenario = (s: SimScenario) => {
     const st = s.setup(theory, ff)
@@ -351,6 +382,19 @@ export function SimPage() {
         <ElevatorView result={result} mechanism={mechanism} goal={safeGoal} idx={pb.idx} />
         <div className="panel stack">
           <PlaybackBar result={result} pb={pb} />
+          {!challenge && (
+            <TuneSliders
+              mechanism="elevator"
+              values={ps}
+              theory={theory}
+              editingCustom={source === 'custom'}
+              sourceLabel={SOURCES.find((x) => x.id === source)!.label}
+              onEdit={tweak}
+              onResetAll={resetToTheory}
+              units={ELEVATOR_UNITS}
+              disabled={ps.slotByDirection ? { kS: '開了往下 Slot 1，kS 在下面的參數區分往上、往下設', kG: '開了往下 Slot 1，kG 在下面的參數區分往上、往下設' } : undefined}
+            />
+          )}
           {charts && result && (
             <>
               <Chart title="位置" x={result.t} series={charts.pos} height={220} yLabel="m" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是 Motion Magic 的軌跡（電梯應該在的高度），實線是電梯真的位置（鼓輪線位移）。兩條線貼在一起就是跟得好。" />
@@ -393,7 +437,7 @@ export function SimPage() {
             <>
               <GainList ps={ps} />
               <p className="small muted" style={{ marginTop: 10 }}>
-                {source === 'theory' ? '理論值由 1F 的機構資料算出，這裡不能改。' : '調參建議值來自 2F，一次只改一個參數。'}想自由調整，切到「自訂」。
+                {source === 'theory' ? '理論值由 1F 的機構資料算出。' : '調參建議值來自 2F。'}想調整就直接拖播放列下面的滑桿，會自動切到「自訂」。
               </p>
             </>
           )}

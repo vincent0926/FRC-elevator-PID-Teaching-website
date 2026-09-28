@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ApproxNote } from '../../components/ApproxNote'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
+import { TuneSliders } from '../../components/TuneSliders'
+import type { TuneKey } from '../simulate/tuneRange'
 import type { AntiWindup, ControllerLocation, GravityType } from '../../core/controller/slot0'
 import { resampleByTime, type SimResult } from '../../core/physics/simulate'
 import { ARM_DEFAULT_SPEC, ARM_SPEC_PRESETS } from '../../core/physics/spec'
@@ -119,6 +121,20 @@ export function ArmSimPage() {
   const editCustom = (patch: (p: ArmParameterSet) => ArmParameterSet) => {
     const base = custom ?? { ...theory, source: 'custom' as const, createdAt: new Date().toISOString() }
     setCustom(patch(base))
+    setSource('custom')
+  }
+  // 滑桿：看的是理論值時，用理論值當起點切到自訂，並疊上理論值比較
+  const tweak = (patch: (p: ArmParameterSet) => ArmParameterSet) => {
+    if (src === 'custom') {
+      setCustom(patch(ps))
+      return
+    }
+    setCustom(patch({ ...theory, source: 'custom', createdAt: new Date().toISOString(), note: '從理論值開始調' }))
+    setSource('custom')
+    setCompare(true)
+  }
+  const resetToTheory = () => {
+    setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString(), note: '理論值' })
     setSource('custom')
   }
   const loadScenario = (s: ArmScenario) => {
@@ -271,6 +287,17 @@ export function ArmSimPage() {
         <ArmView result={result} arm={arm} goal={safeGoal} idx={pb.idx} zeroOffset={knobs.zeroOffset} />
         <div className="panel stack">
           <PlaybackBar result={result} pb={pb} unit="rad" />
+          <TuneSliders
+            mechanism="arm"
+            values={ps}
+            theory={theory}
+            editingCustom={src === 'custom'}
+            sourceLabel={src === 'custom' ? '自訂' : '理論值'}
+            onEdit={tweak}
+            onResetAll={resetToTheory}
+            units={ARM_UNITS}
+            display={{ cruiseVelocity: R2D, acceleration: R2D }}
+          />
           {charts && result && (
             <>
               <Chart title="角度" x={result.t} series={charts.pos} height={220} yLabel="°" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是 Motion Magic 的軌跡（手臂應該在的角度），實線是手臂真的角度。兩條線貼在一起就是跟得好；0° 是水平、90° 是直立。" />
@@ -318,7 +345,7 @@ export function ArmSimPage() {
                 <dt>加速度</dt>
                 <dd>{f(ps.motionMagic.acceleration * R2D, 0)} °/s²</dd>
               </dl>
-              <p className="small muted">理論值由 1F 的機構資料算出，這裡不能改。想自由調整，切到「自訂」。</p>
+              <p className="small muted">理論值由 1F 的機構資料算出。想調整就直接拖播放列下面的滑桿，會自動切到「自訂」。</p>
             </>
           )}
           <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />
@@ -416,6 +443,18 @@ export function ArmSimPage() {
       />
     </section>
   )
+}
+
+const ARM_UNITS: Record<TuneKey, string> = {
+  kS: 'V',
+  kG: 'V',
+  kV: 'V/(rad/s)',
+  kA: 'V/(rad/s²)',
+  kP: 'V/rad',
+  kI: 'V/(rad·s)',
+  kD: 'V/(rad/s)',
+  cruiseVelocity: '°/s',
+  acceleration: '°/s²',
 }
 
 function ArmCustomEditor({ ps, edit, reset }: { ps: ArmParameterSet; edit: (patch: (p: ArmParameterSet) => ArmParameterSet) => void; reset: () => void }) {
