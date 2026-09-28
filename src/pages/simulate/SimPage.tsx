@@ -4,7 +4,7 @@ import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
 import { CONTROL_PERIOD, type AntiWindup, type ControllerLocation } from '../../core/controller/slot0'
 import { CHALLENGE_ATTEMPTS, makeChallenge, nextStatus, referenceSolution, type ChallengeLevel, type HiddenPlant } from '../../core/challenge'
-import { simulate, type SimResult } from '../../core/physics/simulate'
+import { resampleByTime, simulate, type SimResult } from '../../core/physics/simulate'
 import { passesSpec } from '../../core/physics/spec'
 import type { ParameterSet } from '../../schema/parameterSet'
 import { runSimulation } from '../../workers/client'
@@ -137,12 +137,8 @@ export function SimPage() {
   const other = compare && otherPs ? otherRaw : null
   const charts = useMemo(() => {
     if (!result) return null
-    // 疊圖的時間軸可能不同（巡航速度不同），長度對不上時截短或補 NaN
-    const fit = (a: Float64Array) => {
-      const v = new Float64Array(result.t.length).fill(NaN)
-      v.set(a.subarray(0, Math.min(v.length, a.length)))
-      return v
-    }
+    // 比較那組依時間對到這組的時間軸上，播放時圖例才是同一個時間的值
+    const fit = (a: Float64Array) => (other ? resampleByTime(result.t, other.t, a) : a)
     const err = (r: SimResult) => r.refPos.map((x, i) => (x - r.pos[i]) * 100)
     const pos: ChartSeries[] = [
       { label: '目標（軌跡）', color: '--steel', dash: true, values: result.refPos },

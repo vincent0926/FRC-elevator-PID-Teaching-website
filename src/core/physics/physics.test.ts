@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_SUBSTEPS, stepRK4, type PlantParams } from './elevator'
-import { simulate } from './simulate'
+import { resampleByTime, simulate } from './simulate'
 import { computeFeedforward } from '../feedforward'
 import { DEFAULT_MECHANISM } from '../../schema/parameterSet'
 import { plantFromMechanism } from './elevator'
@@ -315,5 +315,26 @@ describe('極端剛性（要超過 1000 小步）', () => {
     // 穩態速度 u/kV = 0.12 m/s，0.1 s 後大約往上 1.2 cm
     expect(s.vel).toBeCloseTo(0.12, 2)
     expect(s.pos).toBeCloseTo(0.512, 2)
+  })
+})
+
+describe('疊圖比較依時間對齊', () => {
+  it('另一組的時間步長不同時，依時間內插；超出範圍是 NaN', () => {
+    const t = Float64Array.from([0, 0.5, 1, 1.5, 2])
+    const tOther = Float64Array.from([0, 1])
+    const v = Float64Array.from([0, 10])
+    const r = resampleByTime(t, tOther, v)
+    expect(Array.from(r.slice(0, 3))).toEqual([0, 5, 10])
+    expect(Number.isNaN(r[3]) && Number.isNaN(r[4])).toBe(true)
+  })
+})
+
+describe('Coast 的隱式小步', () => {
+  it('Coast 時不除以速度項的剛性：跟精確 RK4（小步）一樣往下掉', () => {
+    const p: PlantParams = { ...ideal, kG: 2, kV: 100, kA: 1e-5, statorCurrentLimit: null, minPosition: -100, maxPosition: 100 }
+    let s = { pos: 0, vel: 0 }
+    for (let i = 0; i < 2; i++) s = stepRK4(p, s, 0, 0.001, true)
+    // Coast：只剩重力，a = −kG/kA，2 ms 後 v = −kG/kA·t
+    expect(s.vel).toBeCloseTo((-2 / 1e-5) * 0.002, 0)
   })
 })

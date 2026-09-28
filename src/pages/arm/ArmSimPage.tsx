@@ -3,7 +3,7 @@ import { ApproxNote } from '../../components/ApproxNote'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
 import type { AntiWindup, ControllerLocation, GravityType } from '../../core/controller/slot0'
-import type { SimResult } from '../../core/physics/simulate'
+import { resampleByTime, type SimResult } from '../../core/physics/simulate'
 import { ARM_DEFAULT_SPEC, ARM_SPEC_PRESETS } from '../../core/physics/spec'
 import { DEG, type ArmParameterSet } from '../../schema/armParameterSet'
 import { runSimulation } from '../../workers/client'
@@ -88,11 +88,8 @@ export function ArmSimPage() {
   const charts = useMemo(() => {
     if (!result) return null
     const deg = (a: Float64Array) => a.map((x) => x * R2D)
-    const fit = (a: Float64Array) => {
-      const v = new Float64Array(result.t.length).fill(NaN)
-      v.set(a.subarray(0, Math.min(v.length, a.length)))
-      return v
-    }
+    // 比較那組依時間對到這組的時間軸上，播放時圖例才是同一個時間的值
+    const fit = (a: Float64Array) => (otherShown ? resampleByTime(result.t, otherShown.t, a) : a)
     const pos: ChartSeries[] = [
       { label: '目標（軌跡）', color: '--steel', dash: true, values: deg(result.refPos) },
       { label: '實際角度', color: '--blue', values: deg(result.pos) },

@@ -326,3 +326,28 @@ export function simulate(input: SimInput): SimResult {
   }
   return out
 }
+
+/**
+ * 把另一次模擬的資料依時間對到 t 上（線性內插；超出另一次的時間範圍就是 NaN，圖上不畫）。
+ * 疊圖比較時用：兩次模擬的長度可能不同，播放時間線和圖例才會是同一個時間的值。
+ */
+export function resampleByTime(t: ArrayLike<number>, tOther: ArrayLike<number>, values: ArrayLike<number>): Float64Array {
+  const out = new Float64Array(t.length).fill(NaN)
+  const n = Math.min(tOther.length, values.length)
+  if (n === 0) return out
+  let j = 0
+  for (let i = 0; i < t.length; i++) {
+    const ti = t[i]
+    if (ti < tOther[0] || ti > tOther[n - 1]) continue
+    while (j + 1 < n && tOther[j + 1] < ti) j++
+    if (j + 1 >= n || tOther[j] === ti) {
+      out[i] = values[j]
+      continue
+    }
+    const t0 = tOther[j]
+    const t1 = tOther[j + 1]
+    const w = t1 > t0 ? (ti - t0) / (t1 - t0) : 0
+    out[i] = values[j] + w * (values[j + 1] - values[j])
+  }
+  return out
+}

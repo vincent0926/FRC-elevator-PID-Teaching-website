@@ -208,7 +208,8 @@ export function stepRK4(p: PlantParams, s: PlantState, u: number, dt: number, co
 function implicitOnce(p: PlantParams, s: PlantState, u: number, dt: number, coast: boolean): PlantState {
   const a = acceleration(p, s, u, coast)
   const drive = applyCurrentLimit(p, u, s.vel, coast)
-  const k = drive.currentLimited || drive.supplyLimited ? 0 : ((p.gearboxEfficiency ?? 1) * p.kV) / p.kA
+  // Coast 時馬達斷路（反電動勢跟速度項抵消），電流限制時輸出跟速度無關：這兩種都沒有速度項的剛性
+  const k = coast || drive.currentLimited || drive.supplyLimited ? 0 : ((p.gearboxEfficiency ?? 1) * p.kV) / p.kA
   let vel = s.vel + (dt * a) / (1 + dt * k)
   let pos = s.pos + dt * vel
   if (hasFriction(p) && (Math.sign(vel) !== Math.sign(s.vel) || Math.abs(vel) < STICK_VELOCITY)) {
