@@ -114,7 +114,7 @@ export function TuneSliders<T extends TuneGains>({ mechanism, values, theory, ed
                     <option value={t} label="理論值" />
                   </datalist>
                   <div className="tune-num">
-                    <NumberField label={label} hideLabel value={v} display={s} digits={digits} min={k === 'cruiseVelocity' || k === 'acceleration' ? r.step : k === 'kS' || k === 'kG' ? undefined : 0} onChange={set} unit={units[k]} />
+                    <NumberField label={label} hideLabel value={v} display={s} digits={digits} min={k === 'cruiseVelocity' || k === 'acceleration' ? r.step * s : k === 'kS' || k === 'kG' ? undefined : 0} onChange={set} unit={units[k]} />
                   </div>
                   <div className="tune-ref small muted">
                     理論 {Number.isFinite(t) ? (t * s).toFixed(digits) : '—'}

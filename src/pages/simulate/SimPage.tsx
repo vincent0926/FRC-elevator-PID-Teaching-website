@@ -191,6 +191,8 @@ export function SimPage() {
     const label = SOURCES.find((x) => x.id === source)!.label
     setCustom(patch({ ...ps, source: 'custom', createdAt: new Date().toISOString(), note: `從${label}開始調` }))
     setSimSource('custom')
+    // 疊圖要比的是剛才看的那組：理論值切過來時自然會比理論值；其他來源（調參建議值）存一份快照來比
+    setCompareSet(source === 'theory' ? null : { label, params: ps })
     setCompare(true)
   }
   const resetToTheory = () => {

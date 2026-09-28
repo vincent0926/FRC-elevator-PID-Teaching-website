@@ -82,9 +82,10 @@ export function sliderRange(k: TuneKey, theory: TuneGains, current: number): Sli
     default:
       hi = 1.5 * t
   }
-  // 跟取整後的上限比：拉到端點（= max）時範圍不能再變大，不然越拖越大停不下來
+  // 跟取整後的上限比，撐開時也只取到 cur 以上的下一個整數上限：
+  // 拉到端點（= max）時 niceCeil(max) = max，範圍不會再變大，不然越拖越大停不下來
   let max = niceCeil(hi)
-  if (cur > max) max = niceCeil(cur * 1.25)
+  if (cur > max) max = niceCeil(cur)
   const step = niceStep(max / 250)
   if (k === 'cruiseVelocity' || k === 'acceleration') return { min: step, max, step }
   // 配重比重力大時 kG 是負的；kS、kG 允許負值，其他從 0 開始

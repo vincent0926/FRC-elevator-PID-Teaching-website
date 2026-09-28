@@ -49,6 +49,13 @@ describe('sliderRange', () => {
     expect(sliderRange('kP', theory, 900).max).toBeGreaterThanOrEqual(900)
   })
 
+  it('打了超出範圍的數字之後再拉到端點，範圍不會再變大', () => {
+    const r1 = sliderRange('kP', theory, 900)
+    const r2 = sliderRange('kP', theory, r1.max)
+    expect(r2.max).toBe(r1.max)
+    expect(sliderRange('kP', theory, r2.max).max).toBe(r1.max)
+  })
+
   it('負的 kG（配重太重）可以拉到', () => {
     const neg = { ...theory, feedforward: { ...theory.feedforward, kG: -0.3 } }
     expect(sliderRange('kG', neg, -0.3).min).toBeLessThanOrEqual(-0.6)
