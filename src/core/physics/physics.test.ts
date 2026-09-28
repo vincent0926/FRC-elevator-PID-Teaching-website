@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { stepRK4, type PlantParams } from './elevator'
-import { simulate } from './simulate'
+import { MAX_SUBSTEPS, stepRK4, type PlantParams } from './elevator'
+import { resampleByTime, simulate } from './simulate'
 import { computeFeedforward } from '../feedforward'
 import { DEFAULT_MECHANISM } from '../../schema/parameterSet'
 import { plantFromMechanism } from './elevator'
@@ -282,5 +282,59 @@ describe('馬達控制器的限制（Current Limit、Soft Limit、Peak Output、
   it('SPARK MAX 輸出範圍用佔空比：50% 在 12 V 電池 = 6 V', () => {
     const r = run({ plant: { ...plant, batteryVoltage: 12 }, output: { controller: 'sparkmax', peakForward: 0.5, peakReverse: 1, voltageCompensation: 12 } })
     expect(Math.max(...r.voltage)).toBeLessThanOrEqual(6 + 1e-9)
+  })
+})
+
+describe('時間常數比 1 ms 短的機構（齒比大、鼓輪小）', () => {
+  it('RK4 自動切小步，不會發散成 NaN', () => {
+    // 齒比 34、鼓輪半徑 7 mm、三顆 Falcon：kV 約 90、kA 約 0.006，時間常數 66 µs
+    const m = { ...DEFAULT_MECHANISM, motor: 'falcon500' as const, motorCount: 3, gearRatio: 34.2, drumRadius: 0.007, stages: [{ mass: 1.1, speedRatio: 1 }, { mass: 5.3, speedRatio: 2 }], counterweightForce: 115 }
+    const f = computeFeedforward(m)
+    expect(f.kA / f.kV).toBeLessThan(0.0002)
+    const r = simulate({
+      plant: plantFromMechanism(m, f, { realistic: false }),
+      gains: { kS: 0, kG: f.kG, kV: f.kV, kA: f.kA, kP: 50, kI: 0, kD: 0 },
+      motionMagic: { cruiseVelocity: f.cruiseVelocity, acceleration: f.acceleration },
+      controlPeriod: 0.001,
+      initialPosition: 0.1,
+      moves: [{ time: 0.5, goal: 0.6 }],
+      duration: 8,
+    })
+    expect(r.pos.every(Number.isFinite)).toBe(true)
+    expect(Math.abs(r.pos[r.pos.length - 1] - 0.6)).toBeLessThan(0.01)
+  })
+})
+
+describe('極端剛性（要超過 1000 小步）', () => {
+  it('改用隱式小步，不會發散，速度收斂到 u/kV', () => {
+    const p: PlantParams = { ...ideal, kG: 0, kV: 100, kA: 1e-5, statorCurrentLimit: null, minPosition: 0, maxPosition: 1.2 }
+    expect(0.001 / (0.5 * (p.kA / p.kV))).toBeGreaterThan(MAX_SUBSTEPS)
+    let s = { pos: 0.5, vel: 0 }
+    for (let i = 0; i < 100; i++) s = stepRK4(p, s, 12, 0.001)
+    expect(Number.isFinite(s.pos) && Number.isFinite(s.vel)).toBe(true)
+    // 穩態速度 u/kV = 0.12 m/s，0.1 s 後大約往上 1.2 cm
+    expect(s.vel).toBeCloseTo(0.12, 2)
+    expect(s.pos).toBeCloseTo(0.512, 2)
+  })
+})
+
+describe('疊圖比較依時間對齊', () => {
+  it('另一組的時間步長不同時，依時間內插；超出範圍是 NaN', () => {
+    const t = Float64Array.from([0, 0.5, 1, 1.5, 2])
+    const tOther = Float64Array.from([0, 1])
+    const v = Float64Array.from([0, 10])
+    const r = resampleByTime(t, tOther, v)
+    expect(Array.from(r.slice(0, 3))).toEqual([0, 5, 10])
+    expect(Number.isNaN(r[3]) && Number.isNaN(r[4])).toBe(true)
+  })
+})
+
+describe('Coast 的隱式小步', () => {
+  it('Coast 時不除以速度項的剛性：跟精確 RK4（小步）一樣往下掉', () => {
+    const p: PlantParams = { ...ideal, kG: 2, kV: 100, kA: 1e-5, statorCurrentLimit: null, minPosition: -100, maxPosition: 100 }
+    let s = { pos: 0, vel: 0 }
+    for (let i = 0; i < 2; i++) s = stepRK4(p, s, 0, 0.001, true)
+    // Coast：只剩重力，a = −kG/kA，2 ms 後 v = −kG/kA·t
+    expect(s.vel).toBeCloseTo((-2 / 1e-5) * 0.002, 0)
   })
 })

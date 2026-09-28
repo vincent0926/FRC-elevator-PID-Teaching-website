@@ -58,6 +58,8 @@ export interface ArmSimSetup {
   location: ControllerLocation
   /** 目標角度（rad） */
   goal: number
+  /** 起始角度（rad）；沒給就是收起的角度（下限上面 5°） */
+  start?: number
   gravityType: GravityType
   tolerance?: number
   antiWindup?: AntiWindup
@@ -82,7 +84,7 @@ export function buildArmSimInput(s: ArmSimSetup, ps: ArmParameterSet): SimInput 
     kAScale: k.kAScale,
   })
   plant.gravityCosineOffset = k.zeroOffset
-  const start = armStartAngle(arm)
+  const start = Math.min(arm.maxAngle, Math.max(arm.minAngle, s.start ?? armStartAngle(arm)))
   const goal = Math.min(arm.maxAngle, Math.max(arm.minAngle, s.goal))
   const mm = ps.motionMagic
   const there = trapezoidProfile(start, goal, mm.cruiseVelocity, mm.acceleration)

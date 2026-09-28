@@ -181,8 +181,51 @@ export function acceleration(p: PlantParams, s: PlantState, u: number, coast = f
   return net / p.kA
 }
 
-/** 固定輸入電壓 u 下前進 dt（RK4），並處理機械上下限與靜摩擦。 */
+/**
+ * 固定輸入電壓 u 下前進 dt（RK4），並處理機械上下限與靜摩擦。
+ * 時間常數 kA/kV 比 dt 短時（齒比大、鼓輪小、機構輕）RK4 會發散成 NaN，
+ * 所以自動切成小步：每小步不超過時間常數的一半。
+ * 要超過 MAX_SUBSTEPS 小步才夠的極端機構，改用隱式（線性化後向 Euler）小步：步長再大也不會發散。
+ */
+export const MAX_SUBSTEPS = 1000
+
 export function stepRK4(p: PlantParams, s: PlantState, u: number, dt: number, coast = false): PlantState {
+  const tau = p.kA / Math.max(p.kV * (p.gearboxEfficiency ?? 1), 1e-12)
+  const need = Math.max(1, Math.ceil(dt / (0.5 * tau)))
+  let st = s
+  if (need <= MAX_SUBSTEPS) {
+    for (let i = 0; i < need; i++) st = rk4Once(p, st, u, dt / need, coast)
+  } else {
+    for (let i = 0; i < MAX_SUBSTEPS; i++) st = implicitOnce(p, st, u, dt / MAX_SUBSTEPS, coast)
+  }
+  return st
+}
+
+/**
+ * 線性化後向 Euler：v⁺ = v + h·a(v) / (1 + h·k)，k = η·kV/kA 是速度項的剛性。
+ * 電流限制作用時馬達輸出跟速度無關（k = 0）。穩定但只有一階精度，只給極端機構用。
+ */
+function implicitOnce(p: PlantParams, s: PlantState, u: number, dt: number, coast: boolean): PlantState {
+  const a = acceleration(p, s, u, coast)
+  const drive = applyCurrentLimit(p, u, s.vel, coast)
+  // Coast 時馬達斷路（反電動勢跟速度項抵消），電流限制時輸出跟速度無關：這兩種都沒有速度項的剛性
+  const k = coast || drive.currentLimited || drive.supplyLimited ? 0 : ((p.gearboxEfficiency ?? 1) * p.kV) / p.kA
+  let vel = s.vel + (dt * a) / (1 + dt * k)
+  let pos = s.pos + dt * vel
+  if (hasFriction(p) && (Math.sign(vel) !== Math.sign(s.vel) || Math.abs(vel) < STICK_VELOCITY)) {
+    if (acceleration(p, { pos, vel: 0 }, u, coast) === 0) vel = 0
+  }
+  if (pos < p.minPosition) {
+    pos = p.minPosition
+    if (vel < 0) vel = 0
+  } else if (pos > p.maxPosition) {
+    pos = p.maxPosition
+    if (vel > 0) vel = 0
+  }
+  return { pos, vel }
+}
+
+function rk4Once(p: PlantParams, s: PlantState, u: number, dt: number, coast: boolean): PlantState {
   const a1 = acceleration(p, s, u, coast)
   const s2 = { pos: s.pos + 0.5 * dt * s.vel, vel: s.vel + 0.5 * dt * a1 }
   const a2 = acceleration(p, s2, u, coast)

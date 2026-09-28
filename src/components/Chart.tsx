@@ -30,6 +30,10 @@ export interface ChartProps {
   xLabel?: string
   /** 圖例裡 x 的名稱（預設「時間」） */
   xName?: string
+  /** 圖的說明：看什麼、怎麼判斷（標題下面的小字） */
+  note?: string
+  /** 播放中的時間（x 軸單位）：畫一條直線，圖例顯示這個時間的數值；null = 不畫 */
+  cursorX?: number | null
 }
 
 /** uPlot 只認 null 為斷點，NaN 會弄壞 y 軸範圍 */
@@ -40,13 +44,21 @@ function withGaps(v: ArrayLike<number>): ArrayLike<number | null> {
   return v
 }
 
+/** 把游標放到時間 t（null 或不是有限數字就移到圖外，不顯示） */
+function placeCursor(u: uPlot, t: number | null) {
+  if (t === null || !Number.isFinite(t)) u.setCursor({ left: -10, top: -10 })
+  else u.setCursor({ left: u.valToPos(t, 'x'), top: u.bbox.height / (2 * devicePixelRatio) })
+}
+
 function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'
 }
 
-export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, xLabel = 's', xName = '時間' }: ChartProps) {
+export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, xLabel = 's', xName = '時間', note, cursorX = null }: ChartProps) {
   const box = useRef<HTMLDivElement>(null)
   const plot = useRef<uPlot | null>(null)
+  // 目前的播放時間：重畫（換主題）之後要把時間線放回去
+  const cursorRef = useRef<number | null>(cursorX)
 
   useEffect(() => {
     const el = box.current
@@ -63,7 +75,8 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
       const opts: uPlot.Options = {
         width: Math.max(200, el.clientWidth),
         height,
-        cursor: syncKey ? { sync: { key: syncKey, setSeries: false }, drag: { x: true, y: false } } : { drag: { x: true, y: false } },
+        // 只畫垂直的時間線；水平線在播放時會停在圖中間，看起來像一條資料
+        cursor: syncKey ? { y: false, sync: { key: syncKey, setSeries: false }, drag: { x: true, y: false } } : { y: false, drag: { x: true, y: false } },
         legend: { show: true },
         scales: { x: { time: false } },
         axes: [
@@ -103,6 +116,7 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
       }
       const data = [x, ...series.map((s) => withGaps(s.values))] as unknown as uPlot.AlignedData
       plot.current = new uPlot(opts, data, el)
+      placeCursor(plot.current, cursorRef.current)
     }
 
     build()
@@ -124,9 +138,17 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
     }
   }, [x, series, height, yLabel, syncKey, bands, xLabel, xName])
 
+  // 播放時把游標放到目前時間：圖上有一條直線，圖例顯示這一刻每條線的數值
+  // ref 在 commit 之後才更新：被丟掉的 render 不會影響之後的重畫
+  useEffect(() => {
+    cursorRef.current = cursorX
+    if (plot.current) placeCursor(plot.current, cursorX)
+  }, [cursorX, x, series])
+
   return (
     <figure className="chart-box" style={{ margin: 0 }}>
       {title && <figcaption className="chart-title">{title}</figcaption>}
+      {note && <p className="chart-note small muted">{note}</p>}
       <div ref={box} />
     </figure>
   )
