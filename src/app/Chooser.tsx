@@ -13,7 +13,7 @@ const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = 
     id: 'arm',
     title: '手臂',
     what: '繞一個轉軸轉動的單關節手臂。',
-    points: ['重力跟角度有關：kG·cos θ', '轉動慣量、重心距離', '1F～4F 完整：計算與 Java 輸出（內建編碼器或 CANcoder）、日誌診斷、模擬、實機教學'],
+    points: ['重力跟角度有關：kG·cos θ', '轉動慣量、重心距離', '1F～4F 完整：計算參數（內建編碼器或 CANcoder）、日誌診斷、模擬、實機教學'],
   },
 ]
 

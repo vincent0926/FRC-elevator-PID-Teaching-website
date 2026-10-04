@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../../app/store'
 import { Quiz } from '../../components/Quiz'
-import { ArmExportPanel } from './ArmExportPanel'
 import { ArmForm } from './ArmForm'
 import { ArmParamCard } from './ArmParamCard'
 import { ARM_LESSONS } from './armLessons'
@@ -107,8 +106,6 @@ export function ArmCalcPage() {
               複製成自訂再模擬
             </button>
           </div>
-          <hr style={{ border: 0, borderTop: '1px solid var(--line-2)', margin: '18px 0' }} />
-          <ArmExportPanel />
         </aside>
       </div>
     </section>

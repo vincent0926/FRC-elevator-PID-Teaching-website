@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { useStore } from '../../app/store'
 import { ParamCard } from '../../components/ParamCard'
 import { Quiz } from '../../components/Quiz'
-import { ExportPanel } from './ExportPanel'
-import { ParamLibrary } from '../../components/ParamLibrary'
 import { LESSONS } from './lessons'
 import { MechanismForm } from './MechanismForm'
 import { PARAM_ROWS, KIND_INFO } from './paramSources'
@@ -129,11 +127,6 @@ export function CalcPage() {
               看對照表
             </button>
           </p>
-          <hr style={{ border: 0, borderTop: '1px solid var(--line-2)', margin: '18px 0' }} />
-          <ExportPanel ps={theory} />
-          <hr style={{ border: 0, borderTop: '1px solid var(--line-2)', margin: '18px 0' }} />
-          <h3>參數庫</h3>
-          <ParamLibrary current={theory} currentLabel="理論值" defaultTag="theory" />
         </aside>
       </div>
 

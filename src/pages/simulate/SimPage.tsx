@@ -8,7 +8,6 @@ import { resampleByTime, simulate, type SimResult } from '../../core/physics/sim
 import { passesSpec } from '../../core/physics/spec'
 import type { ParameterSet } from '../../schema/parameterSet'
 import { runSimulation } from '../../workers/client'
-import { ExportPanel } from '../calculate/ExportPanel'
 import { CalibrationPanel } from './CalibrationPanel'
 import { ChallengePanel, type ChallengeState } from './ChallengePanel'
 import { ApproxNote, PLANT_ASSUMPTIONS, SIM_SCOPE } from '../../components/ApproxNote'
@@ -24,7 +23,6 @@ import { SpecEditor } from './SpecEditor'
 import { ElevatorView } from './ElevatorView'
 import { PlaybackBar, usePlayback } from './MiniShaft'
 import { RobustnessPanel } from './RobustnessPanel'
-import { ParamLibrary } from '../../components/ParamLibrary'
 import { buildSimInput, DEFAULT_KNOBS, TOGGLES, type PlantKnobs } from './plantKnobs'
 import { SIM_SCENARIOS, type SimScenario } from './simScenarios'
 
@@ -130,7 +128,7 @@ export function SimPage() {
     }
   }, [setup, ps])
 
-  // 參數庫選的參數組優先（挑戰模式不疊）
+  // 從滑桿切到自訂時存下的那組（例如調參建議值）優先當疊圖對象（挑戰模式不疊）
   const libCompare = challenge ? null : compareSet
   const otherPs = libCompare ? libCompare.params : otherSource ? sets[otherSource] : null
   const otherLabel = libCompare ? `「${libCompare.label}」` : otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : ''
@@ -366,7 +364,7 @@ export function SimPage() {
         )}
         {libCompare && (
           <button className="linkbtn small" type="button" onClick={() => setCompareSet(null)}>
-            不疊參數庫的，改回{otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : '原本的'}
+            不疊「{libCompare.label}」，改回{otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : '原本的'}
           </button>
         )}
       </div>
@@ -442,14 +440,6 @@ export function SimPage() {
             </>
           )}
           {!challenge && <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />}
-          <details style={{ marginTop: 16 }}>
-            <summary className="small" style={{ cursor: 'pointer' }}>
-              達標了？輸出這組參數
-            </summary>
-            <div style={{ marginTop: 12 }}>
-              <ExportPanel ps={ps} />
-            </div>
-          </details>
         </div>
 
         {challenge ? (
@@ -482,15 +472,6 @@ export function SimPage() {
         <>
           <RobustnessPanel base={robustBase} mechanism={mechanism} ff={ff} realistic={knobs.realistic} spec={spec} />
           <CalibrationPanel onApply={applyCalibration} />
-          <details className="panel scen" style={{ marginTop: 20 }}>
-            <summary>
-              <b>參數庫</b>
-              <span className="small muted">存下調好的參數組（理論值、模擬最佳、實機最終），逐項比較或疊圖。</span>
-            </summary>
-            <div style={{ marginTop: 12 }}>
-              <ParamLibrary current={ps} currentLabel={SOURCES.find((s) => s.id === source)!.label} defaultTag="simBest" />
-            </div>
-          </details>
         </>
       )}
     </section>
