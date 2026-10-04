@@ -3,6 +3,7 @@ import { ApproxNote } from '../../components/ApproxNote'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
 import { TuneSliders } from '../../components/TuneSliders'
+import { alignedFromSim } from '../../core/log/sampleLog'
 import type { TuneKey } from '../simulate/tuneRange'
 import type { AntiWindup, ControllerLocation, GravityType } from '../../core/controller/slot0'
 import { resampleByTime, type SimResult } from '../../core/physics/simulate'
@@ -38,7 +39,7 @@ const ARM_ASSUMPTIONS = [
 ]
 
 export function ArmSimPage() {
-  const { arm, ff, theory, custom, setCustom, source, setSource, spec, setSpec } = useArm()
+  const { arm, ff, theory, custom, setCustom, source, setSource, spec, setSpec, setSimLog } = useArm()
   const [knobs, setKnobs] = useState<ArmKnobs>(DEFAULT_ARM_KNOBS)
   const [location, setLocation] = useState<ControllerLocation>('talonfx')
   const [gravityType, setGravityType] = useState<GravityType>('armCosine')
@@ -48,6 +49,8 @@ export function ArmSimPage() {
   const [compare, setCompare] = useState(false)
   const [scenario, setScenario] = useState<ArmScenario | null>(null)
   const [result, setResult] = useState<SimResult | null>(null)
+  // 這個結果是用哪組參數、哪個閉迴路位置算的（送到 2F 要帶這份，不是畫面上現在的值：新模擬還沒算完時兩者不同）
+  const [resultInfo, setResultInfo] = useState<{ params: ArmParameterSet; location: ControllerLocation; label: string } | null>(null)
   // 這份結果是用哪個重力型態算的：圖例和說明跟著結果，不跟著還沒算完的選擇
   const [resultGravity, setResultGravity] = useState<GravityType>('armCosine')
   const [other, setOther] = useState<SimResult | null>(null)
@@ -69,6 +72,7 @@ export function ArmSimPage() {
       .then((r) => {
         if (!alive) return
         setResult(r)
+        setResultInfo({ params: ps, location: setup.location, label: src === 'custom' ? '自訂' : '理論值' })
         setResultGravity(setup.gravityType)
         setError(null)
       })
@@ -151,7 +155,7 @@ export function ArmSimPage() {
     setScenario(s)
   }
   // 課程深層連結要求載入某個手臂情境
-  const { pendingScenario, openScenario } = useStore()
+  const { pendingScenario, openScenario, go } = useStore()
   useEffect(() => {
     if (!pendingScenario) return
     const sc = ARM_SCENARIOS.find((x) => x.id === pendingScenario)
@@ -277,6 +281,19 @@ export function ArmSimPage() {
             疊上理論值比較
           </label>
         )}
+        <button
+          className="btn small"
+          type="button"
+          disabled={!result || !resultInfo}
+          title="把這次模擬的資料送到 2F 調參建議，看哪個參數該先改"
+          onClick={() => {
+            if (!result || !resultInfo) return
+            setSimLog({ log: alignedFromSim(result), name: `3F 模擬（${resultInfo.label}）`, params: resultInfo.params, location: resultInfo.location })
+            go('tune')
+          }}
+        >
+          送到 2F 調參建議
+        </button>
       </div>
 
       <UnsavedNote />

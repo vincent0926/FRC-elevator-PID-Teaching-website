@@ -6,6 +6,7 @@ import { DEFAULT_SPEC, isSpec, type Spec } from '../core/physics/spec'
 import { loadJson, loadSession, saveJson, saveSession } from '../storage/local'
 import { decodeMechanism, SHARE_PARAM } from '../core/shareLink'
 import { hasDeepLink, parseDeepLink, stripDeepLink } from '../core/deepLink'
+import type { SimLogHandoff } from './simLog'
 
 /**
  * 全站共用狀態。參數組只有一種格式（ParameterSet），三個來源：
@@ -76,6 +77,9 @@ interface Store {
   /** 2F 最後匯入的日誌（只在記憶體，不存檔），3F 模型校正用 */
   lastLog: { log: AlignedLog; name: string } | null
   setLastLog: (l: { log: AlignedLog; name: string } | null) => void
+  /** 3F 送來 2F 分析的模擬結果（2F 讀走就清掉；只在記憶體） */
+  simLog: SimLogHandoff<ParameterSet> | null
+  setSimLog: (l: SimLogHandoff<ParameterSet> | null) => void
   page: PageId
   go: (p: PageId) => void
   /** 達標標準（3F 指標、穩健性測試、挑戰模式共用），可以依賽季需求調 */
@@ -161,6 +165,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [baseline, setBaseline] = usePersisted<ParameterSet | null>('baseline', null, isParamsOrNull)
   const [calibration, setCalibration] = usePersisted<Calibration | null>('calibration', null, isCalibrationOrNull)
   const [lastLog, setLastLog] = useState<{ log: AlignedLog; name: string } | null>(null)
+  const [simLog, setSimLog] = useState<SimLogHandoff<ParameterSet> | null>(null)
   const [pendingScenario, setPendingScenario] = useState<string | null>(DEEP_LINK.scenario ?? null)
   const [pendingSection, setPendingSection] = useState<string | null>(DEEP_LINK.section ?? null)
   const clearPendingSection = useCallback(() => setPendingSection(null), [])
@@ -278,6 +283,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCalibration,
     lastLog,
     setLastLog,
+    simLog,
+    setSimLog,
     page,
     go,
     pendingScenario,

@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { downloadBlob } from '../../app/download'
+import type { SimLogHandoff } from '../../app/simLog'
+import type { ArmParameterSet } from '../../schema/armParameterSet'
 import { runDataChecks, type CheckReport } from '../../core/analysis/checks'
 import { estimateRobotGains, oscillationBehindRefusal } from '../../core/analysis/diagnose'
 import { makeArmSampleLog } from '../../core/arm/sampleLog'
@@ -23,9 +25,10 @@ type Stage = 'idle' | 'scanning' | 'mapping' | 'reading' | 'done'
 const STATUS_MARK = { pass: '✓', warn: '!', fail: '✕', skip: '–' } as const
 
 export function ArmTuningPage() {
-  const { arm, ff, theory, custom, fieldMapping, setFieldMapping } = useArm()
+  const { arm, ff, theory, custom, fieldMapping, setFieldMapping, simLog, setSimLog } = useArm()
   const [stage, setStage] = useState<Stage>('idle')
-  const [file, setFile] = useState<{ blob: Blob; name: string; scenario?: string } | null>(null)
+  // sim：3F 送來的模擬結果（不是檔案，沒有 blob、不用對欄位）
+  const [file, setFile] = useState<{ blob: Blob | null; name: string; scenario?: string; sim?: SimLogHandoff<ArmParameterSet> } | null>(null)
   const [scan, setScan] = useState<ScanResult | null>(null)
   const [mapping, setMapping] = useState<FieldMapping | null>(null)
   const [progress, setProgress] = useState(0)
@@ -38,6 +41,29 @@ export function ArmTuningPage() {
   const [over, setOver] = useState(false)
   const [scenarioId, setScenarioId] = useState(ARM_LOG_SCENARIOS[0].id)
 
+  /** 對齊好的欄位 → 資料檢查 → 畫面（實機日誌和 3F 送來的模擬共用） */
+  const accept = (aligned: AlignedLog) => {
+    setLog(aligned)
+    setLogSeq((k) => k + 1)
+    setDiagBands(null)
+    setReport(runDataChecks(aligned, { statorCurrentLimit: arm.statorCurrentLimit, angle: true }))
+    setStage('done')
+  }
+
+  // 3F「送到 2F」：直接用模擬的欄位，不用編成 .wpilog 再解開
+  useEffect(() => {
+    if (!simLog) return
+    setFile({ blob: null, name: simLog.name, sim: simLog })
+    setScan(null)
+    setMapping(null)
+    setError(null)
+    setHighlight(null)
+    accept(simLog.log)
+    setSimLog(null)
+    // accept 每次 render 都是新的函式，只在收到新的模擬時跑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simLog])
+
   const read = async (blob: Blob, m: FieldMapping) => {
     setStage('reading')
     setProgress(0)
@@ -47,12 +73,8 @@ export function ArmTuningPage() {
         .map((r) => r.entry)
         .filter((n): n is string => !!n)
       const aligned = alignSeries(await extractLog(blob, names, setProgress), m)
-      setLog(aligned)
-      setLogSeq((k) => k + 1)
-      setDiagBands(null)
-      setReport(runDataChecks(aligned, { statorCurrentLimit: arm.statorCurrentLimit, angle: true }))
+      accept(aligned)
       setFieldMapping(m)
-      setStage('done')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setStage('mapping')
@@ -103,9 +125,20 @@ export function ArmTuningPage() {
           <h1 id="t-arm-tune">手臂・調參建議</h1>
           <p className="lead">匯入手臂的實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。</p>
         </div>
-        <span className="phase">資料檢查、找問題、建議、驗證</span>
+        <span className="phase">Phase 2：資料檢查、找問題、建議、驗證</span>
       </div>
       <UnsavedNote />
+
+      <ol className="steps" aria-label="目前步驟">
+        <li className={!report?.ok ? 'cur' : undefined} aria-current={!report?.ok ? 'step' : undefined}>
+          0 匯入並檢查
+        </li>
+        <li className={report?.ok ? 'cur' : undefined} aria-current={report?.ok ? 'step' : undefined}>
+          1 找出問題
+        </li>
+        <li>2 處理一個問題</li>
+        <li>3 上機驗證</li>
+      </ol>
 
       <div className="grid2">
         <div className="stack">
@@ -141,7 +174,7 @@ export function ArmTuningPage() {
               />
             </label>
             <br />
-            <span className="muted small">檔案只在這台電腦的瀏覽器裡解析，不會上傳。角度要是弧度、0 = 水平（範例程式的 ArmIO 就是）。</span>
+            <span className="muted small">檔案只在這台電腦的瀏覽器裡解析，不會上傳。第一次匯入要設定欄位對應，之後自動套用。角度要是弧度、0 = 水平（範例程式的 ArmIO 就是）。</span>
             {busy && (
               <>
                 <div className="progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
@@ -154,20 +187,30 @@ export function ArmTuningPage() {
 
           {error && <div className="warn">{error}</div>}
 
+          {file?.sim && (
+            <div className="note">
+              這份是 <b>3F 模擬</b>出來的資料，不是實機日誌。拿來練習讀圖、看調參建議，數字以上機實測為準。診斷會直接用模擬時的參數當「機器人上當時的參數」。
+              按「套用」後回 3F 選「自訂」，同樣的目標再跑一次，看問題有沒有消失。
+            </div>
+          )}
+
           {mapping && scan && file && stage !== 'idle' && (
             <div className="panel">
               <div className="row" style={{ justifyContent: 'space-between' }}>
                 <h2 style={{ margin: 0 }}>欄位對應</h2>
                 <span className="small muted">
                   {file.name}・{(scan.bytes / 1024 / 1024).toFixed(1)} MB・{scan.entries.length} 個欄位
+                  {scan.trailingBytes > 0 && '・檔案結尾不完整（可能斷電）'}
                 </span>
               </div>
               <FieldMappingTable entries={scan.entries} mapping={mapping} onChange={setMapping} />
               <div className="row" style={{ marginTop: 12 }}>
-                <button className="btn primary" type="button" disabled={busy || missingRequired(mapping).length > 0} onClick={() => void read(file.blob, mapping)}>
+                <button className="btn primary" type="button" disabled={busy || !file.blob || missingRequired(mapping).length > 0} onClick={() => file.blob && void read(file.blob, mapping)}>
                   {stage === 'done' ? '重新讀取並檢查' : '讀取並檢查'}
                 </button>
-                {missingRequired(mapping).length > 0 && <span className="small fail">還缺：{missingRequired(mapping).map((r) => r.label).join('、')}</span>}
+                {missingRequired(mapping).length > 0 && (
+                  <span className="small fail">還缺：{missingRequired(mapping).map((r) => r.label).join('、')}</span>
+                )}
               </div>
             </div>
           )}
@@ -210,12 +253,15 @@ export function ArmTuningPage() {
                 <div className="note">
                   <b>但是：</b>
                   {refusalOsc.summary}（{refusalOsc.evidence[0]}）
+                  {refusalOsc.change?.kind === 'gain'
+                    ? `建議先把 ${refusalOsc.change.param} 從 ${refusalOsc.change.from} 降到 ${refusalOsc.change.to} 左右。`
+                    : refusalOsc.evidence[refusalOsc.evidence.length - 1]}
                 </div>
               )}
             </div>
           )}
 
-          {log && report?.ok && file && <ArmDiagnosisPanel key={logSeq} log={log} report={report} logName={file.name} onHighlight={setDiagBands} />}
+          {log && report?.ok && file && <ArmDiagnosisPanel key={logSeq} log={log} report={report} logName={file.name} onHighlight={setDiagBands} sim={file.sim} />}
 
           {report && scenario && (
             <details className="panel">
@@ -231,18 +277,20 @@ export function ArmTuningPage() {
           <div className="panel">
             <h2>沒有日誌？</h2>
             <p className="small">用模擬器產生一份跟範例程式（ArmIO）欄位相同的手臂日誌（50 Hz），拿來練習匯入和讀圖。資料是模擬的，不是實機。</p>
-            <label className="f">
-              情境
-              <span className="inp">
-                <select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
-                  {ARM_LOG_SCENARIOS.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </span>
-            </label>
+            <div className="row">
+              <label className="f" style={{ flex: '1 1 160px' }}>
+                情境
+                <span className="inp">
+                  <select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
+                    {ARM_LOG_SCENARIOS.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+            </div>
             <div className="row" style={{ marginTop: 10 }}>
               <button
                 className="btn"
@@ -266,6 +314,9 @@ export function ArmTuningPage() {
                 下載 .wpilog
               </button>
             </div>
+            <p className="small muted" style={{ margin: '8px 0 0' }}>
+              下載的檔案也可以用 AdvantageScope 打開，對照看。
+            </p>
           </div>
         </div>
       </div>

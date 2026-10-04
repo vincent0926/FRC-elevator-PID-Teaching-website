@@ -14,6 +14,7 @@ import { ApproxNote, PLANT_ASSUMPTIONS, SIM_SCOPE } from '../../components/Appro
 import { ControllerSettings } from './ControllerSettings'
 import { CustomEditor } from './CustomEditor'
 import { TuneSliders } from '../../components/TuneSliders'
+import { alignedFromSim } from '../../core/log/sampleLog'
 import type { TuneKey } from './tuneRange'
 import { AntiWindupEditor } from './AntiWindupEditor'
 import { TuningGuide } from './TuningGuide'
@@ -73,7 +74,7 @@ const ELEVATOR_UNITS: Record<TuneKey, string> = {
 }
 
 export function SimPage() {
-  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration, pendingScenario, openScenario, spec, setSpec, compareSet, setCompareSet } = useStore()
+  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration, pendingScenario, openScenario, spec, setSpec, compareSet, setCompareSet, setSimLog, go } = useStore()
   const [knobs, setKnobs] = useState<PlantKnobs>(DEFAULT_KNOBS)
   const [location, setLocation] = useState<ControllerLocation>('talonfx')
   const [periodOverride, setPeriodOverride] = useState<number | null>(null)
@@ -83,6 +84,8 @@ export function SimPage() {
   const [start, setStart] = useState<number | null>(null)
   const [compare, setCompare] = useState(false)
   const [result, setResult] = useState<SimResult | null>(null)
+  // 這個結果是用哪組參數、哪個閉迴路位置算的（送到 2F 要帶這份，不是畫面上現在的值：新模擬還沒算完時兩者不同）
+  const [resultInfo, setResultInfo] = useState<{ params: ParameterSet; location: ControllerLocation; label: string; challenge: boolean } | null>(null)
   const [otherRaw, setOther] = useState<SimResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [scenario, setScenario] = useState<SimScenario | null>(null)
@@ -116,6 +119,7 @@ export function SimPage() {
       .then((r) => {
         if (!alive) return
         setResult(r)
+        setResultInfo({ params: ps, location, label: SOURCES.find((s) => s.id === source)!.label, challenge: !!challenge })
         setError(null)
         if (judging.current) {
           judging.current = false
@@ -365,6 +369,22 @@ export function SimPage() {
         {libCompare && (
           <button className="linkbtn small" type="button" onClick={() => setCompareSet(null)}>
             不疊「{libCompare.label}」，改回{otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : '原本的'}
+          </button>
+        )}
+        {!challenge && (
+          <button
+            className="btn small"
+            type="button"
+            disabled={!result || !resultInfo || resultInfo.challenge}
+            title="把這次模擬的資料送到 2F 調參建議，看哪個參數該先改"
+            onClick={() => {
+              // 挑戰模式的結果（隱藏的受控體）不能送：退出挑戰後、一般模擬還沒算完前，畫面上還是挑戰的結果
+              if (!result || !resultInfo || resultInfo.challenge) return
+              setSimLog({ log: alignedFromSim(result), name: `3F 模擬（${resultInfo.label}）`, params: resultInfo.params, location: resultInfo.location })
+              go('tune')
+            }}
+          >
+            送到 2F 調參建議
           </button>
         )}
       </div>
