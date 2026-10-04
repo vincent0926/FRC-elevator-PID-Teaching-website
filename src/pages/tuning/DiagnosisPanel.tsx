@@ -174,7 +174,7 @@ export function DiagnosisPanel({ log, report, logName, onHighlight, sim }: Diagn
         </div>
       </div>
 
-      <div className="panel">
+      <div className="panel" id="tune-step-1">
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>步驟 1：找出問題</h2>
           <label className="check" title={expertUnlocked ? '' : '1F 的教學關卡全部完成才開放'}>
@@ -264,7 +264,7 @@ export function DiagnosisPanel({ log, report, logName, onHighlight, sim }: Diagn
       </div>
 
       {showResult && diag.primary && (
-        <div className="panel">
+        <div className="panel" id="tune-step-2">
           <h2>步驟 2：處理這一個問題</h2>
           {diag.primary.change ? (
             <>
@@ -300,7 +300,7 @@ export function DiagnosisPanel({ log, report, logName, onHighlight, sim }: Diagn
       )}
 
       {(applied || (showResult && !diag.primary)) && (
-        <div className="panel">
+        <div className="panel" id="tune-step-3">
           <h2>步驟 3：{diag.primary ? '上機驗證' : '達標，輸出參數'}</h2>
           {diag.primary ? (
             <ol className="small" style={{ paddingLeft: 18, margin: 0 }}>

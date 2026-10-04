@@ -152,7 +152,7 @@ export function ArmDiagnosisPanel({ log, report, logName, onHighlight, sim }: Ar
         </div>
       </div>
 
-      <div className="panel">
+      <div className="panel" id="arm-tune-step-1">
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>步驟 1：找出問題</h2>
           <label className="check" title={expertUnlocked ? '' : '手臂 1F 的教學關卡全部完成才開放'}>
@@ -242,7 +242,7 @@ export function ArmDiagnosisPanel({ log, report, logName, onHighlight, sim }: Ar
       </div>
 
       {showResult && diag.primary && (
-        <div className="panel">
+        <div className="panel" id="arm-tune-step-2">
           <h2>步驟 2：處理這一個問題</h2>
           {diag.primary.change ? (
             <>
@@ -269,7 +269,7 @@ export function ArmDiagnosisPanel({ log, report, logName, onHighlight, sim }: Ar
       )}
 
       {(applied || (showResult && !diag.primary)) && (
-        <div className="panel">
+        <div className="panel" id="arm-tune-step-3">
           <h2>步驟 3：{diag.primary ? '上機驗證' : '達標，輸出參數'}</h2>
           {diag.primary ? (
             <ol className="small" style={{ paddingLeft: 18, margin: 0 }}>
