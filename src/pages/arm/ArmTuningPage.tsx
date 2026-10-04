@@ -125,9 +125,20 @@ export function ArmTuningPage() {
           <h1 id="t-arm-tune">手臂・調參建議</h1>
           <p className="lead">匯入手臂的實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。</p>
         </div>
-        <span className="phase">資料檢查、找問題、建議、驗證</span>
+        <span className="phase">Phase 2：資料檢查、找問題、建議、驗證</span>
       </div>
       <UnsavedNote />
+
+      <ol className="steps" aria-label="目前步驟">
+        <li className={!report?.ok ? 'cur' : undefined} aria-current={!report?.ok ? 'step' : undefined}>
+          0 匯入並檢查
+        </li>
+        <li className={report?.ok ? 'cur' : undefined} aria-current={report?.ok ? 'step' : undefined}>
+          1 找出問題
+        </li>
+        <li>2 處理一個問題</li>
+        <li>3 上機驗證</li>
+      </ol>
 
       <div className="grid2">
         <div className="stack">
@@ -163,7 +174,7 @@ export function ArmTuningPage() {
               />
             </label>
             <br />
-            <span className="muted small">檔案只在這台電腦的瀏覽器裡解析，不會上傳。角度要是弧度、0 = 水平（範例程式的 ArmIO 就是）。</span>
+            <span className="muted small">檔案只在這台電腦的瀏覽器裡解析，不會上傳。第一次匯入要設定欄位對應，之後自動套用。角度要是弧度、0 = 水平（範例程式的 ArmIO 就是）。</span>
             {busy && (
               <>
                 <div className="progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
@@ -189,6 +200,7 @@ export function ArmTuningPage() {
                 <h2 style={{ margin: 0 }}>欄位對應</h2>
                 <span className="small muted">
                   {file.name}・{(scan.bytes / 1024 / 1024).toFixed(1)} MB・{scan.entries.length} 個欄位
+                  {scan.trailingBytes > 0 && '・檔案結尾不完整（可能斷電）'}
                 </span>
               </div>
               <FieldMappingTable entries={scan.entries} mapping={mapping} onChange={setMapping} />
@@ -196,7 +208,9 @@ export function ArmTuningPage() {
                 <button className="btn primary" type="button" disabled={busy || !file.blob || missingRequired(mapping).length > 0} onClick={() => file.blob && void read(file.blob, mapping)}>
                   {stage === 'done' ? '重新讀取並檢查' : '讀取並檢查'}
                 </button>
-                {missingRequired(mapping).length > 0 && <span className="small fail">還缺：{missingRequired(mapping).map((r) => r.label).join('、')}</span>}
+                {missingRequired(mapping).length > 0 && (
+                  <span className="small fail">還缺：{missingRequired(mapping).map((r) => r.label).join('、')}</span>
+                )}
               </div>
             </div>
           )}
@@ -239,6 +253,9 @@ export function ArmTuningPage() {
                 <div className="note">
                   <b>但是：</b>
                   {refusalOsc.summary}（{refusalOsc.evidence[0]}）
+                  {refusalOsc.change?.kind === 'gain'
+                    ? `建議先把 ${refusalOsc.change.param} 從 ${refusalOsc.change.from} 降到 ${refusalOsc.change.to} 左右。`
+                    : refusalOsc.evidence[refusalOsc.evidence.length - 1]}
                 </div>
               )}
             </div>
@@ -260,18 +277,20 @@ export function ArmTuningPage() {
           <div className="panel">
             <h2>沒有日誌？</h2>
             <p className="small">用模擬器產生一份跟範例程式（ArmIO）欄位相同的手臂日誌（50 Hz），拿來練習匯入和讀圖。資料是模擬的，不是實機。</p>
-            <label className="f">
-              情境
-              <span className="inp">
-                <select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
-                  {ARM_LOG_SCENARIOS.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </span>
-            </label>
+            <div className="row">
+              <label className="f" style={{ flex: '1 1 160px' }}>
+                情境
+                <span className="inp">
+                  <select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
+                    {ARM_LOG_SCENARIOS.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+            </div>
             <div className="row" style={{ marginTop: 10 }}>
               <button
                 className="btn"
@@ -295,6 +314,9 @@ export function ArmTuningPage() {
                 下載 .wpilog
               </button>
             </div>
+            <p className="small muted" style={{ margin: '8px 0 0' }}>
+              下載的檔案也可以用 AdvantageScope 打開，對照看。
+            </p>
           </div>
         </div>
       </div>
