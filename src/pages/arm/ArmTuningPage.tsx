@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { downloadBlob } from '../../app/download'
+import { StepBar } from '../../components/StepBar'
 import type { SimLogHandoff } from '../../app/simLog'
 import type { ArmParameterSet } from '../../schema/armParameterSet'
 import { runDataChecks, type CheckReport } from '../../core/analysis/checks'
@@ -129,16 +130,7 @@ export function ArmTuningPage() {
       </div>
       <UnsavedNote />
 
-      <ol className="steps" aria-label="目前步驟">
-        <li className={!report?.ok ? 'cur' : undefined} aria-current={!report?.ok ? 'step' : undefined}>
-          0 匯入並檢查
-        </li>
-        <li className={report?.ok ? 'cur' : undefined} aria-current={report?.ok ? 'step' : undefined}>
-          1 找出問題
-        </li>
-        <li>2 處理一個問題</li>
-        <li>3 上機驗證</li>
-      </ol>
+      <StepBar report={!report ? 'none' : report.ok ? 'ok' : 'failed'} prefix="arm-tune" />
 
       <div className="grid2">
         <div className="stack">
@@ -220,7 +212,7 @@ export function ArmTuningPage() {
 
         <div className="stack">
           {report && (
-            <div className="panel">
+            <div className="panel" id="arm-tune-step-0">
               <h2>步驟 0：資料檢查</h2>
               <p className="small muted">Enable 時間 {report.enabledSeconds.toFixed(1)} 秒。任何一項 ✕ 都不能拿來分析，先解決再重錄。</p>
               <ul className="checks">
