@@ -218,7 +218,7 @@ export function ArmLearnPage() {
             <li>
               <b>分析類型選 Arm。</b>選 Elevator 或 Simple，重力會被當成常數，kG、kS 都會錯。
             </li>
-            <li>SysId 的 kS、kG、kV、kA 單位是 V、V、V/(rad/s)、V/(rad/s²)，可以直接跟 1F 參數卡的 SI 值比；寫進 Phoenix 6 前要換成轉數制（1F 的 Java 輸出會幫你換）。</li>
+            <li>SysId 的 kS、kG、kV、kA 單位是 V、V、V/(rad/s)、V/(rad/s²)，可以直接跟 1F 參數卡的 SI 值比；寫進 Phoenix 6 前要換成轉數制。</li>
           </ol>
           <p className="small">
             跟理論值差很多時：kG 差 → 重心、負載質量量錯；kV 差 → 齒比、馬達型號填錯；kA 差 → 轉動慣量（長度、質量分布）估錯。準靜態測試轉過直立時重力會變號，範圍最好停在直立之前。
