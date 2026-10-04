@@ -181,7 +181,7 @@ export function ArmLearnPage() {
         {!unlocked && <LockNote onGo={toUnit0} />}
         <div className="body">
           <div className="goal lgoal">學習目標：知道手臂的日誌要記哪些欄位、用什麼單位，錄什麼動作才分得出 kG 和 kS。</div>
-          <p>範例程式（1F「下載完整子系統」）的 ArmIO 已經照這個格式記錄，2F 匯入時會自動對應。角度一律是弧度、0 = 水平。</p>
+          <p>範例程式（robot-example 的 ArmIO） 已經照這個格式記錄，2F 匯入時會自動對應。角度一律是弧度、0 = 水平。</p>
           <pre className="code">{INPUTS_SNIPPET}</pre>
           <h3>要錄什麼動作</h3>
           <ul className="small">

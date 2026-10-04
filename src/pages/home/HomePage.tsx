@@ -9,7 +9,7 @@ const LOOP: { where: 'site' | 'robot'; tag: string; name: string; page?: PageId 
   { where: 'site', tag: '2F', name: '看調參建議', page: 'tune' },
   { where: 'site', tag: '3F', name: '模擬預覽', page: 'sim' },
   { where: 'robot', tag: '機器人', name: '上機驗證' },
-  { where: 'site', tag: '1F', name: '達標後輸出參數', page: 'calc' },
+  { where: 'site', tag: '1F', name: '達標後把參數寫進程式碼', page: 'calc' },
 ]
 
 export function HomePage() {

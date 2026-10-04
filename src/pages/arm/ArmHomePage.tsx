@@ -30,7 +30,7 @@ export function ArmHomePage() {
             <li>1F 填手臂的質量、長度、重心、負載、齒比，看理論 kG、kV、kA 怎麼來。</li>
             <li>3F 模擬：先用理想模型，再打開摩擦、電流限制；看「把手臂當電梯」「零點設錯」這些情境。</li>
             <li>4F 先做完單元零（方向、零點在水平、軟體限位），在水平用兩點法量 kS、kG。</li>
-            <li>1F 下載 Java（ArmGains 或完整子系統），上機錄日誌，到 2F 找問題，一次改一個參數。</li>
+            <li>1F 算出參數、寫進機器人程式，上機錄日誌，到 2F 找問題，一次改一個參數。</li>
           </ol>
           <div className="row">
             <button className="btn primary" type="button" onClick={() => go('calc')}>

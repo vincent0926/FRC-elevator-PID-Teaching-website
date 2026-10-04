@@ -84,7 +84,7 @@ interface Store {
   /** 從其他頁面要求 3F 載入某個教學情境（3F 載入後清掉） */
   pendingScenario: string | null
   openScenario: (id: string | null) => void
-  /** 參數庫選來在 3F 疊圖比較的參數組（只在記憶體） */
+  /** 3F 從滑桿切到自訂時，疊圖要比的那組（例如調參建議值；只在記憶體） */
   compareSet: { id?: number; label: string; params: ParameterSet } | null
   setCompareSet: (c: { id?: number; label: string; params: ParameterSet } | null) => void
   /** 從分享連結打開時的結果；prev 是被取代的機構資料（可以復原） */

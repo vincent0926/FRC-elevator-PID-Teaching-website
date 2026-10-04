@@ -6,7 +6,6 @@ import { segment } from '../../core/analysis/segment'
 import { CONTROL_PERIOD, type ControllerLocation, type Slot0Gains } from '../../core/controller/slot0'
 import type { AlignedLog } from '../../core/log/fieldMap'
 import type { ArmParameterSet } from '../../schema/armParameterSet'
-import { ArmExportPanel } from './ArmExportPanel'
 import { ARM_LESSONS } from './armLessons'
 import { useArm } from './armStore'
 import { applyArmChange, armGains, armParamsFromGains } from './armTuning'
@@ -271,16 +270,13 @@ export function ArmDiagnosisPanel({ log, report, logName, onHighlight }: ArmDiag
           <h2>步驟 3：{diag.primary ? '上機驗證' : '達標，輸出參數'}</h2>
           {diag.primary ? (
             <ol className="small" style={{ paddingLeft: 18, margin: 0 }}>
-              <li>下面選「自訂」，下載 Java 或 JSON 放進機器人專案（程式碼才是參數的最終依據）。</li>
+              <li>把上面建議改的那一個參數，改進機器人專案的程式碼（程式碼才是參數的最終依據）。</li>
               <li>照單元零的流程上機：先低速、有人顧 Disable，人不要站在手臂掃過的範圍。</li>
               <li>用同樣的動作（Arm.tuningRoutine）再錄一份日誌，回到這裡匯入，看問題有沒有消失。</li>
             </ol>
           ) : (
             <p className="small">把這組參數寫進程式碼並 commit。之後換負載或改手臂，再重新走一次循環。</p>
           )}
-          <div style={{ marginTop: 12 }}>
-            <ArmExportPanel />
-          </div>
         </div>
       )}
     </>
