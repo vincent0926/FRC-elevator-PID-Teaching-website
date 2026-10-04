@@ -10,14 +10,28 @@ export type ReportState = 'none' | 'failed' | 'ok'
 
 const STEPS = ['匯入並檢查', '找出問題', '處理一個問題', '上機驗證']
 
-function whyMissing(step: number, report: ReportState): string {
+/** 畫面上現在有哪些步驟面板、步驟 2 有沒有「套用」鈕：提示照實際狀況說，不要叫人做做不到的事 */
+interface Seen {
+  has: (n: number) => boolean
+  canApply: boolean
+}
+
+function whyMissing(step: number, report: ReportState, seen: Seen): string {
   if (step === 1) {
     return report === 'failed'
       ? '步驟 0 有 ✕，這份日誌不能拿來分析。先照步驟 0 的說明處理，重錄一份再匯入。'
       : '步驟 1 要先匯入日誌（沒有日誌可以用右邊的範例日誌）並通過步驟 0 的資料檢查。'
   }
-  if (step === 2) return '步驟 2 要先在步驟 1 找出最優先的問題（選對，或打開專家模式）才會出現。'
-  return '步驟 3 要在步驟 2 按「套用」之後才會出現。'
+  if (step === 2) {
+    // 沒找到問題時沒有步驟 2，做完步驟 1 直接是步驟 3
+    return seen.has(3)
+      ? '這份日誌沒有找到要處理的問題（前饋和 PID 都沒有明顯問題），所以沒有步驟 2，直接看步驟 3。'
+      : '步驟 2 要先在步驟 1 找出最優先的問題（選對，或打開專家模式）才會出現。'
+  }
+  // 步驟 3：有問題但不是改參數能解決的（沒有「套用」鈕）就不會有
+  return seen.has(2) && !seen.canApply
+    ? '這個問題不是改參數能解決的（步驟 2 沒有「套用」），所以沒有步驟 3。照步驟 2 的檢查清單處理機構，再重錄一份日誌。'
+    : '步驟 3 要在步驟 2 按「套用」之後才會出現。'
 }
 
 export function StepBar({ report, prefix }: { report: ReportState; prefix: string }) {
@@ -30,7 +44,11 @@ export function StepBar({ report, prefix }: { report: ReportState; prefix: strin
       if (step === 0) {
         setHint(null)
         window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-      } else setHint(whyMissing(step, report))
+      } else {
+        const has = (n: number) => !!document.getElementById(`${prefix}-step-${n}`)
+        const canApply = Array.from(document.getElementById(`${prefix}-step-2`)?.querySelectorAll('button') ?? []).some((b) => b.textContent?.trim().startsWith('套用'))
+        setHint(whyMissing(step, report, { has, canApply }))
+      }
       return
     }
     setHint(null)
