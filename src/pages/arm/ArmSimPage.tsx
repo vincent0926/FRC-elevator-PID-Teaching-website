@@ -49,6 +49,8 @@ export function ArmSimPage() {
   const [compare, setCompare] = useState(false)
   const [scenario, setScenario] = useState<ArmScenario | null>(null)
   const [result, setResult] = useState<SimResult | null>(null)
+  // 這個結果是用哪組參數、哪個閉迴路位置算的（送到 2F 要帶這份，不是畫面上現在的值：新模擬還沒算完時兩者不同）
+  const [resultInfo, setResultInfo] = useState<{ params: ArmParameterSet; location: ControllerLocation; label: string } | null>(null)
   // 這份結果是用哪個重力型態算的：圖例和說明跟著結果，不跟著還沒算完的選擇
   const [resultGravity, setResultGravity] = useState<GravityType>('armCosine')
   const [other, setOther] = useState<SimResult | null>(null)
@@ -70,6 +72,7 @@ export function ArmSimPage() {
       .then((r) => {
         if (!alive) return
         setResult(r)
+        setResultInfo({ params: ps, location: setup.location, label: src === 'custom' ? '自訂' : '理論值' })
         setResultGravity(setup.gravityType)
         setError(null)
       })
@@ -281,11 +284,11 @@ export function ArmSimPage() {
         <button
           className="btn small"
           type="button"
-          disabled={!result}
+          disabled={!result || !resultInfo}
           title="把這次模擬的資料送到 2F 調參建議，看哪個參數該先改"
           onClick={() => {
-            if (!result) return
-            setSimLog({ log: alignedFromSim(result), name: `3F 模擬（${src === 'custom' ? '自訂' : '理論值'}）`, params: ps, location })
+            if (!result || !resultInfo) return
+            setSimLog({ log: alignedFromSim(result), name: `3F 模擬（${resultInfo.label}）`, params: resultInfo.params, location: resultInfo.location })
             go('tune')
           }}
         >
