@@ -7,6 +7,7 @@ import { segment } from '../../core/analysis/segment'
 import { CONTROL_PERIOD, type ControllerLocation, type Slot0Gains } from '../../core/controller/slot0'
 import type { AlignedLog } from '../../core/log/fieldMap'
 import type { ParameterSet } from '../../schema/parameterSet'
+import type { SimLogHandoff } from '../../app/simLog'
 import { LESSONS } from '../calculate/lessons'
 
 /**
@@ -14,10 +15,11 @@ import { LESSONS } from '../calculate/lessons'
  * 引導模式：先讓隊員自己選問題、寫理由，答錯給三層提示；專家模式（教學關卡全部完成才開放）直接看結果。
  */
 
-type GainsSource = 'log' | 'tuning' | 'custom' | 'theory'
+type GainsSource = 'log' | 'tuning' | 'custom' | 'theory' | 'sim'
 type Guess = IssueKey | 'none'
 
 const SOURCE_LABEL: Record<GainsSource, string> = {
+  sim: '3F 模擬用的',
   log: '從日誌推算',
   tuning: '上次的調參建議值',
   custom: '自訂參數組',
@@ -38,19 +40,21 @@ export interface DiagnosisPanelProps {
   report: CheckReport
   logName: string
   onHighlight: (spans: [number, number][] | null) => void
+  /** 3F 送來的模擬：模擬時用的參數與閉迴路位置，不用從日誌猜 */
+  sim?: SimLogHandoff<ParameterSet>
 }
 
-export function DiagnosisPanel({ log, report, logName, onHighlight }: DiagnosisPanelProps) {
+export function DiagnosisPanel({ log, report, logName, onHighlight, sim }: DiagnosisPanelProps) {
   const { mechanism, theory, custom, tuning, setTuning, rounds, addRound, clearRounds, lessonsDone, setSimSource, go } = useStore()
   const expertUnlocked = LESSONS.every((l) => lessonsDone[l.id])
   const [expert, setExpert] = useState(false)
-  const [location, setLocation] = useState<ControllerLocation>('talonfx')
+  const [location, setLocation] = useState<ControllerLocation>(sim?.location ?? 'talonfx')
 
   // ---------- 機器人上當時的參數 ----------
   // 匯入時的快照：套用建議會改掉 tuning，不能讓它回頭改變這份日誌的分析（換日誌時父層用 key 重新掛載）
-  const [sets] = useState<Record<Exclude<GainsSource, 'log'>, ParameterSet | null>>(() => ({ tuning, custom, theory }))
+  const [sets] = useState<Record<Exclude<GainsSource, 'log'>, ParameterSet | null>>(() => ({ tuning, custom, theory, sim: sim?.params ?? null }))
   const seg = useMemo(() => segment(log), [log])
-  const [source, setSource] = useState<GainsSource>(() => (log.cols.feedforwardOutput && log.cols.closedLoopOutput ? 'log' : sets.tuning ? 'tuning' : 'theory'))
+  const [source, setSource] = useState<GainsSource>(() => (sim ? 'sim' : log.cols.feedforwardOutput && log.cols.closedLoopOutput ? 'log' : sets.tuning ? 'tuning' : 'theory'))
   // 推不準的欄位用哪一組補：有調參建議值就用它（多半是上一輪放上機器人的），否則理論值
   const fallbackSet = sets.tuning ?? sets.custom ?? sets.theory!
   const estimate = useMemo(() => estimateRobotGains(log, gainsOf(fallbackSet), seg), [log, seg, fallbackSet])
@@ -128,7 +132,7 @@ export function DiagnosisPanel({ log, report, logName, onHighlight }: DiagnosisP
         </p>
         <div className="row">
           <div className="seg" role="group" aria-label="參數來源">
-            {(['log', 'tuning', 'custom', 'theory'] as GainsSource[]).map((s) => (
+            {(sim ? (['sim', 'log', 'tuning', 'custom', 'theory'] as GainsSource[]) : (['log', 'tuning', 'custom', 'theory'] as GainsSource[])).map((s) => (
               <button key={s} type="button" aria-pressed={effectiveSource === s} disabled={s === 'log' ? !estimate : !sets[s as Exclude<GainsSource, 'log'>]} onClick={() => changeSource(s)}>
                 {SOURCE_LABEL[s]}
               </button>

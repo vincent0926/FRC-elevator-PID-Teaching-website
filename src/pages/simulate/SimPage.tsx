@@ -14,6 +14,7 @@ import { ApproxNote, PLANT_ASSUMPTIONS, SIM_SCOPE } from '../../components/Appro
 import { ControllerSettings } from './ControllerSettings'
 import { CustomEditor } from './CustomEditor'
 import { TuneSliders } from '../../components/TuneSliders'
+import { alignedFromSim } from '../../core/log/sampleLog'
 import type { TuneKey } from './tuneRange'
 import { AntiWindupEditor } from './AntiWindupEditor'
 import { TuningGuide } from './TuningGuide'
@@ -73,7 +74,7 @@ const ELEVATOR_UNITS: Record<TuneKey, string> = {
 }
 
 export function SimPage() {
-  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration, pendingScenario, openScenario, spec, setSpec, compareSet, setCompareSet } = useStore()
+  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration, pendingScenario, openScenario, spec, setSpec, compareSet, setCompareSet, setSimLog, go } = useStore()
   const [knobs, setKnobs] = useState<PlantKnobs>(DEFAULT_KNOBS)
   const [location, setLocation] = useState<ControllerLocation>('talonfx')
   const [periodOverride, setPeriodOverride] = useState<number | null>(null)
@@ -365,6 +366,21 @@ export function SimPage() {
         {libCompare && (
           <button className="linkbtn small" type="button" onClick={() => setCompareSet(null)}>
             不疊「{libCompare.label}」，改回{otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : '原本的'}
+          </button>
+        )}
+        {!challenge && (
+          <button
+            className="btn small"
+            type="button"
+            disabled={!result}
+            title="把這次模擬的資料送到 2F 調參建議，看哪個參數該先改"
+            onClick={() => {
+              if (!result) return
+              setSimLog({ log: alignedFromSim(result), name: `3F 模擬（${SOURCES.find((s) => s.id === source)!.label}）`, params: ps, location })
+              go('tune')
+            }}
+          >
+            送到 2F 調參建議
           </button>
         )}
       </div>

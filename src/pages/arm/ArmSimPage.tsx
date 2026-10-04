@@ -3,6 +3,7 @@ import { ApproxNote } from '../../components/ApproxNote'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
 import { TuneSliders } from '../../components/TuneSliders'
+import { alignedFromSim } from '../../core/log/sampleLog'
 import type { TuneKey } from '../simulate/tuneRange'
 import type { AntiWindup, ControllerLocation, GravityType } from '../../core/controller/slot0'
 import { resampleByTime, type SimResult } from '../../core/physics/simulate'
@@ -38,7 +39,7 @@ const ARM_ASSUMPTIONS = [
 ]
 
 export function ArmSimPage() {
-  const { arm, ff, theory, custom, setCustom, source, setSource, spec, setSpec } = useArm()
+  const { arm, ff, theory, custom, setCustom, source, setSource, spec, setSpec, setSimLog } = useArm()
   const [knobs, setKnobs] = useState<ArmKnobs>(DEFAULT_ARM_KNOBS)
   const [location, setLocation] = useState<ControllerLocation>('talonfx')
   const [gravityType, setGravityType] = useState<GravityType>('armCosine')
@@ -151,7 +152,7 @@ export function ArmSimPage() {
     setScenario(s)
   }
   // 課程深層連結要求載入某個手臂情境
-  const { pendingScenario, openScenario } = useStore()
+  const { pendingScenario, openScenario, go } = useStore()
   useEffect(() => {
     if (!pendingScenario) return
     const sc = ARM_SCENARIOS.find((x) => x.id === pendingScenario)
@@ -277,6 +278,19 @@ export function ArmSimPage() {
             疊上理論值比較
           </label>
         )}
+        <button
+          className="btn small"
+          type="button"
+          disabled={!result}
+          title="把這次模擬的資料送到 2F 調參建議，看哪個參數該先改"
+          onClick={() => {
+            if (!result) return
+            setSimLog({ log: alignedFromSim(result), name: `3F 模擬（${src === 'custom' ? '自訂' : '理論值'}）`, params: ps, location })
+            go('tune')
+          }}
+        >
+          送到 2F 調參建議
+        </button>
       </div>
 
       <UnsavedNote />

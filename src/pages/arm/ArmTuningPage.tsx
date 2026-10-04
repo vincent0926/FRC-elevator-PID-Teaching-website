@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { downloadBlob } from '../../app/download'
+import type { SimLogHandoff } from '../../app/simLog'
+import type { ArmParameterSet } from '../../schema/armParameterSet'
 import { runDataChecks, type CheckReport } from '../../core/analysis/checks'
 import { estimateRobotGains, oscillationBehindRefusal } from '../../core/analysis/diagnose'
 import { makeArmSampleLog } from '../../core/arm/sampleLog'
@@ -23,9 +25,10 @@ type Stage = 'idle' | 'scanning' | 'mapping' | 'reading' | 'done'
 const STATUS_MARK = { pass: '✓', warn: '!', fail: '✕', skip: '–' } as const
 
 export function ArmTuningPage() {
-  const { arm, ff, theory, custom, fieldMapping, setFieldMapping } = useArm()
+  const { arm, ff, theory, custom, fieldMapping, setFieldMapping, simLog, setSimLog } = useArm()
   const [stage, setStage] = useState<Stage>('idle')
-  const [file, setFile] = useState<{ blob: Blob; name: string; scenario?: string } | null>(null)
+  // sim：3F 送來的模擬結果（不是檔案，沒有 blob、不用對欄位）
+  const [file, setFile] = useState<{ blob: Blob | null; name: string; scenario?: string; sim?: SimLogHandoff<ArmParameterSet> } | null>(null)
   const [scan, setScan] = useState<ScanResult | null>(null)
   const [mapping, setMapping] = useState<FieldMapping | null>(null)
   const [progress, setProgress] = useState(0)
@@ -38,6 +41,29 @@ export function ArmTuningPage() {
   const [over, setOver] = useState(false)
   const [scenarioId, setScenarioId] = useState(ARM_LOG_SCENARIOS[0].id)
 
+  /** 對齊好的欄位 → 資料檢查 → 畫面（實機日誌和 3F 送來的模擬共用） */
+  const accept = (aligned: AlignedLog) => {
+    setLog(aligned)
+    setLogSeq((k) => k + 1)
+    setDiagBands(null)
+    setReport(runDataChecks(aligned, { statorCurrentLimit: arm.statorCurrentLimit, angle: true }))
+    setStage('done')
+  }
+
+  // 3F「送到 2F」：直接用模擬的欄位，不用編成 .wpilog 再解開
+  useEffect(() => {
+    if (!simLog) return
+    setFile({ blob: null, name: simLog.name, sim: simLog })
+    setScan(null)
+    setMapping(null)
+    setError(null)
+    setHighlight(null)
+    accept(simLog.log)
+    setSimLog(null)
+    // accept 每次 render 都是新的函式，只在收到新的模擬時跑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simLog])
+
   const read = async (blob: Blob, m: FieldMapping) => {
     setStage('reading')
     setProgress(0)
@@ -47,12 +73,8 @@ export function ArmTuningPage() {
         .map((r) => r.entry)
         .filter((n): n is string => !!n)
       const aligned = alignSeries(await extractLog(blob, names, setProgress), m)
-      setLog(aligned)
-      setLogSeq((k) => k + 1)
-      setDiagBands(null)
-      setReport(runDataChecks(aligned, { statorCurrentLimit: arm.statorCurrentLimit, angle: true }))
+      accept(aligned)
       setFieldMapping(m)
-      setStage('done')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setStage('mapping')
@@ -154,6 +176,13 @@ export function ArmTuningPage() {
 
           {error && <div className="warn">{error}</div>}
 
+          {file?.sim && (
+            <div className="note">
+              這份是 <b>3F 模擬</b>出來的資料，不是實機日誌。拿來練習讀圖、看調參建議，數字以上機實測為準。診斷會直接用模擬時的參數當「機器人上當時的參數」。
+              按「套用」後回 3F 選「自訂」，同樣的目標再跑一次，看問題有沒有消失。
+            </div>
+          )}
+
           {mapping && scan && file && stage !== 'idle' && (
             <div className="panel">
               <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -164,7 +193,7 @@ export function ArmTuningPage() {
               </div>
               <FieldMappingTable entries={scan.entries} mapping={mapping} onChange={setMapping} />
               <div className="row" style={{ marginTop: 12 }}>
-                <button className="btn primary" type="button" disabled={busy || missingRequired(mapping).length > 0} onClick={() => void read(file.blob, mapping)}>
+                <button className="btn primary" type="button" disabled={busy || !file.blob || missingRequired(mapping).length > 0} onClick={() => file.blob && void read(file.blob, mapping)}>
                   {stage === 'done' ? '重新讀取並檢查' : '讀取並檢查'}
                 </button>
                 {missingRequired(mapping).length > 0 && <span className="small fail">還缺：{missingRequired(mapping).map((r) => r.label).join('、')}</span>}
@@ -215,7 +244,7 @@ export function ArmTuningPage() {
             </div>
           )}
 
-          {log && report?.ok && file && <ArmDiagnosisPanel key={logSeq} log={log} report={report} logName={file.name} onHighlight={setDiagBands} />}
+          {log && report?.ok && file && <ArmDiagnosisPanel key={logSeq} log={log} report={report} logName={file.name} onHighlight={setDiagBands} sim={file.sim} />}
 
           {report && scenario && (
             <details className="panel">

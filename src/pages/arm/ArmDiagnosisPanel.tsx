@@ -6,6 +6,7 @@ import { segment } from '../../core/analysis/segment'
 import { CONTROL_PERIOD, type ControllerLocation, type Slot0Gains } from '../../core/controller/slot0'
 import type { AlignedLog } from '../../core/log/fieldMap'
 import type { ArmParameterSet } from '../../schema/armParameterSet'
+import type { SimLogHandoff } from '../../app/simLog'
 import { ARM_LESSONS } from './armLessons'
 import { useArm } from './armStore'
 import { applyArmChange, armGains, armParamsFromGains } from './armTuning'
@@ -15,10 +16,10 @@ import { applyArmChange, armGains, armParamsFromGains } from './armTuning'
  * 套用建議會存成手臂的「自訂」，到 3F 選自訂就能預覽。
  */
 
-type GainsSource = 'log' | 'custom' | 'theory'
+type GainsSource = 'log' | 'custom' | 'theory' | 'sim'
 type Guess = IssueKey | 'none'
 
-const SOURCE_LABEL: Record<GainsSource, string> = { log: '從日誌推算', custom: '自訂參數組', theory: '理論值' }
+const SOURCE_LABEL: Record<GainsSource, string> = { sim: '3F 模擬用的', log: '從日誌推算', custom: '自訂參數組', theory: '理論值' }
 
 const GAIN_ROWS: [keyof Slot0Gains, string, number][] = [
   ['kS', 'V', 3],
@@ -35,21 +36,23 @@ export interface ArmDiagnosisPanelProps {
   report: CheckReport
   logName: string
   onHighlight: (spans: [number, number][] | null) => void
+  /** 3F 送來的模擬：模擬時用的參數與閉迴路位置，不用從日誌猜 */
+  sim?: SimLogHandoff<ArmParameterSet>
 }
 
-export function ArmDiagnosisPanel({ log, report, logName, onHighlight }: ArmDiagnosisPanelProps) {
+export function ArmDiagnosisPanel({ log, report, logName, onHighlight, sim }: ArmDiagnosisPanelProps) {
   const { lessonsDone, go } = useStore()
   const { arm, theory, custom, setCustom, setSource: setSimSource } = useArm()
   const expertUnlocked = ARM_LESSONS.every((l) => lessonsDone[l.id])
   const [expert, setExpert] = useState(false)
-  const [location, setLocation] = useState<ControllerLocation>('talonfx')
+  const [location, setLocation] = useState<ControllerLocation>(sim?.location ?? 'talonfx')
 
   // 匯入時的快照：套用建議會改掉 custom，不能回頭改變這份日誌的分析
-  const [sets] = useState<Record<Exclude<GainsSource, 'log'>, ArmParameterSet | null>>(() => ({ custom, theory }))
+  const [sets] = useState<Record<Exclude<GainsSource, 'log'>, ArmParameterSet | null>>(() => ({ custom, theory, sim: sim?.params ?? null }))
   const seg = useMemo(() => segment(log), [log])
   const fallbackSet = sets.custom ?? sets.theory!
   const estimate = useMemo(() => estimateRobotGains(log, armGains(fallbackSet), seg, 'arm'), [log, seg, fallbackSet])
-  const [source, setSource] = useState<GainsSource>(() => (estimate ? 'log' : sets.custom ? 'custom' : 'theory'))
+  const [source, setSource] = useState<GainsSource>(() => (sim ? 'sim' : estimate ? 'log' : sets.custom ? 'custom' : 'theory'))
   const effectiveSource: GainsSource = source === 'log' && !estimate ? 'theory' : source !== 'log' && !sets[source] ? 'theory' : source
   const base: ArmParameterSet = useMemo(() => {
     if (effectiveSource === 'log' && estimate) {
@@ -109,7 +112,7 @@ export function ArmDiagnosisPanel({ log, report, logName, onHighlight }: ArmDiag
           建議是「在這組參數上改一個」，所以要先知道錄日誌時手臂跑的是哪一組。
         </p>
         <div className="seg" role="group" aria-label="參數來源">
-          {(['log', 'custom', 'theory'] as GainsSource[]).map((s) => (
+          {(sim ? (['sim', 'log', 'custom', 'theory'] as GainsSource[]) : (['log', 'custom', 'theory'] as GainsSource[])).map((s) => (
             <button key={s} type="button" aria-pressed={effectiveSource === s} disabled={s === 'log' ? !estimate : !sets[s]} onClick={() => (setSource(s), onHighlight(null))}>
               {SOURCE_LABEL[s]}
             </button>

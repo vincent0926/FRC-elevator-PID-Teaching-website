@@ -4,6 +4,7 @@ import { ARM_DEFAULT_SPEC, isSpec, type Spec } from '../../core/physics/spec'
 import { ArmMechanismSchema, ArmParameterSetSchema, DEFAULT_ARM, type ArmMechanism, type ArmParameterSet } from '../../schema/armParameterSet'
 import type { FieldMapping } from '../../core/log/fieldMap'
 import { loadJson, saveJson } from '../../storage/local'
+import type { SimLogHandoff } from '../../app/simLog'
 
 /**
  * 手臂線的狀態（跟電梯分開存，互不影響）：機構資料、入門 kP、自訂參數、達標標準。
@@ -31,6 +32,9 @@ interface ArmStore {
   /** 2F 日誌的欄位對應（跟電梯分開記） */
   fieldMapping: Partial<FieldMapping>
   setFieldMapping: (m: Partial<FieldMapping>) => void
+  /** 3F 送來 2F 分析的模擬結果（2F 讀走就清掉；只在記憶體） */
+  simLog: SimLogHandoff<ArmParameterSet> | null
+  setSimLog: (l: SimLogHandoff<ArmParameterSet> | null) => void
   /** 最近一次存到瀏覽器失敗：畫面上的值還在，但重新整理會回到上次存的值 */
   unsaved: boolean
 }
@@ -84,9 +88,10 @@ export function ArmStoreProvider({ children }: { children: ReactNode }) {
   const [spec, setSpec] = usePersisted<Spec>('armSpec', ARM_DEFAULT_SPEC, isSpec, onSaved)
   const [fieldMapping, setFieldMapping] = usePersisted<Partial<FieldMapping>>('armFieldMapping', {}, (v): v is Partial<FieldMapping> => typeof v === 'object' && v !== null, onSaved)
   const [unit0, setUnit0] = usePersisted<boolean[]>('armUnit0', [], (v): v is boolean[] => Array.isArray(v) && v.every((x) => typeof x === 'boolean'), onSaved)
+  const [simLog, setSimLog] = useState<SimLogHandoff<ArmParameterSet> | null>(null)
   const ff = useMemo(() => computeArmFeedforward(arm), [arm])
   const theory = useMemo(() => buildArmTheory(arm, ff, voltsPerDeg), [arm, ff, voltsPerDeg])
-  const value: ArmStore = { arm, setArm, voltsPerDeg, setVoltsPerDeg, ff, theory, custom, setCustom, source, setSource, spec, setSpec, fieldMapping, setFieldMapping, unit0, setUnit0, unsaved }
+  const value: ArmStore = { arm, setArm, voltsPerDeg, setVoltsPerDeg, ff, theory, custom, setCustom, source, setSource, spec, setSpec, fieldMapping, setFieldMapping, unit0, setUnit0, simLog, setSimLog, unsaved }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
