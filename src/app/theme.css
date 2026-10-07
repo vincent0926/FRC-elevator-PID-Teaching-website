@@ -84,6 +84,19 @@ p { margin: 0 0 10px }
 .paths { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 22px }
 .path-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; cursor: pointer; text-align: left; width: 100% }
 .path-card:hover { border-color: var(--steel) }
+.guide-card { margin-bottom: 22px; border-left: 4px solid var(--yellow) }
+.guide-card h2 { margin: 0 0 6px }
+.help-link { margin-left: 8px; font-size: 13.5px; white-space: nowrap }
+.guide-body h3 { margin: 16px 0 6px; font-size: 14.5px; color: var(--ink-2) }
+.guide-steps, .guide-list { margin: 0; padding-left: 22px; display: grid; gap: 6px }
+.guide-stuck, .guide-terms { margin: 0; display: grid; gap: 10px }
+.guide-stuck dt, .guide-terms dt { font-weight: 600 }
+.guide-stuck dd, .guide-terms dd { margin: 2px 0 0; color: var(--ink-2) }
+.guide-terms { margin-top: 12px; grid-template-columns: max-content 1fr; gap: 8px 18px }
+.guide-terms > div { display: contents }
+.guide-route { list-style: none; margin: 12px 0 14px; padding: 0; display: grid; gap: 10px }
+.guide-route li { display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--panel-2) }
+.guide-route .tag { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--amber) }
 .path-card p { margin: 0; color: var(--ink-2) }
 
 /* 表單 */
@@ -184,7 +197,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .tune-head h3 { margin: 0; font-size: 15px }
 .tune-head > span { flex: 1 1 240px }
 .tune-head > .btn { flex: none }
-.tune-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px 20px; margin-top: 10px }
+.tune-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr)); gap: 12px 20px; margin-top: 10px }
 .tune-group h4 { margin: 0 0 6px; font-size: 13px; color: var(--ink-2) }
 .tune-row { display: grid; grid-template-columns: minmax(0, 1fr) 152px; grid-template-areas: "label label" "range num" "ref ref"; gap: 2px 8px; padding: 6px 0; border-top: 1px solid var(--line-2) }
 .tune-row:first-of-type { border-top: 0 }
@@ -380,3 +393,10 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .av-arm { stroke: var(--yellow); stroke-width: 10; stroke-linecap: round }
 .av-target { stroke: var(--ink-3); stroke-width: 2; stroke-dasharray: 5 4 }
 .av-cg { fill: var(--ink); }
+
+/* 320px 這種很窄的螢幕：標籤可以換行、滑桿旁的數字欄縮小、分段按鈕不超出 */
+@media (max-width: 360px) {
+  .tag, .src-tag { white-space: normal }
+  .tune-row { grid-template-columns: minmax(0, 1fr) minmax(100px, 136px) }
+  .seg { max-width: 100%; overflow-x: auto }
+}

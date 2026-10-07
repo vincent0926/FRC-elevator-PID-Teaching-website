@@ -11,6 +11,7 @@ import { ArmCalcPage } from './pages/arm/ArmCalcPage'
 import { ArmSimPage } from './pages/arm/ArmSimPage'
 import { ArmTuningPage } from './pages/arm/ArmTuningPage'
 import { ArmLearnPage } from './pages/arm/ArmLearnPage'
+import { GuidePage } from './pages/guide/GuidePage'
 
 export default function App() {
   const { page, track } = useStore()
@@ -23,6 +24,7 @@ export default function App() {
         {page === 'tune' && <ArmTuningPage />}
         {page === 'sim' && <ArmSimPage />}
         {page === 'learn' && <ArmLearnPage />}
+        {page === 'guide' && <GuidePage />}
       </Shell>
     )
   return (
@@ -32,6 +34,7 @@ export default function App() {
       {page === 'tune' && <TuningPage />}
       {page === 'sim' && <SimPage />}
       {page === 'learn' && <LearnPage />}
+      {page === 'guide' && <GuidePage />}
     </Shell>
   )
 }

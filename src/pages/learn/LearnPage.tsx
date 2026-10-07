@@ -4,6 +4,8 @@ import { UNIT0_ITEMS, useStore } from '../../app/store'
 import { Unit1 } from './Unit1'
 import { Unit2 } from './Unit2'
 import { Unit3 } from './Unit3'
+import { HelpLink } from '../../components/HelpLink'
+import { GUIDE_ANCHOR } from '../guide/guideContent'
 
 /**
  * 4F 實機資料教學。單元零必修，全部勾完才開放單元一、二。
@@ -43,7 +45,7 @@ export function LearnPage() {
       <div className="head">
         <div>
           <h1 id="t-learn">實機資料教學</h1>
-          <p className="lead">調參建議需要好的實機資料，而資料要安全地錄。單元一、二隨時可以先讀；但要上機錄日誌或跑 SysId 之前，一定要先完成單元零的檢查。</p>
+          <p className="lead">調參建議需要好的實機資料，而資料要安全地錄。單元一、二隨時可以先讀；但要上機錄日誌或跑 SysId 之前，一定要先完成單元零的檢查。 <HelpLink section={GUIDE_ANCHOR.learn} /></p>
         </div>
       </div>
 

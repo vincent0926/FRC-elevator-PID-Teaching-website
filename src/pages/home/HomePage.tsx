@@ -28,6 +28,11 @@ export function HomePage() {
         </div>
       </div>
 
+      <button className="path-card guide-card" type="button" onClick={() => go('guide')}>
+        <h2>第一次來？先看使用說明</h2>
+        <p>怎麼從機構資料走到看懂調參建議、每一層怎麼操作、卡住了怎麼辦。大約 30 分鐘走一遍。</p>
+      </button>
+
       <h2>調參循環</h2>
       <ol className="loop">
         {LOOP.map((s, i) => (

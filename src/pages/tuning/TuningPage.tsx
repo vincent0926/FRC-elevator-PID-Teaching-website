@@ -15,6 +15,8 @@ import { DiagnosisPanel } from './DiagnosisPanel'
 import { FieldMappingTable } from './FieldMappingTable'
 import { LogCharts } from './LogCharts'
 import { SCENARIOS } from './sampleScenarios'
+import { HelpLink } from '../../components/HelpLink'
+import { GUIDE_ANCHOR } from '../guide/guideContent'
 
 /**
  * 2F 調參建議。
@@ -133,7 +135,7 @@ export function TuningPage() {
       <div className="head">
         <div>
           <h1 id="t-tune">調參建議</h1>
-          <p className="lead">匯入實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。</p>
+          <p className="lead">匯入實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。 <HelpLink section={GUIDE_ANCHOR.tune} /></p>
         </div>
         <span className="phase">Phase 2：資料檢查、找問題、建議、驗證</span>
       </div>

@@ -26,6 +26,8 @@ import { PlaybackBar, usePlayback } from './MiniShaft'
 import { RobustnessPanel } from './RobustnessPanel'
 import { buildSimInput, DEFAULT_KNOBS, TOGGLES, type PlantKnobs } from './plantKnobs'
 import { SIM_SCENARIOS, type SimScenario } from './simScenarios'
+import { HelpLink } from '../../components/HelpLink'
+import { GUIDE_ANCHOR } from '../guide/guideContent'
 
 /**
  * 3F 模擬。三個入口（理論值、調參建議值、自訂）共用這一頁，差別只在參數來源。
@@ -286,7 +288,7 @@ export function SimPage() {
       <div className="head">
         <div>
           <h1 id="t-sim">模擬</h1>
-          <p className="lead">上機前先確認參數不會出事。改一個數字看看會怎樣，不用怕撞壞機構。</p>
+          <p className="lead">上機前先確認參數不會出事。改一個數字看看會怎樣，不用怕撞壞機構。 <HelpLink section={GUIDE_ANCHOR.sim} /></p>
         </div>
         <span className="phase">
           {challenge ? '挑戰中（受控體隱藏）' : knobs.calibrated ? '已校正模型' : knobs.realistic ? '真實模型' : '理想模型'}・{knobs.realistic && !challenge ? (knobs.controllerType === 'sparkmax' ? 'SPARK MAX' : 'TalonFX') + ' ' : ''}{location === 'talonfx' ? '1 kHz' : 'roboRIO 50 Hz'}

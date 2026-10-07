@@ -123,3 +123,12 @@ describe('WpilogStreamParser', () => {
     console.log(`壓力測試：${(bytes.length / 1e6).toFixed(1)} MB，掃描＋取值 ${ms.toFixed(0)} ms`)
   }, 60000)
 })
+
+describe('visitor 丟出的錯誤不被當成損毀紀錄吞掉', () => {
+  it('onStart 丟 RangeError 會照常往外傳', () => {
+    const w = new WpilogWriter()
+    w.start('/a', 'double', '', 0)
+    const parser = new WpilogStreamParser({ onStart: () => { throw new RangeError('visitor') } })
+    expect(() => parser.push(w.toBytes())).toThrow('visitor')
+  })
+})
