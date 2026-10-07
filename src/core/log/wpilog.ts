@@ -97,12 +97,15 @@ export class WpilogStreamParser {
       if (p + size > len) break
 
       if (id === 0) {
+        // 只有解析與邊界檢查包在 try 裡；損毀的控制紀錄（長度超出紀錄範圍）略過這一筆，其他紀錄照讀。
+        // visitor 的回呼放在 try 外面，它丟的錯要照常往外傳
+        let notify: (() => void) | undefined
         try {
-          this.control(buf, view, p, size, ts)
+          notify = this.control(buf, view, p, size, ts)
         } catch (e) {
-          // 損毀的控制紀錄（字串長度超出紀錄範圍）：略過這一筆，其他紀錄照讀
           if (!(e instanceof RangeError)) throw e
         }
+        notify?.()
       } else if (v.onRecord) {
         v.onRecord(id, ts, view, p, size)
       }
@@ -112,29 +115,37 @@ export class WpilogStreamParser {
     return pos
   }
 
-  private control(buf: Uint8Array, view: DataView, p: number, size: number, ts: number): void {
-    if (size < 5) return
+  private control(buf: Uint8Array, view: DataView, p: number, size: number, ts: number): (() => void) | undefined {
+    if (size < 5) return undefined
+    const end = p + size
     const kind = buf[p]
     const id = view.getUint32(p + 1, true)
     const v = this.visitor
     if (kind === 0) {
       let q = p + 5
       const readStr = () => {
+        if (q + 4 > end) throw new RangeError('控制紀錄字串長度欄位超出紀錄範圍')
         const n = view.getUint32(q, true)
-        const s = textDecoder.decode(buf.subarray(q + 4, q + 4 + n))
-        q += 4 + n
+        q += 4
+        if (q + n > end) throw new RangeError('控制紀錄字串超出紀錄範圍')
+        const s = textDecoder.decode(buf.subarray(q, q + n))
+        q += n
         return s
       }
       const name = readStr()
       const type = readStr()
       const metadata = readStr()
-      v.onStart?.(id, name, type, metadata, ts)
-    } else if (kind === 1) {
-      v.onFinish?.(id, ts)
-    } else if (kind === 2) {
-      const n = view.getUint32(p + 5, true)
-      v.onSetMetadata?.(id, textDecoder.decode(buf.subarray(p + 9, p + 9 + n)), ts)
+      return () => v.onStart?.(id, name, type, metadata, ts)
     }
+    if (kind === 1) return () => v.onFinish?.(id, ts)
+    if (kind === 2) {
+      if (p + 9 > end) throw new RangeError('控制紀錄 metadata 長度欄位超出紀錄範圍')
+      const n = view.getUint32(p + 5, true)
+      if (p + 9 + n > end) throw new RangeError('控制紀錄 metadata 超出紀錄範圍')
+      const meta = textDecoder.decode(buf.subarray(p + 9, p + 9 + n))
+      return () => v.onSetMetadata?.(id, meta, ts)
+    }
+    return undefined
   }
 }
 
