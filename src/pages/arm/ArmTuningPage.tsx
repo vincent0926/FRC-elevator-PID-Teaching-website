@@ -16,6 +16,8 @@ import { ARM_LOG_SCENARIOS } from './armLogScenarios'
 import { useArm } from './armStore'
 import { armGains } from './armTuning'
 import { UnsavedNote } from './UnsavedNote'
+import { HelpLink } from '../../components/HelpLink'
+import { GUIDE_ANCHOR } from '../guide/guideContent'
 
 /**
  * 手臂 2F 調參建議：跟電梯同一套流程（資料檢查 → 找問題 → 處理一個 → 上機驗證），
@@ -124,7 +126,7 @@ export function ArmTuningPage() {
       <div className="head">
         <div>
           <h1 id="t-arm-tune">手臂・調參建議</h1>
-          <p className="lead">匯入手臂的實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。</p>
+          <p className="lead">匯入手臂的實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。 <HelpLink section={GUIDE_ANCHOR.tune} /></p>
         </div>
         <span className="phase">Phase 2：資料檢查、找問題、建議、驗證</span>
       </div>

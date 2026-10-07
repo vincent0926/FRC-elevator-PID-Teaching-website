@@ -23,6 +23,11 @@ export function ArmHomePage() {
         </div>
       </div>
 
+      <button className="path-card guide-card" type="button" onClick={() => go('guide')}>
+        <h2>第一次來？先看使用說明</h2>
+        <p>怎麼從機構資料走到看懂調參建議、每一層怎麼操作、卡住了怎麼辦。大約 30 分鐘走一遍。</p>
+      </button>
+
       <div className="grid2">
         <div className="panel">
           <h2>第一次調手臂</h2>

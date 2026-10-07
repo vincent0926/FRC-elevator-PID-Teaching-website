@@ -15,8 +15,8 @@ import type { SimLogHandoff } from './simLog'
  *   custom  使用者自己改的
  */
 
-export type PageId = 'home' | 'calc' | 'tune' | 'sim' | 'learn'
-export const PAGES: PageId[] = ['home', 'calc', 'tune', 'sim', 'learn']
+export type PageId = 'home' | 'calc' | 'tune' | 'sim' | 'learn' | 'guide'
+export const PAGES: PageId[] = ['home', 'calc', 'tune', 'sim', 'learn', 'guide']
 export type SimSource = 'theory' | 'tuning' | 'custom'
 /** 網站的兩條線：電梯、手臂。null = 還沒選（每次進站都要選，同一個分頁重新整理不用重選） */
 export type Track = 'elevator' | 'arm'
@@ -82,6 +82,8 @@ interface Store {
   setSimLog: (l: SimLogHandoff<ParameterSet> | null) => void
   page: PageId
   go: (p: PageId) => void
+  /** 打開使用說明並捲到某一段（section 是說明頁上的 id） */
+  openGuide: (section?: string) => void
   /** 達標標準（3F 指標、穩健性測試、挑戰模式共用），可以依賽季需求調 */
   spec: Spec
   setSpec: (s: Spec) => void
@@ -241,6 +243,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     window.scrollTo(0, 0)
   }, [])
 
+  const openGuide = useCallback(
+    (section?: string) => {
+      setPendingSection(section ?? null)
+      go('guide')
+    },
+    [go],
+  )
+
   const openScenario = useCallback(
     (id: string | null) => {
       setPendingScenario(id)
@@ -287,6 +297,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSimLog,
     page,
     go,
+    openGuide,
     pendingScenario,
     openScenario,
     compareSet,

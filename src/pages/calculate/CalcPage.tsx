@@ -7,6 +7,8 @@ import { MechanismForm } from './MechanismForm'
 import { PARAM_ROWS, KIND_INFO } from './paramSources'
 import { ParamSources } from './ParamSources'
 import { RatioSweep, ShareMechanism } from './RatioSweep'
+import { HelpLink } from '../../components/HelpLink'
+import { GUIDE_ANCHOR } from '../guide/guideContent'
 
 const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
@@ -28,7 +30,7 @@ export function CalcPage() {
       <div className="head">
         <div>
           <h1 id="t-calc">計算參數</h1>
-          <p className="lead">填入機構資料，右邊的參數卡會即時更新。數字怎麼來的，跟著下方五個關卡一步一步看。</p>
+          <p className="lead">填入機構資料，右邊的參數卡會即時更新。數字怎麼來的，跟著下方五個關卡一步一步看。 <HelpLink section={GUIDE_ANCHOR.calc} /></p>
         </div>
         <span className="phase">
           教學關卡 {done} / {LESSONS.length}

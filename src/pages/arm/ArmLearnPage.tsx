@@ -6,6 +6,8 @@ import { ArmMechanismSchema } from '../../schema/armParameterSet'
 import { ArmUnit4 } from './ArmUnit4'
 import { useArm } from './armStore'
 import { UnsavedNote } from './UnsavedNote'
+import { HelpLink } from '../../components/HelpLink'
+import { GUIDE_ANCHOR } from '../guide/guideContent'
 
 /**
  * 手臂 4F 實機資料教學：單元零（上機前準備，必修）、兩點法量 kS／kG、
@@ -106,7 +108,7 @@ export function ArmLearnPage() {
       <div className="head">
         <div>
           <h1 id="t-arm-learn">手臂・實機資料教學</h1>
-          <p className="lead">調參建議需要好的實機資料，而資料要安全地錄。內容隨時可以先讀；要讓手臂動起來之前，一定要先完成單元零。</p>
+          <p className="lead">調參建議需要好的實機資料，而資料要安全地錄。內容隨時可以先讀；要讓手臂動起來之前，一定要先完成單元零。 <HelpLink section={GUIDE_ANCHOR.learn} /></p>
         </div>
       </div>
       <UnsavedNote />

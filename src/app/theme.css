@@ -84,6 +84,19 @@ p { margin: 0 0 10px }
 .paths { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 22px }
 .path-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; cursor: pointer; text-align: left; width: 100% }
 .path-card:hover { border-color: var(--steel) }
+.guide-card { margin-bottom: 22px; border-left: 4px solid var(--yellow) }
+.guide-card h2 { margin: 0 0 6px }
+.help-link { margin-left: 8px; font-size: 13.5px; white-space: nowrap }
+.guide-body h3 { margin: 16px 0 6px; font-size: 14.5px; color: var(--ink-2) }
+.guide-steps, .guide-list { margin: 0; padding-left: 22px; display: grid; gap: 6px }
+.guide-stuck, .guide-terms { margin: 0; display: grid; gap: 10px }
+.guide-stuck dt, .guide-terms dt { font-weight: 600 }
+.guide-stuck dd, .guide-terms dd { margin: 2px 0 0; color: var(--ink-2) }
+.guide-terms { margin-top: 12px; grid-template-columns: max-content 1fr; gap: 8px 18px }
+.guide-terms > div { display: contents }
+.guide-route { list-style: none; margin: 12px 0 14px; padding: 0; display: grid; gap: 10px }
+.guide-route li { display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--panel-2) }
+.guide-route .tag { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--amber) }
 .path-card p { margin: 0; color: var(--ink-2) }
 
 /* 表單 */

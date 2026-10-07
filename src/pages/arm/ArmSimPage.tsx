@@ -22,6 +22,8 @@ import { useArm } from './armStore'
 import { useStore } from '../../app/store'
 import { ArmView } from './ArmView'
 import { UnsavedNote } from './UnsavedNote'
+import { HelpLink } from '../../components/HelpLink'
+import { GUIDE_ANCHOR } from '../guide/guideContent'
 
 /** 手臂 3F 模擬：理論值／自訂、理想／真實模型、重力型態、教學情境、照順序調、指標（角度） */
 
@@ -181,6 +183,7 @@ export function ArmSimPage() {
           <h1 id="t-arm-sim">手臂・模擬</h1>
           <p className="lead">
             從起始角度（現在 {f(safeStart * R2D, 0)}°）轉到目標，停一下再轉回來。先用理想模型看清楚每個參數在做什麼，再打開真實模型的摩擦、電流限制、延遲。
+            <HelpLink section={GUIDE_ANCHOR.sim} />
           </p>
         </div>
       </div>
