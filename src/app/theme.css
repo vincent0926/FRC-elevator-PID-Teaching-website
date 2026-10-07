@@ -197,7 +197,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .tune-head h3 { margin: 0; font-size: 15px }
 .tune-head > span { flex: 1 1 240px }
 .tune-head > .btn { flex: none }
-.tune-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px 20px; margin-top: 10px }
+.tune-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr)); gap: 12px 20px; margin-top: 10px }
 .tune-group h4 { margin: 0 0 6px; font-size: 13px; color: var(--ink-2) }
 .tune-row { display: grid; grid-template-columns: minmax(0, 1fr) 152px; grid-template-areas: "label label" "range num" "ref ref"; gap: 2px 8px; padding: 6px 0; border-top: 1px solid var(--line-2) }
 .tune-row:first-of-type { border-top: 0 }
@@ -393,3 +393,10 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .av-arm { stroke: var(--yellow); stroke-width: 10; stroke-linecap: round }
 .av-target { stroke: var(--ink-3); stroke-width: 2; stroke-dasharray: 5 4 }
 .av-cg { fill: var(--ink); }
+
+/* 320px 這種很窄的螢幕：標籤可以換行、滑桿旁的數字欄縮小、分段按鈕不超出 */
+@media (max-width: 360px) {
+  .tag, .src-tag { white-space: normal }
+  .tune-row { grid-template-columns: minmax(0, 1fr) minmax(100px, 136px) }
+  .seg { max-width: 100%; overflow-x: auto }
+}

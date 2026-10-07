@@ -97,7 +97,12 @@ export class WpilogStreamParser {
       if (p + size > len) break
 
       if (id === 0) {
-        this.control(buf, view, p, size, ts)
+        try {
+          this.control(buf, view, p, size, ts)
+        } catch (e) {
+          // 損毀的控制紀錄（字串長度超出紀錄範圍）：略過這一筆，其他紀錄照讀
+          if (!(e instanceof RangeError)) throw e
+        }
       } else if (v.onRecord) {
         v.onRecord(id, ts, view, p, size)
       }
