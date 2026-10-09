@@ -7,12 +7,13 @@ import { COURSE_URL, courseChapterUrl } from '../core/deepLink'
 
 /** 井道導覽：樓層由下往上，黃色車廂停在目前頁面。 */
 
-const FLOORS: { id: PageId; lv: string; name: string }[] = [
-  { id: 'learn', lv: '4F', name: '實機資料教學' },
-  { id: 'sim', lv: '3F', name: '模擬' },
-  { id: 'tune', lv: '2F', name: '調參建議' },
-  { id: 'calc', lv: '1F', name: '計算參數' },
-  { id: 'home', lv: 'G', name: '總覽' },
+/** short：手機底部導覽用的短名稱（六個按鈕擠一排，長名稱會斷成好幾行） */
+const FLOORS: { id: PageId; lv: string; name: string; short: string }[] = [
+  { id: 'learn', lv: '4F', name: '實機資料教學', short: '實機' },
+  { id: 'sim', lv: '3F', name: '模擬', short: '模擬' },
+  { id: 'tune', lv: '2F', name: '調參建議', short: '調參' },
+  { id: 'calc', lv: '1F', name: '計算參數', short: '計算' },
+  { id: 'home', lv: 'G', name: '總覽', short: '總覽' },
 ]
 
 type Theme = 'light' | 'dark' | null
@@ -71,6 +72,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <button type="button" className="floor" data-floor="guide" aria-current={page === 'guide' ? 'page' : undefined} onClick={() => go('guide')}>
               <span className="lv">？</span>
               <span className="nm">使用說明</span>
+              <span className="nm-short">說明</span>
             </button>
             {FLOORS.map((f) => (
               <button
@@ -83,6 +85,7 @@ export function Shell({ children }: { children: ReactNode }) {
               >
                 <span className="lv">{f.lv}</span>
                 <span className="nm">{f.name}</span>
+                <span className="nm-short">{f.short}</span>
               </button>
             ))}
           </div>

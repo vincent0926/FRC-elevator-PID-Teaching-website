@@ -182,7 +182,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .seg button + button { border-left: 1px solid var(--line) }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel) }
 .seg button:disabled { color: var(--ink-3); cursor: not-allowed }
-.simwrap { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 20px }
+.simwrap { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px }
 .mini-shaft { position: relative; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); height: 100%; min-height: 300px }
 .mini-shaft .tgt, .mini-shaft .cab { position: absolute; left: 16px; right: 30px; height: 26px; border-radius: 3px }
 .mini-shaft .tgt { border: 1.5px dashed var(--steel) }
@@ -256,6 +256,7 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .checklist label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer }
 .checklist input { margin-top: 6px; accent-color: var(--ink); flex: none }
 .checklist ul { margin: 4px 0 0; padding-left: 18px; color: var(--ink-2); font-size: 13.5px }
+.checklist ul li { border-top: 0; padding: 3px 0 }
 .banner { background: var(--blue-soft); color: var(--ink); border-bottom: 1px solid var(--line); padding: 8px 16px; font-size: 13.5px; display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
 
@@ -304,11 +305,11 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .src-measure { color: var(--amber); border-color: var(--amber); background: var(--amber-soft) }
 .src-tune { color: var(--violet); border-color: var(--violet); background: var(--panel-2) }
 .src-constraint { color: var(--ink-2); border-color: var(--line); background: var(--panel-2) }
-.src-kinds { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px }
-.src-kinds li { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 10px; align-items: baseline }
+.src-kinds { list-style: none; padding: 0; margin: 0 0 12px; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 12px; align-items: baseline }
+.src-kinds li { display: contents }
 .src-kinds li > .src-tag { justify-self: start }
 .src-tbl td, .src-tbl th { vertical-align: top; font-size: 13px }
-@media (max-width: 720px) { .src-kinds li { grid-template-columns: minmax(0, 1fr) } }
+@media (max-width: 720px) { .src-kinds { grid-template-columns: minmax(0, 1fr) } .src-kinds li > .src-tag { margin-top: 6px } }
 .approx { border-left: 3px solid var(--amber); background: var(--amber-soft); border-radius: 4px; padding: 8px 12px; font-size: 13px; color: var(--ink); margin: 10px 0 }
 .approx > b { margin-right: 4px }
 .approx details { margin-top: 4px }
@@ -318,6 +319,8 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 
 .elev-view { position: sticky; top: 16px; align-self: start; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 8px 10px; height: 420px; display: flex; flex-direction: column }
 .elev-view svg { flex: 1; min-height: 0 }
+.arm-view { height: auto }
+.arm-view svg { flex: none; height: auto; aspect-ratio: 1 / 1 }
 .ev-frame { fill: none; stroke: var(--steel); stroke-width: 3; stroke-linecap: round }
 .ev-label { font-size: 11px; fill: var(--ink-3) }
 .ev-on-carriage { fill: var(--ink-2) }
@@ -400,3 +403,15 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
   .tune-row { grid-template-columns: minmax(0, 1fr) minmax(100px, 136px) }
   .seg { max-width: 100%; overflow-x: auto }
 }
+
+/* 手機底部導覽：.course-link 的 display: block 寫在上面的 @media 之後會蓋掉隱藏，這裡再藏一次；
+   六個按鈕平均分寬，名稱用短的，不會擠在左邊斷成三行 */
+.floor .nm-short { display: none }
+@media (max-width: 720px) {
+  .course-link { display: none }
+  .floors { justify-content: stretch }
+  .floor { flex: 1 1 0; min-width: 0; width: auto; padding: 8px 2px }
+  .floor .nm { display: none }
+  .floor .nm-short { display: block; font-size: 12px; white-space: nowrap }
+}
+.map-done > summary { cursor: pointer; color: var(--ink-2); margin-top: 10px }
