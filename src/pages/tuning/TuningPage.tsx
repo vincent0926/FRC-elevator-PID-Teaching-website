@@ -137,7 +137,7 @@ export function TuningPage() {
           <h1 id="t-tune">調參建議</h1>
           <p className="lead">匯入實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。 <HelpLink section={GUIDE_ANCHOR.tune} /></p>
         </div>
-        <span className="phase">Phase 2：資料檢查、找問題、建議、驗證</span>
+        <span className="phase">一次只改一個參數</span>
       </div>
 
       <StepBar report={!report ? 'none' : report.ok ? 'ok' : 'failed'} prefix="tune" />
@@ -205,15 +205,19 @@ export function TuningPage() {
                   {scan.trailingBytes > 0 && '・檔案結尾不完整（可能斷電）'}
                 </span>
               </div>
-              <FieldMappingTable entries={scan.entries} mapping={mapping} onChange={setMapping} mechanism={mechanism} />
-              <div className="row" style={{ marginTop: 12 }}>
-                <button className="btn primary" type="button" disabled={busy || !file.blob || missingRequired(mapping).length > 0} onClick={() => file.blob && void read(file.blob, mapping, file.name)}>
-                  {stage === 'done' ? '重新讀取並檢查' : '讀取並檢查'}
-                </button>
-                {missingRequired(mapping).length > 0 && (
-                  <span className="small fail">還缺：{missingRequired(mapping).map((r) => r.label).join('、')}</span>
-                )}
-              </div>
+              {/* 讀取完成後把對應表收起來：11 列的表一直攤開，下面的圖要捲很久才看得到。檢查沒過時保持展開（多半要改欄位或倍率）；open 跟著狀態變，使用者自己展開不會被蓋掉 */}
+              <details className="map-done" open={stage !== 'done' || report?.ok === false}>
+                <summary className="small">{stage !== 'done' ? '對應表（自動猜的，讀取前確認一下）' : report?.ok === false ? '資料檢查沒過：先確認欄位和倍率有沒有選錯' : '資料已讀取。要改欄位或倍率再展開'}</summary>
+                <FieldMappingTable entries={scan.entries} mapping={mapping} onChange={setMapping} mechanism={mechanism} />
+                <div className="row" style={{ marginTop: 12 }}>
+                  <button className="btn primary" type="button" disabled={busy || !file.blob || missingRequired(mapping).length > 0} onClick={() => file.blob && void read(file.blob, mapping, file.name)}>
+                    {stage === 'done' ? '重新讀取並檢查' : '讀取並檢查'}
+                  </button>
+                  {missingRequired(mapping).length > 0 && (
+                    <span className="small fail">還缺：{missingRequired(mapping).map((r) => r.label).join('、')}</span>
+                  )}
+                </div>
+              </details>
             </div>
           )}
 

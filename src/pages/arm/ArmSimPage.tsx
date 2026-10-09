@@ -321,10 +321,10 @@ export function ArmSimPage() {
           {charts && result && (
             <>
               <Chart title="角度" x={result.t} series={charts.pos} height={220} yLabel="°" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是 Motion Magic 的軌跡（手臂應該在的角度），實線是手臂真的角度。兩條線貼在一起就是跟得好；0° 是水平、90° 是直立。" />
-              <Chart title="跟隨誤差" x={result.t} series={charts.err} height={130} yLabel="°" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="軌跡減實際角度。正的是落後（手臂還沒到）、負的是超前或衝過頭。停住後應該回到 0 附近。" />
-              <Chart title="角速度" x={result.t} series={charts.vel} height={130} yLabel="°/s" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是軌跡要的轉速（梯形：加速、等速、減速），實線是真的轉速。" />
-              <Chart title="電壓（前饋 + 回授）" x={result.t} series={charts.volt} height={170} yLabel="V" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note={`綠線是前饋（${resultGravity === 'constant' ? 'kS + kG（常數，沒有乘 cos θ）' : 'kS + kG·cos θ'} + kV·ω + kA·α，照軌跡事先算好），紅線是回授（P+I+D，看誤差補的）。前饋準的時候紅線幾乎是 0；紅線一直偏同一邊，就是前饋哪裡不對。`} />
-              <Chart title="電流" x={result.t} series={charts.cur} height={130} yLabel="A" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="每顆馬達的電流。貼著電流限制（真實模型）時馬達已經出全力，調 PID 沒有用，要放慢 Motion Magic。" />
+              <Chart title="跟隨誤差" x={result.t} series={charts.err} height={170} yLabel="°" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="軌跡減實際角度。正的是落後（手臂還沒到）、負的是超前或衝過頭。停住後應該回到 0 附近。" />
+              <Chart title="角速度" x={result.t} series={charts.vel} height={170} yLabel="°/s" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是軌跡要的轉速（梯形：加速、等速、減速），實線是真的轉速。" />
+              <Chart title="電壓（前饋 + 回授）" x={result.t} series={charts.volt} height={190} yLabel="V" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note={`綠線是前饋（${resultGravity === 'constant' ? 'kS + kG（常數，沒有乘 cos θ）' : 'kS + kG·cos θ'} + kV·ω + kA·α，照軌跡事先算好），紅線是回授（P+I+D，看誤差補的）。前饋準的時候紅線幾乎是 0；紅線一直偏同一邊，就是前饋哪裡不對。`} />
+              <Chart title="電流" x={result.t} series={charts.cur} height={170} yLabel="A" syncKey="arm" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="每顆馬達的電流。貼著電流限制（真實模型）時馬達已經出全力，調 PID 沒有用，要放慢 Motion Magic。" />
             </>
           )}
         </div>

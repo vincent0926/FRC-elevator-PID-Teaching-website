@@ -20,6 +20,16 @@ interface Props {
 
 const armUnit = (u: string) => u.replace(/^m/, 'rad')
 
+/**
+ * 選單裡把欄位名稱的最後一段放前面：/Elevator/ClosedLoopReferenceMeters 和
+ * /Elevator/ClosedLoopReferenceSlopeMetersPerSec 前面都一樣，選單寬度不夠時被截掉的是後面，兩個會看起來一模一樣。
+ */
+export function entryLabel(e: { name: string; count: number }): string {
+  const i = e.name.lastIndexOf('/')
+  if (i <= 0 || i === e.name.length - 1) return `${e.name}（${e.count} 筆）`
+  return `${e.name.slice(i + 1)}（${e.name.slice(0, i)}，${e.count} 筆）`
+}
+
 export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Props) {
   const numeric = entries.filter((e) => NUMERIC_TYPES.has(e.type) && e.count > 0)
   const arm = !mechanism
@@ -50,11 +60,11 @@ export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Pro
                 </td>
                 <td style={{ minWidth: 200 }}>
                   <span className="inp">
-                    <select aria-label={`${r.label}對應欄位`} value={m.entry ?? ''} onChange={(e) => set(r.key, { entry: e.target.value || null })}>
+                    <select aria-label={`${r.label}對應欄位`} title={m.entry ?? ''} value={m.entry ?? ''} onChange={(e) => set(r.key, { entry: e.target.value || null })}>
                       <option value="">（不使用）</option>
                       {options.map((e) => (
                         <option key={e.name} value={e.name}>
-                          {e.name}（{e.count} 筆）
+                          {entryLabel(e)}
                         </option>
                       ))}
                     </select>

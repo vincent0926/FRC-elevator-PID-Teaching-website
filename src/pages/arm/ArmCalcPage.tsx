@@ -3,6 +3,7 @@ import { useStore } from '../../app/store'
 import { Quiz } from '../../components/Quiz'
 import { ArmForm } from './ArmForm'
 import { ArmParamCard } from './ArmParamCard'
+import { KIND_INFO, PARAM_ROWS } from '../calculate/paramSources'
 import { ARM_LESSONS } from './armLessons'
 import { useArm } from './armStore'
 import { UnsavedNote } from './UnsavedNote'
@@ -75,6 +76,18 @@ export function ArmCalcPage() {
         <aside className="panel card-param" aria-live="polite">
           <ArmParamCard
             ps={theory}
+            tags={Object.fromEntries(
+              PARAM_ROWS.map((r) => {
+                // 手臂的參數名稱多一個「角」字，來源分類跟電梯一樣
+                const name = r.name === '巡航速度' ? '巡航角速度' : r.name === '加速度' ? '角加速度' : r.name
+                return [
+                  name,
+                  <span key={name} className={'src-mini src-' + r.kind} title={KIND_INFO[r.kind].label}>
+                    {KIND_INFO[r.kind].short}
+                  </span>,
+                ]
+              }),
+            )}
             notes={{
               kS: ff.kS > 0 ? '你量到的值（機構資料「馬達」那一欄）' : '公式算不出，一定要上機量',
               kI: '預設 0，穩態誤差先查 kG、零點、負載',
@@ -108,6 +121,9 @@ export function ArmCalcPage() {
               複製成自訂再模擬
             </button>
           </div>
+          <p className="small muted" style={{ margin: '8px 0 0' }}>
+            參數名稱旁的小字是它怎麼來的：算、算＋量、量、調、限制（游標停在上面看說明）。分類跟電梯一樣，完整對照表在電梯的 1F。
+          </p>
         </aside>
       </div>
     </section>

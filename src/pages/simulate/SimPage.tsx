@@ -418,10 +418,10 @@ export function SimPage() {
           {charts && result && (
             <>
               <Chart title="位置" x={result.t} series={charts.pos} height={220} yLabel="m" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是 Motion Magic 的軌跡（電梯應該在的高度），實線是電梯真的位置（鼓輪線位移）。兩條線貼在一起就是跟得好。" />
-              <Chart title="跟隨誤差" x={result.t} series={charts.err} height={130} yLabel="cm" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="軌跡減實際位置。正的是落後（還沒到）、負的是超前或衝過頭。停住後應該回到 0 附近。" />
-              <Chart title="速度" x={result.t} series={charts.vel} height={130} yLabel="m/s" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是軌跡要的速度（梯形：加速、等速、減速），實線是真的速度。" />
-              <Chart title="電壓（前饋 + 回授）" x={result.t} series={charts.volt} height={170} yLabel="V" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="綠線是前饋（kS + kG + kV·v + kA·a，照軌跡事先算好），紅線是回授（P+I+D，看誤差補的）。前饋準的時候紅線幾乎是 0；紅線一直偏同一邊，就是前饋哪裡不對。" />
-              <Chart title="電流" x={result.t} series={charts.cur} height={130} yLabel="A" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="每顆馬達的電流。貼著電流限制（真實模型）時馬達已經出全力，調 PID 沒有用，要放慢 Motion Magic。" />
+              <Chart title="跟隨誤差" x={result.t} series={charts.err} height={170} yLabel="cm" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="軌跡減實際位置。正的是落後（還沒到）、負的是超前或衝過頭。停住後應該回到 0 附近。" />
+              <Chart title="速度" x={result.t} series={charts.vel} height={170} yLabel="m/s" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是軌跡要的速度（梯形：加速、等速、減速），實線是真的速度。" />
+              <Chart title="電壓（前饋 + 回授）" x={result.t} series={charts.volt} height={190} yLabel="V" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="綠線是前饋（kS + kG + kV·v + kA·a，照軌跡事先算好），紅線是回授（P+I+D，看誤差補的）。前饋準的時候紅線幾乎是 0；紅線一直偏同一邊，就是前饋哪裡不對。" />
+              <Chart title="電流" x={result.t} series={charts.cur} height={170} yLabel="A" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="每顆馬達的電流。貼著電流限制（真實模型）時馬達已經出全力，調 PID 沒有用，要放慢 Motion Magic。" />
             </>
           )}
           <p className="small muted" style={{ margin: 0 }}>

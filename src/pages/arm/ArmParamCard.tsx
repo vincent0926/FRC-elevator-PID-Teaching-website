@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { convertArm } from '../../core/codegen'
 import type { ArmParameterSet } from '../../schema/armParameterSet'
 
@@ -8,7 +9,8 @@ const R2D = 180 / Math.PI
 
 const LABEL: Record<ArmParameterSet['source'], string> = { theory: '理論值', tuning: '調參建議值', custom: '自訂', measured: '實測值' }
 
-export function ArmParamCard({ ps, notes }: { ps: ArmParameterSet; notes?: Partial<Record<string, string>> }) {
+/** tags：參數旁邊的小標籤（跟電梯 1F 一樣標「算／量／決定」），key 是參數名稱 */
+export function ArmParamCard({ ps, notes, tags }: { ps: ArmParameterSet; notes?: Partial<Record<string, string>>; tags?: Partial<Record<string, ReactNode>> }) {
   const c = convertArm(ps)
   const { kS, kG, kV, kA } = ps.feedforward
   const { kP, kI, kD } = ps.feedback
@@ -31,7 +33,10 @@ export function ArmParamCard({ ps, notes }: { ps: ArmParameterSet; notes?: Parti
       <dl className="readout">
         {rows.map(([k, v, u, rot]) => (
           <div key={k} style={{ display: 'contents' }}>
-            <dt>{k}</dt>
+            <dt>
+              {k}
+              {tags?.[k]}
+            </dt>
             <dd>{v}</dd>
             <span className="u">{u}</span>
             <span className="rot">{rot}</span>

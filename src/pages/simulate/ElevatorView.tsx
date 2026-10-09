@@ -60,7 +60,10 @@ export function ElevatorView({ result, mechanism, goal, idx }: { result: SimResu
           return (
             <g key={i}>
               <rect x={left} y={y} width={W - 2 * left} height={railLen * scale} rx={2} className="ev-stage" />
-              <text x={left + 3} y={y + 10} className="ev-label">第 {i} 級</text>
+              {/* 級的名稱靠右、往下錯開一行：靠左會跟「固定架」疊在一起（電梯在底部時兩個框的上緣同高） */}
+              <text x={W - left - 3} y={y + 10 + 11 * (i - 1)} textAnchor="end" className="ev-label">
+                第 {i} 級
+              </text>
             </g>
           )
         })}

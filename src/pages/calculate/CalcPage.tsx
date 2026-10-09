@@ -124,7 +124,7 @@ export function CalcPage() {
             </button>
           </div>
           <p className="small muted" style={{ margin: '8px 0 0' }}>
-            參數名稱旁的小字是它怎麼來的：算、算＋量、量、決定。
+            參數名稱旁的小字是它怎麼來的：算、算＋量、量、調、限制（游標停在上面看說明）。
             <button className="linkbtn" type="button" onClick={() => document.getElementById('param-sources')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>
               看對照表
             </button>
