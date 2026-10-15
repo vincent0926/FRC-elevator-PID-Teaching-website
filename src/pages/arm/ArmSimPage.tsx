@@ -182,7 +182,7 @@ export function ArmSimPage() {
         <div>
           <h1 id="t-arm-sim">手臂・模擬</h1>
           <p className="lead">
-            上機前先確認參數不會出事。從起始角度（現在 {f(safeStart * R2D, 0)}°）轉到目標，停一下再轉回來。
+            上機前先在模擬裡找出明顯的參數問題。從起始角度（現在 {f(safeStart * R2D, 0)}°）轉到目標，停一下再轉回來。
             <HelpLink section={GUIDE_ANCHOR.sim} />
           </p>
         </div>
