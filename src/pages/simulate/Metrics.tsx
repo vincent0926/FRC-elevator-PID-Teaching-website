@@ -93,11 +93,13 @@ export function MetricsTable({
         {moves.every((m) => moveFailures(m, spec).length === 0) ? (
           <b className="pass">每一次移動都達標</b>
         ) : (
-          <b className="fail">
-            {moves.filter((m) => moveFailures(m, spec).length > 0).length} / {moves.length} 次移動沒過
-          </b>
+          <>
+            <b className="fail">
+              {moves.filter((m) => moveFailures(m, spec).length > 0).length} / {moves.length} 次移動沒過
+            </b>
+            ，看下面是哪一次、哪一項。
+          </>
         )}
-        ——整體通過要每一次都過，所以先看是哪一次、哪一項沒過。
       </p>
       {moves.map((m, i) =>
         diagnoseMove(m, spec, unit).length ? (

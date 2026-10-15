@@ -318,9 +318,6 @@ export function TuningPage() {
                 下載 .wpilog
               </button>
             </div>
-            <p className="small muted" style={{ margin: '8px 0 0' }}>
-              下載的檔案也可以用 AdvantageScope 打開，對照看。
-            </p>
           </div>
         </div>
       </div>

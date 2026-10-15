@@ -87,7 +87,7 @@ export function ElevatorView({ result, mechanism, goal, idx }: { result: SimResu
         ) : (
           <span className="fail">模擬數值發散，看不到位置：檢查參數（kP、kD 是不是大得不合理）</span>
         )}
-        <span className="muted">固定架不動，每一級往上疊；黃色是托架，藍色虛線框是軌跡要它在的位置</span>
+        <span className="muted">黃色：托架　藍色虛線：軌跡目標</span>
       </div>
     </div>
   )

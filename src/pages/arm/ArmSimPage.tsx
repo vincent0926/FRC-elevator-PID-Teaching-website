@@ -182,7 +182,7 @@ export function ArmSimPage() {
         <div>
           <h1 id="t-arm-sim">手臂・模擬</h1>
           <p className="lead">
-            從起始角度（現在 {f(safeStart * R2D, 0)}°）轉到目標，停一下再轉回來。先用理想模型看清楚每個參數在做什麼，再打開真實模型的摩擦、電流限制、延遲。
+            上機前先確認參數不會出事。從起始角度（現在 {f(safeStart * R2D, 0)}°）轉到目標，停一下再轉回來。
             <HelpLink section={GUIDE_ANCHOR.sim} />
           </p>
         </div>
@@ -365,7 +365,6 @@ export function ArmSimPage() {
                 <dt>加速度</dt>
                 <dd>{f(ps.motionMagic.acceleration * R2D, 0)} °/s²</dd>
               </dl>
-              <p className="small muted">理論值由 1F 的機構資料算出。想調整就直接拖播放列下面的滑桿，會自動切到「自訂」。</p>
             </>
           )}
           <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />

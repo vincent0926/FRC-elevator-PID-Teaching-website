@@ -68,8 +68,7 @@ export function CalibrationPanel({ onApply }: { onApply: (c: Calibration) => voi
     <div className="panel" style={{ marginTop: 20 }}>
       <h2>模型校正</h2>
       <p className="small muted" style={{ marginTop: 0 }}>
-        理論模型是用 1F 填的資料算的，真的電梯多少不一樣。把實機日誌的輸出電壓直接餵給模擬（開迴路重播），調整重力、kV、等效質量、摩擦讓位置對得上，
-        就得到「已校正模型」。之後在模擬裡預覽調參建議，結果比較接近真的機器人。
+        把實機日誌的輸出電壓餵給模擬（開迴路重播），調整重力、kV、等效質量、摩擦讓位置對得上，得到比較接近真機器人的「已校正模型」。
       </p>
       <ApproxNote
         summary="校正後的模型還是近似：它只把四個數對到這一份日誌，換了高度範圍、電池或負載就可能不準。"

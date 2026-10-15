@@ -108,7 +108,7 @@ export function ArmLearnPage() {
       <div className="head">
         <div>
           <h1 id="t-arm-learn">手臂・實機資料教學</h1>
-          <p className="lead">調參建議需要好的實機資料，而資料要安全地錄。內容隨時可以先讀；要讓手臂動起來之前，一定要先完成單元零。 <HelpLink section={GUIDE_ANCHOR.learn} /></p>
+          <p className="lead">內容隨時可以先讀；要讓手臂動起來之前，一定要先完成單元零。 <HelpLink section={GUIDE_ANCHOR.learn} /></p>
         </div>
       </div>
       <UnsavedNote />
