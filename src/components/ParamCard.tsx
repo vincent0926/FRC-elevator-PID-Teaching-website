@@ -1,3 +1,4 @@
+import { FlashValue } from './FlashValue'
 import type { ReactNode } from 'react'
 import { convert } from '../core/codegen'
 import type { ParameterSet } from '../schema/parameterSet'
@@ -43,7 +44,9 @@ export function ParamCard({ ps, notes, tags }: { ps: ParameterSet; notes?: Parti
               {k}
               {tags?.[k]}
             </dt>
-            <dd>{v}</dd>
+            <dd>
+              <FlashValue value={v} />
+            </dd>
             <span className="u">{u}</span>
             <span className="rot">{rot}</span>
           </div>
