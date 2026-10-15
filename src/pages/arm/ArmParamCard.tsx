@@ -1,3 +1,4 @@
+import { FlashValue } from '../../components/FlashValue'
 import type { ReactNode } from 'react'
 import { convertArm } from '../../core/codegen'
 import type { ArmParameterSet } from '../../schema/armParameterSet'
@@ -37,7 +38,9 @@ export function ArmParamCard({ ps, notes, tags }: { ps: ArmParameterSet; notes?:
               {k}
               {tags?.[k]}
             </dt>
-            <dd>{v}</dd>
+            <dd>
+              <FlashValue value={v} />
+            </dd>
             <span className="u">{u}</span>
             <span className="rot">{rot}</span>
           </div>

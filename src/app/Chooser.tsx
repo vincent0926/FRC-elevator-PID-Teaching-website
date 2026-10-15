@@ -21,8 +21,9 @@ function ElevatorIcon() {
   return (
     <svg viewBox="0 0 80 80" width="80" height="80" aria-hidden="true">
       <rect x="18" y="8" width="44" height="64" rx="3" className="ch-frame" />
-      <rect x="26" y="16" width="28" height="44" rx="2" className="ch-stage" />
-      <rect x="30" y="22" width="20" height="12" rx="2" className="ch-car" />
+      {/* 滑過卡片時中間那級和托架上下動（CSS 動畫，托架跑兩倍距離，跟串級式一樣） */}
+      <rect x="26" y="16" width="28" height="44" rx="2" className="ch-stage ch-stage-move" />
+      <rect x="30" y="44" width="20" height="12" rx="2" className="ch-car ch-car-move" />
       <rect x="10" y="72" width="60" height="4" className="ch-base" />
     </svg>
   )
@@ -34,8 +35,11 @@ function ArmIcon() {
       <rect x="10" y="72" width="60" height="4" className="ch-base" />
       <rect x="20" y="40" width="10" height="32" className="ch-frame" />
       <g transform="rotate(-35 25 42)">
-        <rect x="25" y="38" width="46" height="8" rx="3" className="ch-stage" />
-        <rect x="64" y="34" width="10" height="16" rx="2" className="ch-car" />
+        {/* 滑過卡片時繞轉軸轉一下 */}
+        <g className="ch-arm-swing">
+          <rect x="25" y="38" width="46" height="8" rx="3" className="ch-stage" />
+          <rect x="64" y="34" width="10" height="16" rx="2" className="ch-car" />
+        </g>
       </g>
       <circle cx="25" cy="42" r="5" className="ch-pivot" />
     </svg>

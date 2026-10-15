@@ -3,6 +3,7 @@
   --line: #CBD2DA; --line-2: #E1E6EB; --steel: #7D8896; --shaft: #2A3441;
   --yellow: #F2B705; --yellow-ink: #3A2C00; --blue: #2F6FDE; --blue-soft: #DCE7FA; --red: #C0392F; --red-soft: #F8E1E0;
   --green: #2A7F50; --green-soft: #DDF1E5; --amber: #9A6A00; --amber-soft: #FBF0D2; --violet: #7A4FC9;
+  --flash: rgba(242, 183, 5, .38); --lift-shadow: 0 6px 18px rgba(27, 36, 48, .10);
   --radius: 6px; --font: "IBM Plex Sans", "Noto Sans TC", system-ui, sans-serif; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
   color-scheme: light;
 }
@@ -12,6 +13,7 @@
     --line: #34404D; --line-2: #2A3440; --steel: #7B8898; --shaft: #0C1015;
     --blue: #6E9DF0; --blue-soft: #1E2E4A; --red: #E36B67; --red-soft: #3A2020; --green: #5BBE85; --green-soft: #1B3326;
     --amber: #E0B040; --amber-soft: #3A3018; --violet: #B294F0;
+    --flash: rgba(242, 183, 5, .30); --lift-shadow: 0 6px 18px rgba(0, 0, 0, .45);
     color-scheme: dark;
   }
 }
@@ -20,6 +22,7 @@
   --line: #34404D; --line-2: #2A3440; --steel: #7B8898; --shaft: #0C1015;
   --blue: #6E9DF0; --blue-soft: #1E2E4A; --red: #E36B67; --red-soft: #3A2020; --green: #5BBE85; --green-soft: #1B3326;
   --amber: #E0B040; --amber-soft: #3A3018; --violet: #B294F0;
+  --flash: rgba(242, 183, 5, .30); --lift-shadow: 0 6px 18px rgba(0, 0, 0, .45);
   color-scheme: dark;
 }
 
@@ -415,3 +418,75 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
   .floor .nm-short { display: block; font-size: 12px; white-space: nowrap }
 }
 .map-done > summary { cursor: pointer; color: var(--ink-2); margin-top: 10px }
+
+/* ── 動畫（v0.17）──────────────────────────────────────────────
+   只做有用途的：換頁時看得出到了新的一層、展開的內容從哪裡來、數字改了哪幾個、答對答錯。
+   全部在「減少動態效果」（prefers-reduced-motion）時關掉，見最下面。 */
+@keyframes rise-in { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes drop-in { from { opacity: 0; transform: translateY(-4px) } to { opacity: 1; transform: none } }
+@keyframes flash-val { 0% { background: var(--flash) } 100% { background: transparent } }
+@keyframes pop { 0% { transform: scale(1) } 40% { transform: scale(1.025) } 100% { transform: scale(1) } }
+@keyframes shake { 0%, 100% { transform: none } 20% { transform: translateX(-5px) } 40% { transform: translateX(5px) } 60% { transform: translateX(-3px) } 80% { transform: translateX(3px) } }
+@keyframes loop-light { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+@keyframes car-bob { 0%, 100% { transform: none } 50% { transform: translateY(-14px) } }
+@keyframes stage-bob { 0%, 100% { transform: none } 50% { transform: translateY(-7px) } }
+@keyframes arm-swing { 0%, 100% { transform: none } 50% { transform: rotate(-22deg) } }
+
+/* 換頁：像電梯門打開，標題先出來，面板一個接一個 */
+main > section > * { animation: rise-in .32s cubic-bezier(.2, .7, .3, 1) both }
+main > section > :nth-child(2) { animation-delay: .04s }
+main > section > :nth-child(3) { animation-delay: .08s }
+main > section > :nth-child(4) { animation-delay: .12s }
+main > section > :nth-child(5) { animation-delay: .16s }
+main > section > :nth-child(n+6) { animation-delay: .2s }
+
+/* 展開：<details> 打開時內容從上面滑下來 */
+details[open] > :not(summary) { animation: drop-in .22s ease-out both }
+
+/* 按鈕與卡片：滑過浮起、按下壓一點 */
+.btn, .path-card, .chooser-card, .quiz li button, .guide-route .btn { transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease, background-color .15s ease }
+.btn:not(:disabled):active, .quiz li button:active { transform: scale(.97) }
+.path-card:hover, .chooser-card:hover { transform: translateY(-2px); box-shadow: var(--lift-shadow) }
+.path-card:active, .chooser-card:active { transform: translateY(0) scale(.99) }
+.floor { transition: color .2s ease }
+.floor .lv { transition: color .2s ease }
+
+/* 參數卡：數值改變時閃一下，看得出改了機構資料後動到哪幾個參數 */
+.flash { border-radius: 3px; animation: flash-val .9s ease-out }
+
+/* 答題回饋 */
+.quiz li button[aria-pressed="true"].right { animation: pop .3s ease-out }
+.quiz li button[aria-pressed="true"].wrong { animation: shake .35s ease-in-out }
+.ok, .warn, .note { animation: fade-in .25s ease-out both }
+
+/* 首頁調參循環：八個步驟依序亮起，看得出先後順序 */
+.loop li { animation: loop-light .35s ease-out both }
+.loop li:nth-child(1) { animation-delay: .15s }
+.loop li:nth-child(2) { animation-delay: .23s }
+.loop li:nth-child(3) { animation-delay: .31s }
+.loop li:nth-child(4) { animation-delay: .39s }
+.loop li:nth-child(5) { animation-delay: .47s }
+.loop li:nth-child(6) { animation-delay: .55s }
+.loop li:nth-child(7) { animation-delay: .63s }
+.loop li:nth-child(8) { animation-delay: .71s }
+
+/* 進站選機構：滑過時電梯升起、手臂轉一下 */
+.chooser-cards > * { animation: rise-in .35s cubic-bezier(.2, .7, .3, 1) both }
+.chooser-cards > :nth-child(2) { animation-delay: .08s }
+.ch-car-move, .ch-stage-move, .ch-arm-swing { transform-box: view-box }
+.ch-arm-swing { transform-origin: 25px 42px }
+.chooser-card:hover .ch-car-move, .chooser-card:focus-visible .ch-car-move { animation: car-bob 1.2s ease-in-out infinite }
+.chooser-card:hover .ch-stage-move, .chooser-card:focus-visible .ch-stage-move { animation: stage-bob 1.2s ease-in-out infinite }
+.chooser-card:hover .ch-arm-swing, .chooser-card:focus-visible .ch-arm-swing { animation: arm-swing 1.4s ease-in-out infinite }
+
+/* 步驟列的提示、使用說明的路線 */
+.guide-route li { animation: rise-in .3s ease-out both }
+.guide-route li:nth-child(2) { animation-delay: .06s }
+.guide-route li:nth-child(3) { animation-delay: .12s }
+.guide-route li:nth-child(4) { animation-delay: .18s }
+.guide-route li:nth-child(5) { animation-delay: .24s }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important }
+}
