@@ -50,7 +50,7 @@ export function RobustnessPanel({ base, mechanism, ff, realistic, spec }: { base
     <div className="panel" style={{ marginTop: 20 }}>
       <h2>穩健性測試</h2>
       <p className="small muted" style={{ marginTop: 0 }}>
-        真的電梯每天都不一樣：電池有滿有沒滿、有時夾著遊戲物件、摩擦隨磨損改變。在下面的範圍內隨機抽樣，用目前這組參數跑很多次，看有幾成還達標。
+        電池、負載、摩擦每天都不一樣。在下面的範圍內隨機抽樣跑很多次，看這組參數有幾成還達標。
         {!realistic && ' 目前是理想模型，建議先切到真實模型（有電流限制和電池壓降）再測。'}
       </p>
       <div className="fields three">

@@ -45,7 +45,7 @@ export function LearnPage() {
       <div className="head">
         <div>
           <h1 id="t-learn">實機資料教學</h1>
-          <p className="lead">調參建議需要好的實機資料，而資料要安全地錄。單元一、二隨時可以先讀；但要上機錄日誌或跑 SysId 之前，一定要先完成單元零的檢查。 <HelpLink section={GUIDE_ANCHOR.learn} /></p>
+          <p className="lead">單元一、二隨時可以先讀；上機錄日誌或跑 SysId 之前，一定要先完成單元零。 <HelpLink section={GUIDE_ANCHOR.learn} /></p>
         </div>
       </div>
 

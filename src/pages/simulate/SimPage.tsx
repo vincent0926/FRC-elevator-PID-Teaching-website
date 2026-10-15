@@ -288,7 +288,7 @@ export function SimPage() {
       <div className="head">
         <div>
           <h1 id="t-sim">模擬</h1>
-          <p className="lead">上機前先確認參數不會出事。改一個數字看看會怎樣，不用怕撞壞機構。 <HelpLink section={GUIDE_ANCHOR.sim} /></p>
+          <p className="lead">上機前先在模擬裡找出明顯的參數問題。改一個數字看看會怎樣，不用怕撞壞機構。 <HelpLink section={GUIDE_ANCHOR.sim} /></p>
         </div>
         <span className="phase">
           {challenge ? '挑戰中（受控體隱藏）' : knobs.calibrated ? '已校正模型' : knobs.realistic ? '真實模型' : '理想模型'}・{knobs.realistic && !challenge ? (knobs.controllerType === 'sparkmax' ? 'SPARK MAX' : 'TalonFX') + ' ' : ''}{location === 'talonfx' ? '1 kHz' : 'roboRIO 50 Hz'}
@@ -424,9 +424,6 @@ export function SimPage() {
               <Chart title="電流" x={result.t} series={charts.cur} height={170} yLabel="A" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="每顆馬達的電流。貼著電流限制（真實模型）時馬達已經出全力，調 PID 沒有用，要放慢 Motion Magic。" />
             </>
           )}
-          <p className="small muted" style={{ margin: 0 }}>
-            在圖上拖曳可以放大時間軸，點兩下還原。
-          </p>
         </div>
       </div>
 
@@ -456,9 +453,6 @@ export function SimPage() {
           ) : (
             <>
               <GainList ps={ps} />
-              <p className="small muted" style={{ marginTop: 10 }}>
-                {source === 'theory' ? '理論值由 1F 的機構資料算出。' : '調參建議值來自 2F。'}想調整就直接拖播放列下面的滑桿，會自動切到「自訂」。
-              </p>
             </>
           )}
           {!challenge && <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />}
@@ -580,7 +574,7 @@ function PlantPanel({
           ? `重力、kV、慣性、摩擦用「${calibration.logName}」校正過（重播誤差 ${(calibration.rms * 100).toFixed(1)} cm）。改任何一項就變回一般的真實模型。`
           : knobs.realistic
           ? '每一項都可以單獨開關。一次只開一項，看圖怎麼變，就知道它對電梯的影響。'
-          : '沒有摩擦、沒有電流限制、沒有控制器的其他限制，只有重力、慣性和反電動勢（電壓最多到電池電壓）。理論值在這裡應該幾乎完美。馬達控制器的設定（電流限制、軟體限位、輸出上限）在真實模型裡。'}
+          : '沒有摩擦、沒有電流限制、沒有控制器的其他限制，只有重力、慣性和反電動勢（電壓最多到電池電壓）。理論值在這裡應該幾乎完美。'}
       </p>
       <ApproxNote
         summary={

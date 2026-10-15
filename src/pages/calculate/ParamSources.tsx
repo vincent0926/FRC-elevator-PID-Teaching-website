@@ -50,8 +50,7 @@ export function ParamSources() {
     <div className="panel" id="param-sources">
       <h2>哪些參數可以算、哪些一定要量</h2>
       <p className="small" style={{ marginTop: 0 }}>
-        1F 算出來的不是「答案」，是起點：理論給初始值，SysId 鑑別出真的機構參數，閉迴路調參在真的機器上驗證表現。
-        每個數字屬於下面五種之一，知道它是哪一種，就知道上機之後該相信它、驗證它、重新量，還是自己調。
+        1F 算出來的是起點，不是答案。每個數字屬於下面五種之一，決定上機後該相信、重新量，還是自己調。
       </p>
       <Workflow />
       <ul className="src-kinds">

@@ -70,8 +70,8 @@ export function TuneSliders<T extends TuneGains>({ mechanism, values, theory, ed
         <h3>親手調參數</h3>
         <span className="small muted">
           {editingCustom
-            ? '拖動滑桿或打數字，模擬和動畫馬上更新。一次只改一個，才看得出是誰造成的變化。'
-            : `現在看的是「${sourceLabel}」。拖任何一條就從這組數字開始調，自動切到「自訂」（會取代原本的自訂參數）。`}
+            ? '一次只改一個，才看得出是誰造成的變化。'
+            : `現在看的是「${sourceLabel}」。一拖就切到「自訂」，取代原本的自訂參數。`}
         </span>
         <button className="btn small" type="button" onClick={onResetAll} disabled={editingCustom && !changed}>
           全部回到理論值

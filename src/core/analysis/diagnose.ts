@@ -789,7 +789,7 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       const upV = gains.kG + f.dKg + gains.kS + f.dKs
       const downV = gains.kG + f.dKg - (gains.kS + f.dKs)
       notes.push(
-        `等速時往上需要 ${upV.toFixed(2)} V、往下 ${downV.toFixed(2)} V（不含 kV·v）。就算摩擦往上往下不一樣，把 kG、kS 照建議改好，kG 剛好落在靜摩擦範圍中間，一個 Slot 就夠；改好後指標還是不過，才考慮往下用 Slot 1。`,
+        `等速時往上需要 ${upV.toFixed(2)} V、往下 ${downV.toFixed(2)} V（不含 kV·v）。照建議改 kG、kS，一個 Slot 就夠；改好後還是不過，才考慮往下用 Slot 1。`,
       )
     }
     // 前饋誤差迴歸解釋不了、殘差又很大：可能是機構或雜訊

@@ -141,7 +141,7 @@ export function PlaybackBar({ result, pb, unit = 'm' }: { result: SimResult | nu
       </span>
     </div>
     <p className="small muted" style={{ margin: 0 }}>
-      按「播放」：{unit === 'rad' ? '左邊的手臂' : '左邊的電梯'}照模擬的時間動，每張圖上的直線是現在的時間，圖下面的圖例會顯示這一刻每條線的數值。也可以拖時間軸、把滑鼠移到圖上看數值；在圖上左右拖曳可以放大，點兩下還原。
+      拖時間軸或滑鼠移到圖上看某一刻的數值；在圖上左右拖曳放大，點兩下還原。
     </p>
     </>
   )
