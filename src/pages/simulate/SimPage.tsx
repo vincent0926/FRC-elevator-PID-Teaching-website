@@ -439,8 +439,8 @@ export function SimPage() {
 
       <div className="grid2" style={{ marginTop: 20 }}>
         <div className="panel">
-          <h2>參數（{SOURCES.find((s) => s.id === source)!.label}）</h2>
-          {source === 'custom' && custom ? (
+          <h2>{source === 'custom' ? '自訂參數：Slot 1 與基準' : '進階設定'}</h2>
+          {source === 'custom' && custom && (
             <CustomEditor
               custom={custom}
               edit={editCustom}
@@ -450,10 +450,13 @@ export function SimPage() {
               resetBaseline={() => baseline && setCustom({ ...baseline, source: 'custom', createdAt: new Date().toISOString() })}
               locked={!!challenge}
             />
-          ) : (
-            <>
-              <GainList ps={ps} />
-            </>
+          )}
+          {/* 滑桿在開了 Slot 1 時把 kS、kG 停用並指到這裡；不是自訂時沒有編輯欄，至少讓人看到往上、往下各是多少 */}
+          {source !== 'custom' && ps.slotByDirection && (
+            <p className="small">
+              往上（Slot 0）kS {ps.slotByDirection.up.kS.toFixed(3)} V、kG {ps.slotByDirection.up.kG.toFixed(3)} V；往下（Slot 1）kS {ps.slotByDirection.down.kS.toFixed(3)} V、kG{' '}
+              {ps.slotByDirection.down.kG.toFixed(3)} V
+            </p>
           )}
           {!challenge && <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />}
         </div>
@@ -684,36 +687,6 @@ function PlantPanel({
         </button>
       </div>
     </div>
-  )
-}
-
-function GainList({ ps }: { ps: ParameterSet }) {
-  const rows: [string, number, string][] = [
-    ['kS', ps.feedforward.kS, 'V'],
-    ['kG', ps.feedforward.kG, 'V'],
-    ['kV', ps.feedforward.kV, 'V/(m/s)'],
-    ['kA', ps.feedforward.kA, 'V/(m/s²)'],
-    ['kP', ps.feedback.kP, 'V/m'],
-    ['kI', ps.feedback.kI, 'V/(m·s)'],
-    ['kD', ps.feedback.kD, 'V/(m/s)'],
-    ['巡航速度', ps.motionMagic.cruiseVelocity, 'm/s'],
-    ['加速度', ps.motionMagic.acceleration, 'm/s²'],
-  ]
-  if (ps.slotByDirection) {
-    rows.push(['往下 kS（Slot 1）', ps.slotByDirection.down.kS, 'V'], ['往下 kG（Slot 1）', ps.slotByDirection.down.kG, 'V'])
-  }
-  return (
-    <table className="tbl">
-      <tbody>
-        {rows.map(([k, v, u]) => (
-          <tr key={k}>
-            <th>{k}</th>
-            <td className="num">{Number(v.toPrecision(4))}</td>
-            <td className="muted">{u}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   )
 }
 

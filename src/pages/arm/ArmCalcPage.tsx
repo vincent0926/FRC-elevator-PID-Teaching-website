@@ -101,13 +101,7 @@ export function ArmCalcPage() {
             <dd>{f(ff.gravityTorque, 2)} N·m</dd>
             <dt>轉動慣量</dt>
             <dd>{f(ff.inertia, 3)} kg·m²</dd>
-            <dt>最高角速度</dt>
-            <dd>
-              {f(ff.maxVelocity * R2D, 0)} °/s{ff.frictionIncluded ? '' : '（不含摩擦的理論上限）'}
-            </dd>
-            <dt>感測器</dt>
-            <dd>{arm.encoder === 'cancoder' ? `CANcoder（${f(arm.cancoderToArmRatio, 2)} : 1）` : 'TalonFX 內建編碼器'}</dd>
-          </dl>
+</dl>
           {ff.warnings.map((w) => (
             <div key={w} className="warn">
               {w}

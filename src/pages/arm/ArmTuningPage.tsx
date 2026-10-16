@@ -128,7 +128,6 @@ export function ArmTuningPage() {
           <h1 id="t-arm-tune">手臂・調參建議</h1>
           <p className="lead">匯入手臂的實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。 <HelpLink section={GUIDE_ANCHOR.tune} /></p>
         </div>
-        <span className="phase">一次只改一個參數</span>
       </div>
       <UnsavedNote />
 

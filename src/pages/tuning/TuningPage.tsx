@@ -137,7 +137,6 @@ export function TuningPage() {
           <h1 id="t-tune">調參建議</h1>
           <p className="lead">匯入實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。 <HelpLink section={GUIDE_ANCHOR.tune} /></p>
         </div>
-        <span className="phase">一次只改一個參數</span>
       </div>
 
       <StepBar report={!report ? 'none' : report.ok ? 'ok' : 'failed'} prefix="tune" />
