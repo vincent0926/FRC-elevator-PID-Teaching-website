@@ -124,11 +124,6 @@ export function ArmSimPage() {
     return { pos, err, vel, volt, cur }
   }, [result, otherShown, resultGravity])
 
-  const editCustom = (patch: (p: ArmParameterSet) => ArmParameterSet) => {
-    const base = custom ?? { ...theory, source: 'custom' as const, createdAt: new Date().toISOString() }
-    setCustom(patch(base))
-    setSource('custom')
-  }
   // 滑桿：看的是理論值時，用理論值當起點切到自訂，並疊上理論值比較
   const tweak = (patch: (p: ArmParameterSet) => ArmParameterSet) => {
     if (src === 'custom') {
@@ -344,29 +339,8 @@ export function ArmSimPage() {
 
       <div className="grid2" style={{ marginTop: 20 }}>
         <div className="panel">
-          <h2>參數（{src === 'custom' ? '自訂' : '理論值'}）</h2>
-          {src === 'custom' ? (
-            <ArmCustomEditor ps={ps} edit={editCustom} reset={() => setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString() })} />
-          ) : (
-            <>
-              <dl className="small arm-derived">
-                {(['kS', 'kG', 'kV', 'kA'] as const).map((k) => (
-                  <div key={k} style={{ display: 'contents' }}>
-                    <dt>{k}</dt>
-                    <dd>{f(ps.feedforward[k], 4)}</dd>
-                  </div>
-                ))}
-                <dt>kP</dt>
-                <dd>
-                  {f(ps.feedback.kP, 1)} V/rad（每度 {f(ps.feedback.kP / R2D, 2)} V）
-                </dd>
-                <dt>巡航</dt>
-                <dd>{f(ps.motionMagic.cruiseVelocity * R2D, 0)} °/s</dd>
-                <dt>加速度</dt>
-                <dd>{f(ps.motionMagic.acceleration * R2D, 0)} °/s²</dd>
-              </dl>
-            </>
-          )}
+          <h2>進階設定</h2>
+          {src === 'custom' && ps.note && <p className="small muted">自訂參數來源：{ps.note}</p>}
           <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />
         </div>
 
@@ -476,44 +450,3 @@ const ARM_UNITS: Record<TuneKey, string> = {
   acceleration: '°/s²',
 }
 
-function ArmCustomEditor({ ps, edit, reset }: { ps: ArmParameterSet; edit: (patch: (p: ArmParameterSet) => ArmParameterSet) => void; reset: () => void }) {
-  const units: Record<string, string> = { kS: 'V', kG: 'V', kV: 'V/(rad/s)', kA: 'V/(rad/s²)', kP: 'V/rad', kI: 'V/(rad·s)', kD: 'V/(rad/s)' }
-  return (
-    <>
-      <div className="gains">
-        {(['kS', 'kG', 'kV', 'kA'] as const).map((k) => (
-          <NumberField key={k} label={k} value={ps.feedforward[k]} onChange={(v) => edit((p) => ({ ...p, feedforward: { ...p.feedforward, [k]: v } }))} unit={units[k]} />
-        ))}
-        {(['kP', 'kI', 'kD'] as const).map((k) => (
-          <NumberField key={k} label={k} value={ps.feedback[k]} min={0} onChange={(v) => edit((p) => ({ ...p, feedback: { ...p.feedback, [k]: v } }))} unit={units[k]} />
-        ))}
-        <span />
-        <NumberField
-          label="巡航角速度"
-          value={ps.motionMagic.cruiseVelocity}
-          display={R2D}
-          min={1}
-          onChange={(v) => edit((p) => ({ ...p, motionMagic: { ...p.motionMagic, cruiseVelocity: v } }))}
-          unit="°/s"
-        />
-        <NumberField
-          label="角加速度"
-          value={ps.motionMagic.acceleration}
-          display={R2D}
-          min={1}
-          onChange={(v) => edit((p) => ({ ...p, motionMagic: { ...p.motionMagic, acceleration: v } }))}
-          unit="°/s²"
-        />
-      </div>
-      <p className="small muted" style={{ margin: '6px 0 0' }}>
-        kP 每度 {f(ps.feedback.kP / R2D, 2)} V。kG 是水平時的值，控制器會乘 cos θ。一次只改一個參數。
-      </p>
-      <div className="row" style={{ marginTop: 8 }}>
-        <button className="btn small" type="button" onClick={reset}>
-          重置為理論值
-        </button>
-      </div>
-      {ps.note && <p className="small muted">來源：{ps.note}</p>}
-    </>
-  )
-}

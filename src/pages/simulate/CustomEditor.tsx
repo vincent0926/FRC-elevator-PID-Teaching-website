@@ -1,7 +1,10 @@
 import { NumberField } from '../../components/NumberField'
 import type { ParameterSet } from '../../schema/parameterSet'
 
-/** 3F「自訂」參數編輯：kS–kD、Motion Magic、往下 Slot 1，以及基準參數（步驟 8） */
+/**
+ * 3F「自訂」參數：往下 Slot 1、基準參數（步驟 8）。
+ * kS–kD、Motion Magic 平常用播放列下面的滑桿改；挑戰模式沒有滑桿，才在這裡顯示數字欄。
+ */
 
 export function CustomEditor({
   custom,
@@ -26,6 +29,7 @@ export function CustomEditor({
     edit((p) => (p.slotByDirection ? { ...p, slotByDirection: { ...p.slotByDirection, [dir]: { ...p.slotByDirection[dir], [k]: v } } } : p))
   return (
     <>
+      {locked && (
       <div className="gains">
         {(['kS', 'kG', 'kV', 'kA'] as const).map((k) => (
           <NumberField
@@ -62,8 +66,9 @@ export function CustomEditor({
           unit="m/s²"
         />
       </div>
+      )}
 
-      <label className="check" style={{ marginTop: 14 }}>
+      <label className="check" style={{ marginTop: locked ? 14 : 0 }}>
         <input
           type="checkbox"
           checked={!!slots}
@@ -93,15 +98,16 @@ export function CustomEditor({
         <button className="btn small" type="button" disabled={!baseline} onClick={resetBaseline} title={baseline ? undefined : '還沒設基準'}>
           重置為基準
         </button>
-        <button className="btn small" type="button" onClick={resetTheory}>
-          重置為理論值
-        </button>
+        {locked && (
+          <button className="btn small" type="button" onClick={resetTheory}>
+            重置為理論值
+          </button>
+        )}
       </div>
       <p className="small muted" style={{ margin: '6px 0 0' }}>
         {baseline && !locked
           ? `基準：${baseline.note ?? '自訂'}（${new Date(baseline.createdAt).toLocaleString('zh-TW', { hour12: false })}）。亂調之後按「重置為基準」就回來了。`
-          :'找到一組還不錯的參數時先「設為基準」，之後亂調也能一鍵回來。'}
-        一次只改一個參數，才看得出是誰造成的變化。
+          : '找到一組還不錯的參數時先「設為基準」，之後亂調也能一鍵回來。'}
       </p>
       {custom.note && <p className="small muted">來源：{custom.note}</p>}
     </>
