@@ -28,6 +28,12 @@ import {
   wheelForGoal,
   trajectoryOptions,
   theoryGains,
+  moveAims,
+  moveOutcomes,
+  movePose,
+  solveMovingShot,
+  STILL,
+  GRAVITY,
   type FlywheelGains,
   type FlywheelKnobs,
   type ShotPlan,
@@ -315,5 +321,93 @@ describe('彈道：同一個距離的候選軌跡', () => {
     const far = trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 12 }, ffd.freeSpeed)
     expect(far.some((o) => !o.reachable)).toBe(true)
     expect(trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 0.3 }, ffd.freeSpeed)).toEqual([])
+  })
+})
+
+describe('邊移動邊射', () => {
+  const rx = exitRadius(DEFAULT_FLYWHEEL)
+  const pitch = DEFAULT_PLAN.angle
+  /** 照球對地的速度算落點：回傳往目標的距離、左右偏 */
+  const land = (motion: { toward: number; side: number }) => {
+    const s = solveMovingShot(rx, DEFAULT_PLAN, pitch, motion)!
+    const along = s.exit * Math.cos(pitch) * Math.cos(s.yaw) + motion.toward
+    const left = s.exit * Math.cos(pitch) * Math.sin(s.yaw) + motion.side
+    const T = flightTime(s.exit, pitch, DEFAULT_PLAN.height, DEFAULT_PLAN.goalHeight)
+    return { s, along: along * T, left: left * T }
+  }
+  it('機器人沒動時跟靜止的公式一樣', () => {
+    expect(solveMovingShot(rx, DEFAULT_PLAN, pitch, STILL)!.wheel).toBeCloseTo(wheelForGoal(rx, DEFAULT_PLAN)!, 6)
+    expect(solveMovingShot(rx, DEFAULT_PLAN, pitch, STILL)!.yaw).toBe(0)
+  })
+  it('補償後球對地剛好飛到目標中心（往目標、往後、側向都一樣）', () => {
+    for (const m of [
+      { toward: 1.5, side: 0 },
+      { toward: -1, side: 0 },
+      { toward: 0, side: 2 },
+      { toward: 1, side: -1.5 },
+    ]) {
+      const r = land(m)
+      expect(r.along).toBeCloseTo(DEFAULT_PLAN.goalDistance, 6)
+      expect(r.left).toBeCloseTo(0, 9)
+    }
+  })
+  it('往目標開要的轉速比較低、往後退比較高；往左開底盤要往右偏', () => {
+    const still = wheelForGoal(rx, DEFAULT_PLAN)!
+    expect(land({ toward: 1.5, side: 0 }).s.wheel).toBeLessThan(still)
+    expect(land({ toward: -1.5, side: 0 }).s.wheel).toBeGreaterThan(still)
+    const left = land({ toward: 0, side: 2 }).s
+    expect(left.yaw).toBeLessThan(0)
+    expect(left.wheel).toBeGreaterThan(still)
+  })
+  it('候選軌跡帶機器人速度：對地的軌跡打到目標中心', () => {
+    const m = { toward: 1, side: 1 }
+    const opts = trajectoryOptions(DEFAULT_FLYWHEEL, DEFAULT_PLAN, ff.freeSpeed, undefined, m)
+    expect(opts.length).toBeGreaterThan(3)
+    for (const o of opts) {
+      expect(launchRange(o.fieldExit, o.fieldAngle, DEFAULT_PLAN.height, DEFAULT_PLAN.goalHeight)).toBeCloseTo(DEFAULT_PLAN.goalDistance, 6)
+      expect(o.yaw).toBeLessThan(0)
+    }
+  })
+  it('第一發時機器人在目標正前方，之後照速度移動', () => {
+    const p0 = movePose(DEFAULT_PLAN, { toward: 1, side: 2 }, DEFAULT_PLAN.firstShot)
+    expect(p0.distance).toBeCloseTo(DEFAULT_PLAN.goalDistance, 12)
+    expect(p0.motion.toward).toBeCloseTo(1, 12)
+    expect(p0.motion.side).toBeCloseTo(2, 12)
+    const p1 = movePose(DEFAULT_PLAN, { toward: 1, side: 2 }, DEFAULT_PLAN.firstShot + 1)
+    expect(p1.distance).toBeCloseTo(Math.hypot(DEFAULT_PLAN.goalDistance - 1, 2), 12)
+    // 速度大小不變，只是換到新的方向來看
+    expect(Math.hypot(p1.motion.toward, p1.motion.side)).toBeCloseTo(Math.hypot(1, 2), 12)
+  })
+  it('每一發換目標轉速：模擬的目標跟著換', () => {
+    const plan = { ...DEFAULT_PLAN, shots: 3, interval: 0.5 }
+    const targets = [40 * TAU, 45 * TAU, 50 * TAU]
+    const res = simulateFlywheel(DEFAULT_FLYWHEEL, theory, IDEAL, plan, targets)
+    expect(res.shotTargets).toEqual(targets)
+    const at = (t: number) => res.ref[Math.round(t / 0.001)]
+    expect(at(plan.firstShot - 0.1)).toBe(targets[0])
+    expect(at(plan.firstShot + 0.1)).toBe(targets[1])
+    expect(at(plan.firstShot + 0.6)).toBe(targets[2])
+  })
+  it('側向開：有補償會進，沒補償球往開的方向偏', () => {
+    const plan = { ...DEFAULT_PLAN, shots: 1, goalWidth: 0.6 }
+    const g = { ...theory, kS: 0, kP: 2 / TAU }
+    const one = (compensate: boolean) => {
+      const setup = { motion: { toward: 0, side: 2 }, compensate }
+      const aims = moveAims(DEFAULT_FLYWHEEL, plan, setup)
+      const res = simulateFlywheel(DEFAULT_FLYWHEEL, g, IDEAL, plan, aims.map((a) => a.target))
+      return moveOutcomes(res, DEFAULT_FLYWHEEL, plan, aims)[0]
+    }
+    const on = one(true)
+    const off = one(false)
+    expect(on.hit).toBe(true)
+    expect(Math.hypot(on.landX, on.landY)).toBeLessThan(0.1)
+    expect(off.hit).toBe(false)
+    // 往左開、沒補償：球偏左（偏右的距離是負的）
+    expect(off.side).toBeLessThan(-0.3)
+    expect(off.landY).toBeGreaterThan(0.3)
+  })
+  it('太近射不進的時候算不出來', () => {
+    expect(solveMovingShot(rx, { ...DEFAULT_PLAN, goalDistance: 0.3 }, pitch, { toward: 1, side: 0 })).toBeNull()
+    expect(GRAVITY).toBeCloseTo(9.81, 9)
   })
 })

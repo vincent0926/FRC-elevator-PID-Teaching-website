@@ -57,15 +57,28 @@ export function useShotPlan() {
 
 /**
  * 進站選的用法，跟選的機構一樣存在這個分頁（sessionStorage）：
- * 彈道 = 1F 算轉速和仰角（選軌跡）→ 3F 連射模擬；客製化 = 1F 原本的計算頁、3F 連射模擬參數自己設。
+ * 彈道 = 1F 算轉速和仰角（選軌跡）→ 3F 連射模擬；客製化 = 1F 原本的計算頁、3F 連射模擬參數自己設；
+ * 邊移動邊射 = 1F 加上機器人速度算轉速、仰角、底盤偏角 → 3F 邊開邊射。
  */
-export type FlywheelStyle = 'ballistic' | 'custom'
+export type FlywheelStyle = 'ballistic' | 'custom' | 'move'
 export function loadFlywheelStyle(): FlywheelStyle {
-  return loadSession('flywheel:style') === 'ballistic' ? 'ballistic' : 'custom'
+  const s = loadSession('flywheel:style')
+  return s === 'ballistic' || s === 'move' ? s : 'custom'
 }
 export function saveFlywheelStyle(s: FlywheelStyle) {
   saveSession('flywheel:style', s)
 }
+
+/** 邊移動邊射的設定：機器人速度、有沒有補償，和自己的發數、間隔（連射 50 發的話機器人早就開走了） */
+export interface MoveSettings {
+  toward: number
+  side: number
+  compensate: boolean
+  shots: number
+  interval: number
+}
+export const DEFAULT_MOVE: MoveSettings = { toward: 0, side: 1.5, compensate: true, shots: 8, interval: 0.25 }
+export const useMoveSettings = () => usePersisted<MoveSettings>('flywheel:move', DEFAULT_MOVE, (m) => m.shots >= 1 && m.interval > 0)
 
 export const SHAPES = [
   { v: 0.5, label: '實心圓盤（0.5）' },

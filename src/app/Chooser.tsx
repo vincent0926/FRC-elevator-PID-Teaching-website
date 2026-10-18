@@ -4,7 +4,8 @@ import { useStore, type Track } from './store'
 
 /**
  * 進站先選機構：電梯、單關節手臂或射球飛輪。選完才進到各樓層（射球飛輪只有 1F、3F）。
- * 射球飛輪每次都再問一次要「彈道」（1F 算轉速和仰角 → 3F 連射模擬）還是「客製化」（直接到 3F 連射模擬，自己設）。
+ * 射球飛輪每次都再問一次要「彈道」（1F 算轉速和仰角 → 3F 連射模擬）、「客製化」（直接到 3F 連射模擬，自己設）
+ * 還是「邊移動邊射」（1F 算補償 → 3F 邊開邊射）。
  */
 
 const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = [
@@ -24,7 +25,7 @@ const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = 
     id: 'flywheel',
     title: '射球飛輪',
     what: '控制轉速的射球機構：先轉到目標轉速，球打出去會掉速。',
-    points: ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '彈道：1F 選軌跡得到 RPS 和仰角 → 3F 連射', '客製化：直接連射模擬，參數自己設'],
+    points: ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '彈道：1F 選軌跡得到 RPS 和仰角 → 3F 連射', '客製化：直接連射模擬，參數自己設', '邊移動邊射：算補償，看邊開邊射進不進'],
   },
 ]
 
@@ -75,7 +76,7 @@ function FlywheelIcon() {
 
 const ICONS = { elevator: ElevatorIcon, arm: ArmIcon, flywheel: FlywheelIcon }
 
-/** 射球飛輪的兩種進法（存在這個分頁，見 flywheelStore 的 FlywheelStyle） */
+/** 射球飛輪的三種進法（存在這個分頁，見 flywheelStore 的 FlywheelStyle） */
 const FLYWHEEL_STYLES = [
   {
     id: 'ballistic',
@@ -88,6 +89,12 @@ const FLYWHEEL_STYLES = [
     title: '客製化',
     what: '直接到 3F 連射模擬：機構、仰角、RPS、發數、間隔、kP 全部自己設，看轉速撐不撐得住、球進不進。',
     start: 'sim',
+  },
+  {
+    id: 'move',
+    title: '邊移動邊射',
+    what: 'Shoot on the move：機器人邊開邊射，球會帶著機器人的速度。1F 算出要幾 RPS、仰角、底盤偏幾度，3F 看有補償和沒補償差多少。',
+    start: 'calc',
   },
 ] as const
 
@@ -125,7 +132,7 @@ function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <p className="small muted" style={{ margin: '10px 0 0' }}>
-          兩種用同一份機構和射球資料；要換的話，左邊導覽的「換機構」再選一次。
+          三種用同一份機構和射球資料；要換的話，左邊導覽的「換機構」再選一次。
         </p>
         <button type="button" className="btn small" onClick={onClose}>
           回去選機構

@@ -12,6 +12,9 @@ import {
   flywheelMetrics,
   shotOutcomes,
   simulateFlywheel,
+  moveAims,
+  moveOutcomes,
+  type MoveOutcome,
   wheelForGoal,
   exitRadius,
   theoryGains,
@@ -22,12 +25,16 @@ import {
   type ShotPlan,
 } from '../../core/flywheel/flywheel'
 import { PlaybackBar, usePlayback } from '../simulate/MiniShaft'
-import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText } from './flywheelTune'
+import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText, moveMissText, yawText } from './flywheelTune'
 import { FlywheelView } from './FlywheelView'
+import { MoveView } from './MoveView'
 import { BallFields, HubPreset, MechFields } from './FlywheelForms'
-import { SHAPES, useFlywheelMechanism, usePersisted, useShotPlan } from './flywheelStore'
+import { loadFlywheelStyle, SHAPES, useFlywheelMechanism, useMoveSettings, usePersisted, useShotPlan, type MoveSettings } from './flywheelStore'
 
-/** 3F 射球飛輪連射模擬：轉到目標轉速、連射幾發，看掉速和恢復。內部 SI（rad/s），畫面一律 rps。 */
+/**
+ * 3F 射球飛輪連射模擬：轉到目標轉速、連射幾發，看掉速和恢復。內部 SI（rad/s），畫面一律 rps。
+ * 進站選「邊移動邊射」時，機器人邊開邊射：每一發的距離不同，看有補償和沒補償進不進。
+ */
 
 const TAU = 2 * Math.PI
 const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
@@ -35,21 +42,41 @@ const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 export function FlywheelSimPage() {
   const [mech, setMech] = useFlywheelMechanism()
   const [plan, setPlan] = useShotPlan()
+  const [move, setMove] = useMoveSettings()
+  // 讀一次就好：換用法要回進站重選
+  const [style] = useState(loadFlywheelStyle)
+  const moving = style === 'move'
   return (
     <section aria-labelledby="t-fw-sim">
       <div className="head">
         <div>
-          <h1 id="t-fw-sim">射球飛輪・模擬</h1>
-          <p className="lead">從靜止轉到目標轉速，連射幾發，看每一發掉多少、多快回來，球落在哪裡。數字都是 Phoenix 6 的 rps，可以直接填進程式。</p>
+          <h1 id="t-fw-sim">{moving ? '射球飛輪・邊移動邊射模擬' : '射球飛輪・模擬'}</h1>
+          <p className="lead">
+            {moving
+              ? '機器人邊開邊射：每一發離目標的距離、方向都不一樣。看有補償（每一發重算轉速和底盤偏角）和沒補償（照站著射的轉速表）差多少。'
+              : '從靜止轉到目標轉速，連射幾發，看每一發掉多少、多快回來，球落在哪裡。數字都是 Phoenix 6 的 rps，可以直接填進程式。'}
+          </p>
         </div>
       </div>
-      <ShotSim mech={mech} setMech={setMech} plan={plan} setPlan={setPlan} />
+      <ShotSim mech={mech} setMech={setMech} plan={plan} setPlan={setPlan} move={moving ? { settings: move, set: setMove } : undefined} />
     </section>
   )
 }
 
 /** 連射模擬本體 */
-function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; setMech: (m: FlywheelMechanism) => void; plan: ShotPlan; setPlan: (p: ShotPlan) => void }) {
+function ShotSim({
+  mech,
+  setMech,
+  plan: basePlan,
+  setPlan,
+  move,
+}: {
+  mech: FlywheelMechanism
+  setMech: (m: FlywheelMechanism) => void
+  plan: ShotPlan
+  setPlan: (p: ShotPlan) => void
+  move?: { settings: MoveSettings; set: (m: MoveSettings) => void }
+}) {
   const { go } = useStore()
   const [knobs, setKnobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
   const [spec, setSpec] = usePersisted<FlywheelSpec>('flywheel:spec', DEFAULT_FLYWHEEL_SPEC)
@@ -60,17 +87,28 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
   const gains = custom.gains ?? theory
   const [preset, setPreset] = useState<string | null>(null)
 
-  const setP = (p: Partial<ShotPlan>) => setPlan({ ...plan, ...p })
+  const setP = (p: Partial<ShotPlan>) => setPlan({ ...basePlan, ...p })
+  const mv = move?.settings
+  const setMv = (p: Partial<MoveSettings>) => move?.set({ ...move.settings, ...p })
+  // 邊移動邊射：發數、間隔用自己的；每一發的目標轉速照當時的距離算，第一發的當成模擬的目標轉速
+  const aims = useMemo(
+    () => (mv ? moveAims(mech, { ...basePlan, shots: mv.shots, interval: mv.interval }, { motion: { toward: mv.toward, side: mv.side }, compensate: mv.compensate }) : null),
+    [mech, basePlan, mv],
+  )
+  const plan = useMemo(() => (mv && aims ? { ...basePlan, shots: mv.shots, interval: mv.interval, target: aims[0].target } : basePlan), [basePlan, mv, aims])
   const setK = (p: Partial<FlywheelKnobs>) => setKnobs({ ...knobs, ...p })
   const setGain = (k: keyof FlywheelGains, v: number) => {
     setPreset(null)
     setCustom({ gains: { ...gains, [k]: v } })
   }
 
-  const result = useMemo(() => simulateFlywheel(mech, gains, knobs, plan), [mech, gains, knobs, plan])
+  const result = useMemo(() => simulateFlywheel(mech, gains, knobs, plan, aims?.map((a) => a.target)), [mech, gains, knobs, plan, aims])
   const metrics = useMemo(() => flywheelMetrics(result, plan, spec), [result, plan, spec])
   const fails = flywheelFailures(metrics, plan, spec)
-  const outcomes = useMemo(() => shotOutcomes(result, mech, plan), [result, mech, plan])
+  const outcomes = useMemo(
+    () => (mv && aims ? moveOutcomes(result, mech, plan, aims) : shotOutcomes(result, mech, plan)),
+    [result, mech, plan, mv, aims],
+  )
   const hits = outcomes.filter((o) => o.hit).length
   const recoveryOk = (r: number | null) => r !== null && r <= spec.recovery
   const shotStats = useMemo(() => {
@@ -86,7 +124,9 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
   const pb = usePlayback(result)
   const cursorX = pb.idx !== null ? result.t[pb.idx] : null
   const tol = (spec.tolPct / 100) * plan.target
-  const reachable = plan.target < ff.freeSpeed * 0.9
+  const maxTarget = aims ? Math.max(...aims.map((a) => a.target)) : plan.target
+  const reachable = maxTarget < ff.freeSpeed * 0.9
+  const unsolved = aims ? aims.filter((a) => !a.solved).length : 0
 
   const charts = useMemo(() => {
     const rps = (a: Float64Array) => Array.from(a, (x) => x / TAU)
@@ -105,7 +145,7 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
   const shotBands = result.shotTimes.map((s): [number, number] => [s, s + 0.03])
 
   const hints: string[] = []
-  if (!reachable) hints.push(`目標 ${f(plan.target / TAU, 0)} rps 太接近最高轉速（約 ${f(ff.freeSpeed / TAU, 0)} rps，還沒扣摩擦）：電壓不夠，調參數也到不了。降低目標或改齒比。`)
+  if (!reachable) hints.push(`目標 ${f(maxTarget / TAU, 0)} rps 太接近最高轉速（約 ${f(ff.freeSpeed / TAU, 0)} rps，還沒扣摩擦）：電壓不夠，調參數也到不了。降低目標或改齒比。`)
   if (fails.includes('steady'))
     hints.push(metrics.steadyError > 0 ? '轉速一直差一點：先把 kS 補成摩擦的大小，再檢查 kV；最後一點點才用 kI。' : '轉速一直偏高：kV 或 kS 太大。')
   if (fails.includes('overshoot')) hints.push('衝過頭：kI 在起步時累積太多，或 kP、kV 太大。飛輪通常不用 kI。')
@@ -131,7 +171,11 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
       </div>
 
       <div className="panel" style={{ marginTop: 20 }}>
-        <FlywheelView result={result} mech={mech} plan={plan} tol={tol} shots={outcomes} idx={pb.idx} />
+        {mv && aims ? (
+          <MoveView result={result} plan={plan} motion={{ toward: mv.toward, side: mv.side }} aims={aims} shots={outcomes as MoveOutcome[]} tol={tol} idx={pb.idx} />
+        ) : (
+          <FlywheelView result={result} mech={mech} plan={plan} tol={tol} shots={outcomes} idx={pb.idx} />
+        )}
         <div style={{ marginTop: 10 }}>
           <PlaybackBar result={result} pb={pb} readout={(k) => `${f(result.vel[k] / TAU, 1)} rps`} />
         </div>
@@ -140,11 +184,35 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
       <div className="grid2" style={{ marginTop: 20 }}>
         <div className="panel">
           <h2>射球</h2>
+          {mv && (
+            <>
+              <h3 style={{ marginTop: 0 }}>機器人怎麼動</h3>
+              <div className="fields">
+                <NumberField label="往目標方向的速度" value={mv.toward} onChange={(v) => setMv({ toward: v })} min={-5} max={5} step={0.1} unit="m/s" hint="往目標開是正的；第一發時的方向" />
+                <NumberField label="側向速度" value={mv.side} onChange={(v) => setMv({ side: v })} min={-5} max={5} step={0.1} unit="m/s" hint="面向目標時往左開是正的" />
+              </div>
+              <label className="check">
+                <input type="checkbox" checked={mv.compensate} onChange={(e) => setMv({ compensate: e.target.checked })} />
+                有補償（每一發照當時的距離和速度重算轉速、底盤偏角）
+              </label>
+              <p className="small" style={{ margin: '6px 0 12px' }}>
+                {mv.compensate ? '有補償' : '沒補償：照站著射的轉速表（只看距離），底盤正對目標'}。這 {mv.shots} 發機器人開了 {f(Math.hypot(mv.toward, mv.side) * (mv.shots - 1) * mv.interval, 2)} m，目標轉速 {f(Math.min(...aims!.map((a) => a.target)) / TAU, 1)}～{f(maxTarget / TAU, 1)} rps
+                {mv.compensate && `，底盤${yawRange(aims!)}`}。
+                {unsolved > 0 && <span className="fail"> 有 {unsolved} 發算不出來（太近、太遠或射不進），沿用前一發的轉速、底盤正對目標。</span>}
+              </p>
+            </>
+          )}
           <div className="fields">
-            <NumberField label="目標轉速" value={plan.target} display={1 / TAU} digits={1} onChange={(v) => setP({ target: v })} min={1} max={150} step={1} unit="rps" />
+            {mv ? (
+              <p className="small muted" style={{ margin: 0, alignSelf: 'center' }}>
+                目標轉速每一發自動算（看當時離目標多遠）。
+              </p>
+            ) : (
+              <NumberField label="目標轉速" value={plan.target} display={1 / TAU} digits={1} onChange={(v) => setP({ target: v })} min={1} max={150} step={1} unit="rps" />
+            )}
             <NumberField label="加速度限制" value={plan.accel} display={1 / TAU} digits={0} onChange={(v) => setP({ accel: v })} min={0} max={2000} step={10} unit="rps/s" hint="0 = VelocityVoltage 直接跳到目標；大於 0 = MotionMagicVelocityVoltage" />
-            <NumberField label="發數" value={plan.shots} onChange={(v) => setP({ shots: Math.round(v) })} min={1} max={100} step={1} unit="發" />
-            <NumberField label="每發間隔" value={plan.interval} onChange={(v) => setP({ interval: v })} min={0.05} max={2} step={0.05} unit="s" />
+            <NumberField label="發數" value={plan.shots} onChange={(v) => (mv ? setMv({ shots: Math.round(v) }) : setP({ shots: Math.round(v) }))} min={1} max={100} step={1} unit="發" />
+            <NumberField label="每發間隔" value={plan.interval} onChange={(v) => (mv ? setMv({ interval: v }) : setP({ interval: v }))} min={0.05} max={2} step={0.05} unit="s" />
             <NumberField label="第一發" value={plan.firstShot} onChange={(v) => setP({ firstShot: v })} min={0.2} max={5} step={0.1} unit="s" hint="從靜止開始算" />
             <BallFields plan={plan} setP={setP} />
             <NumberField label="出射仰角" value={plan.angle} display={180 / Math.PI} digits={0} onChange={(v) => setP({ angle: v })} min={5} max={85} step={1} unit="°" />
@@ -152,12 +220,12 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
           </div>
           <h3 style={{ marginTop: 14 }}>目標</h3>
           <div className="fields three">
-            <NumberField label="目標距離" value={plan.goalDistance} onChange={(v) => setP({ goalDistance: v })} min={0.2} max={20} step={0.1} unit="m" hint="離出射點的水平距離" />
+            <NumberField label="目標距離" value={plan.goalDistance} onChange={(v) => setP({ goalDistance: v })} min={0.2} max={20} step={0.1} unit="m" hint={mv ? '第一發時離目標多遠' : '離出射點的水平距離'} />
             <NumberField label="目標高度" value={plan.goalHeight} onChange={(v) => setP({ goalHeight: v })} min={0} max={5} step={0.05} unit="m" hint="0 = 地面" />
             <NumberField label="開口寬度" value={plan.goalWidth} onChange={(v) => setP({ goalWidth: v })} min={0.05} max={3} step={0.05} unit="m" />
           </div>
           <HubPreset setP={setP} />
-          <p className="small" style={{ margin: '8px 0 0' }}>
+          {!mv && <p className="small" style={{ margin: '8px 0 0' }}>
             {goalW === null ? (
               <span className="fail">這個仰角射不進：目標太近或太高。改仰角或目標。</span>
             ) : (
@@ -170,7 +238,7 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
                 )}
               </>
             )}
-          </p>
+          </p>}
         </div>
 
         <div className="panel">
@@ -351,7 +419,7 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
                 <th className="num">恢復</th>
                 <th className="num">輪子轉速</th>
                 <th className="num">出口球速</th>
-                <th className="num">落點</th>
+                <th className="num">{mv ? '離目標' : '落點'}</th>
                 <th>進了沒</th>
               </tr>
             </thead>
@@ -363,8 +431,8 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
                   <td className={'num ' + (recoveryOk(metrics.shots[i].recovery) ? '' : 'fail')}>{metrics.shots[i].recovery === null ? '回不來' : `${f(metrics.shots[i].recovery!)} s`}</td>
                   <td className="num">{f(o.wheel / TAU, 1)} rps</td>
                   <td className="num">{f(o.exit, 2)} m/s</td>
-                  <td className="num">{Number.isFinite(o.range) ? `${f(o.range, 2)} m` : '—'}</td>
-                  <td className={o.hit ? 'pass' : 'fail'}>{missText(o, plan.goalHeight)}</td>
+                  <td className="num">{mv ? `${f((o as MoveOutcome).pose.distance, 2)} m` : Number.isFinite(o.range) ? `${f(o.range, 2)} m` : '—'}</td>
+                  <td className={o.hit ? 'pass' : 'fail'}>{mv ? moveMissText(o as MoveOutcome, plan.goalHeight) : missText(o, plan.goalHeight)}</td>
                 </tr>
               ))}
             </tbody>
@@ -372,7 +440,10 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
         </div>
         </details>
         <p className="small muted" style={{ margin: '6px 0 0' }}>
-          落點是球往下掉經過目標高度（{f(plan.goalHeight, 2)} m）時離出射點多遠，離目標距離在開口一半（±{f((plan.goalWidth / 2) * 100, 0)} cm）以內算進。轉速差一點，落點就差一截。
+          {mv
+            ? `看球往下掉經過目標高度（${f(plan.goalHeight, 2)} m）的地方，離目標中心在開口一半（${f((plan.goalWidth / 2) * 100, 0)} cm）以內算進（開口當成圓的）。`
+            : `落點是球往下掉經過目標高度（${f(plan.goalHeight, 2)} m）時離出射點多遠，離目標距離在開口一半（±${f((plan.goalWidth / 2) * 100, 0)} cm）以內算進。`}
+          轉速差一點，落點就差一截。
         </p>
         <p className="small" style={{ margin: '10px 0 0' }}>
           整體：{fails.length === 0 ? <b className="pass">全部達標</b> : <b className="fail">{fails.length} 項沒過</b>}
@@ -393,4 +464,12 @@ function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; se
       </div>
     </>
   )
+}
+
+/** 底盤偏角的範圍 */
+function yawRange(aims: { yaw: number }[]): string {
+  const ys = aims.map((a) => a.yaw)
+  const lo = Math.min(...ys)
+  const hi = Math.max(...ys)
+  return Math.abs(hi - lo) < 1e-3 ? yawText(lo) : `${yawText(lo)}～${yawText(hi)}`
 }
