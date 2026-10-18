@@ -30,7 +30,7 @@ export function usePersisted<T extends object>(key: string, fallback: T, check: 
   return [v, setV]
 }
 
-export const useFlywheelMechanism = () => usePersisted<FlywheelMechanism>('flywheel:mechanism', DEFAULT_FLYWHEEL, (m) => m.motor in MOTOR_SPECS)
+export const useFlywheelMechanism = () => usePersisted<FlywheelMechanism>('flywheel:mechanism', DEFAULT_FLYWHEEL, (m) => m.motor in MOTOR_SPECS && (m.back === 'hood' || m.back === 'rollers'))
 /** 舊版存的發數比新預設少（v0.21 以前預設 3 發），改成新預設；只做一次，之後照使用者設定 */
 const PLAN_VERSION = 2
 function migratePlan() {

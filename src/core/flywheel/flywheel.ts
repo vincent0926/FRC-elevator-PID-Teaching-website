@@ -19,6 +19,14 @@ export interface FlywheelMechanism {
   wheelRadius: number
   /** J = shape·m·r²：實心圓盤 0.5，質量集中在外圈接近 1 */
   shape: number
+  /** 球的另一邊：固定導板（hood），或是對面也有滾輪一起夾著球（rollers） */
+  back: 'hood' | 'rollers'
+  /** 對面滾輪半徑 m（back = rollers 才用） */
+  backRadius: number
+  /** 對面滾輪加起來的質量 kg（當實心滾筒算，形狀 0.5） */
+  backMass: number
+  /** 對面滾輪轉速 ÷ 大輪轉速（同一顆馬達 1:1 帶就是 1） */
+  backRatio: number
 }
 
 export const DEFAULT_FLYWHEEL: FlywheelMechanism = {
@@ -28,6 +36,23 @@ export const DEFAULT_FLYWHEEL: FlywheelMechanism = {
   wheelMass: 1.5,
   wheelRadius: 0.0508,
   shape: 0.5,
+  back: 'hood',
+  backRadius: 0.0254,
+  backMass: 0.3,
+  backRatio: 1,
+}
+
+/** 對面滾輪的輪緣速度是大輪的幾倍；固定導板是 0 */
+export function backSurfaceRatio(m: FlywheelMechanism): number {
+  return m.back === 'rollers' ? (m.backRatio * m.backRadius) / m.wheelRadius : 0
+}
+
+/**
+ * 換算用的半徑：球速 = EXIT_RATIO × ω × exitRadius。
+ * 球夾在兩個面中間，中心速度是兩邊輪緣速度的平均：0.5 × (ω·r + ω·r·s) = 0.5 × ω × r(1 + s)。
+ */
+export function exitRadius(m: FlywheelMechanism): number {
+  return m.wheelRadius * (1 + backSurfaceRatio(m))
 }
 
 /** 增益（SI）：kS [V]、kV [V/(rad/s)]、kA [V/(rad/s²)]、kP [V/(rad/s)]、kI [V/rad]、kD [V/(rad/s²)] */
@@ -49,8 +74,19 @@ export interface FlywheelFeedforward {
   freeSpeed: number
 }
 
+/** 換算到大輪的轉動慣量：對面滾輪轉速是大輪的 backRatio 倍，慣量要乘 backRatio² */
 export function flywheelInertia(m: FlywheelMechanism): number {
-  return m.shape * m.wheelMass * m.wheelRadius ** 2
+  const back = m.back === 'rollers' ? 0.5 * m.backMass * m.backRadius ** 2 * m.backRatio ** 2 : 0
+  return m.shape * m.wheelMass * m.wheelRadius ** 2 + back
+}
+
+/**
+ * 一發從大輪那根軸（換算後）帶走的角動量 = ballMass × EXIT_RATIO × ω × impulseRadiusSq。
+ * 球的動量 m·v 由兩邊推出去，假設各邊出的力跟它的輪緣速度成正比（固定導板不出力）：
+ * m·v·[r/(1+s) + r·s·s/(1+s)] = m·0.5·ω·r²·(1 + s²)。固定導板（s = 0）就是原本的 m·0.5·ω·r²。
+ */
+export function impulseRadiusSq(m: FlywheelMechanism): number {
+  return m.wheelRadius ** 2 * (1 + backSurfaceRatio(m) ** 2)
 }
 
 export function computeFlywheelFeedforward(m: FlywheelMechanism): FlywheelFeedforward {
@@ -170,7 +206,7 @@ export function simulateFlywheel(mech: FlywheelMechanism, gains: FlywheelGains, 
   const J = flywheelInertia(mech)
   const G = mech.gearRatio
   const n = mech.motorCount
-  const r = mech.wheelRadius
+  const r2 = impulseRadiusSq(mech)
   const frictionTorque = (knobs.friction * G * n * mot.kT) / mot.R
   const steps = Math.round(simEnd(plan) / CONTROL_DT) + 1
   const out: FlywheelSimResult = {
@@ -216,7 +252,7 @@ export function simulateFlywheel(mech: FlywheelMechanism, gains: FlywheelGains, 
     // 球的扭矩：接觸的 30 ms 內平均分配
     let ballTorque = 0
     for (let s = 0; s < plan.shots; s++) {
-      if (k === shotStep[s]) impulse[s] = plan.ballMass * EXIT_RATIO * Math.max(0, w) * r * r
+      if (k === shotStep[s]) impulse[s] = plan.ballMass * EXIT_RATIO * Math.max(0, w) * r2
       if (k >= shotStep[s] && k < shotStep[s] + contactSteps) ballTorque += impulse[s] / CONTACT
     }
 
@@ -336,7 +372,7 @@ export function flywheelFailures(m: FlywheelMetrics, plan: ShotPlan, spec: Flywh
 
 /**
  * 球速與射程：拋體運動，不計空氣阻力、球的旋轉（近似模型）。
- * 球出去的速度 = EXIT_RATIO × 輪緣速度（ω·r），跟模擬裡球帶走的角動量用同一個假設。
+ * 球出去的速度 = EXIT_RATIO × ω × r，r 傳 exitRadius(mech)（對面有滾輪時會比輪子半徑大），跟模擬裡球帶走的角動量用同一個假設。
  */
 export const GRAVITY = 9.81
 
@@ -396,11 +432,11 @@ export function rangeAtWheel(w: number, r: number, plan: ShotPlan): number {
 }
 
 /**
- * 一發大概掉多少（比例）：球帶走 m_ball·EXIT_RATIO·ω·r² 的角動量，馬達在 30 ms 內來不及補，
- * Δω/ω ≈ m_ball·EXIT_RATIO·r² / J = m_ball·EXIT_RATIO / (shape·m_wheel)。跟轉速、半徑都無關。
+ * 一發大概掉多少（比例）：球帶走 m_ball·EXIT_RATIO·ω·r²(1+s²) 的角動量（見 impulseRadiusSq），馬達在 30 ms 內來不及補，
+ * Δω/ω ≈ m_ball·EXIT_RATIO·r²(1+s²) / J。只有固定導板時 = m_ball·EXIT_RATIO / (shape·m_wheel)，跟轉速、半徑都無關。
  */
 export function dipFraction(mech: FlywheelMechanism, ballMass: number): number {
-  return (ballMass * EXIT_RATIO * mech.wheelRadius ** 2) / flywheelInertia(mech)
+  return (ballMass * EXIT_RATIO * impulseRadiusSq(mech)) / flywheelInertia(mech)
 }
 
 export interface ShotOutcome {
@@ -424,7 +460,7 @@ export function shotOutcomes(res: FlywheelSimResult, mech: FlywheelMechanism, pl
   return res.shotTimes.map((at) => {
     const k = Math.min(res.vel.length - 1, Math.round(at / CONTROL_DT))
     const wheel = res.vel[k]
-    const exit = exitSpeed(wheel, mech.wheelRadius)
+    const exit = exitSpeed(wheel, exitRadius(mech))
     const range = launchRange(exit, plan.angle, plan.height, plan.goalHeight)
     const miss = range - plan.goalDistance
     return { at, wheel, exit, release: at + CONTACT, range, miss, hit: Math.abs(miss) <= plan.goalWidth / 2 }

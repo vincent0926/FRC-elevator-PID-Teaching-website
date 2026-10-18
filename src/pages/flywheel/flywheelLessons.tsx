@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { QuizDef } from '../../components/Quiz'
-import { dipFraction, exitSpeed, rangeAtWheel, type FlywheelFeedforward, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
+import { dipFraction, exitRadius, exitSpeed, rangeAtWheel, type FlywheelFeedforward, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
 
 /** 射球飛輪 1F 教學關卡：每關用你的機構算，最後一題檢核題 */
 
@@ -66,9 +66,15 @@ export const FLYWHEEL_LESSONS: FlywheelLesson[] = [
             球被輪子帶出去時會帶走角動量。球只碰輪子 30 ms，馬達來不及補，所以一發大約掉：
           </p>
           <p className="mono">掉的比例 ≈ 球質量 × 0.5 ÷ (形狀 × 飛輪質量)</p>
-          <p>
-            你的機構：{plan.ballMass} × 0.5 ÷ ({m.shape} × {m.wheelMass}) ≈ <b>{f(frac * 100, 1)}%</b>，目標 {f(plan.target / TAU, 0)} rps 會掉約 {f((frac * plan.target) / TAU, 1)} rps。跟轉速、半徑都無關。
-          </p>
+          {m.back === 'rollers' ? (
+            <p>
+              你的機構對面也有滾輪：球被兩邊一起推，帶走的角動量比較多，對面滾輪的慣量也會幫忙撐住，算出來一發約掉 <b>{f(frac * 100, 1)}%</b>，目標 {f(plan.target / TAU, 0)} rps 會掉約 {f((frac * plan.target) / TAU, 1)} rps。上面的式子是只有固定導板時的版本。
+            </p>
+          ) : (
+            <p>
+              你的機構：{plan.ballMass} × 0.5 ÷ ({m.shape} × {m.wheelMass}) ≈ <b>{f(frac * 100, 1)}%</b>，目標 {f(plan.target / TAU, 0)} rps 會掉約 {f((frac * plan.target) / TAU, 1)} rps。跟轉速、半徑都無關。
+            </p>
+          )}
           <p>想掉少一點：飛輪重一點，或把重量放到外圈。代價是到速比較慢，要更多電流。</p>
         </>
       )
@@ -87,9 +93,9 @@ export const FLYWHEEL_LESSONS: FlywheelLesson[] = [
     sub: '為什麼掉速球就射不準',
     goal: '會從轉速算球速和射程，知道轉速差一點落點差多少',
     Body: ({ m, plan }) => {
-      const v = exitSpeed(plan.target, m.wheelRadius)
-      const r = rangeAtWheel(plan.target, m.wheelRadius, plan)
-      const r95 = rangeAtWheel(plan.target * 0.95, m.wheelRadius, plan)
+      const v = exitSpeed(plan.target, exitRadius(m))
+      const r = rangeAtWheel(plan.target, exitRadius(m), plan)
+      const r95 = rangeAtWheel(plan.target * 0.95, exitRadius(m), plan)
       return (
         <>
           <p>
@@ -97,7 +103,14 @@ export const FLYWHEEL_LESSONS: FlywheelLesson[] = [
           </p>
           <p className="mono">球速 ≈ 0.5 × 轉速 [rps] × 2π × 半徑</p>
           <p>
-            你的機構：{f(plan.target / TAU, 0)} rps × 2π × {f(m.wheelRadius, 4)} m × 0.5 ≈ <b>{f(v, 2)} m/s</b>。仰角 {f((plan.angle * 180) / Math.PI, 0)}°、離地 {f(plan.height, 2)} m 射出，不計空氣阻力，往下掉經過目標高度 {f(plan.goalHeight, 2)} m 的地方離出射點 <b>{Number.isFinite(r) ? `${f(r, 2)} m` : '（打不到那麼高）'}</b>（目標在 {f(plan.goalDistance, 2)} m）。
+            對面也有滾輪的話，球兩邊都被推，球速 ≈ 0.5 ×（大輪輪緣速度 + 對面輪緣速度）。
+          </p>
+          <p>
+            你的機構：
+            {m.back === 'rollers'
+              ? `0.5 × ${f(plan.target / TAU, 0)} rps × 2π × (${f(m.wheelRadius, 4)} + ${f(m.backRatio, 2)} × ${f(m.backRadius, 4)}) m`
+              : `${f(plan.target / TAU, 0)} rps × 2π × ${f(m.wheelRadius, 4)} m × 0.5`}{' '}
+            ≈ <b>{f(v, 2)} m/s</b>。仰角 {f((plan.angle * 180) / Math.PI, 0)}°、離地 {f(plan.height, 2)} m 射出，不計空氣阻力，往下掉經過目標高度 {f(plan.goalHeight, 2)} m 的地方離出射點 <b>{Number.isFinite(r) ? `${f(r, 2)} m` : '（打不到那麼高）'}</b>（目標在 {f(plan.goalDistance, 2)} m）。
           </p>
           <p>
             轉速少 5%，落點變成 {Number.isFinite(r95) ? `${f(r95, 2)} m，近了 ${f((r - r95) * 100, 0)} cm` : '打不到目標高度'}。射程大約跟球速的平方成正比（目標比出射點高的時候差得更多），所以轉速差一點，落點差一截。這就是為什麼要等轉速回來才射下一發。
