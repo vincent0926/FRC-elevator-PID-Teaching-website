@@ -6,6 +6,7 @@ import {
   flightTime,
   launchRange,
   exitSpeed,
+  exitRadius,
   type FlywheelMechanism,
   type FlywheelSimResult,
   type ShotOutcome,
@@ -57,7 +58,7 @@ export function FlywheelView({
     return out
   }, [result])
 
-  const idealV = exitSpeed(plan.target, mech.wheelRadius)
+  const idealV = exitSpeed(plan.target, exitRadius(mech))
   // 比例尺：所有路線和目標都放得下
   const speeds = [idealV, ...shots.map((s) => s.exit)]
   const xMax = Math.max(1, plan.goalDistance + plan.goalWidth / 2, ...speeds.map((v) => launchRange(v, plan.angle, plan.height))) * 1.06

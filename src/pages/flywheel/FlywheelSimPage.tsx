@@ -13,6 +13,7 @@ import {
   shotOutcomes,
   simulateFlywheel,
   wheelForGoal,
+  exitRadius,
   theoryGains,
   type FlywheelGains,
   type FlywheelKnobs,
@@ -64,7 +65,7 @@ export function FlywheelSimPage() {
     }
     return { maxDip, slowest, recoveryFails: metrics.shots.filter((sh) => !(sh.recovery !== null && sh.recovery <= spec.recovery)).length }
   }, [metrics, spec.recovery])
-  const goalW = wheelForGoal(mech.wheelRadius, plan)
+  const goalW = wheelForGoal(exitRadius(mech), plan)
   const pb = usePlayback(result)
   const cursorX = pb.idx !== null ? result.t[pb.idx] : null
   const tol = (spec.tolPct / 100) * plan.target
@@ -107,7 +108,7 @@ export function FlywheelSimPage() {
       <div className="panel fw-mech">
         <b>機構</b>
         <span className="small">
-          {MOTOR_SPECS[mech.motor].label} × {mech.motorCount}、齒比 {mech.gearRatio} : 1、{mech.wheelMass} kg、半徑 {f(mech.wheelRadius * 100, 2)} cm、{SHAPES.find((x) => x.v === mech.shape)?.label ?? `形狀 ${mech.shape}`}
+          {MOTOR_SPECS[mech.motor].label} × {mech.motorCount}、齒比 {mech.gearRatio} : 1、{mech.wheelMass} kg、半徑 {f(mech.wheelRadius * 100, 2)} cm、{SHAPES.find((x) => x.v === mech.shape)?.label ?? `形狀 ${mech.shape}`}、{mech.back === 'rollers' ? `對面滾輪半徑 ${f(mech.backRadius * 100, 2)} cm、${mech.backMass} kg、轉速比 ${mech.backRatio}` : '對面是固定導板'}
         </span>
         <span className="small muted">J {(ff.J * 1e4).toFixed(2)} kg·cm²，最高約 {f(ff.freeSpeed / TAU, 0)} rps</span>
         <button className="linkbtn small" type="button" onClick={() => go('calc')}>

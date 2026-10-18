@@ -8,6 +8,8 @@ import {
   DEFAULT_KNOBS,
   dipFraction,
   exitSpeed,
+  exitRadius,
+  backSurfaceRatio,
   apexHeight,
   EXIT_RATIO,
   fastestSpinUp,
@@ -47,12 +49,12 @@ export function FlywheelCalcPage() {
     if (p) setP({ ballMass: p.mass })
   }
 
-  const v = exitSpeed(plan.target, mech.wheelRadius)
+  const v = exitSpeed(plan.target, exitRadius(mech))
   const range = launchRange(v, plan.angle, plan.height, plan.goalHeight)
   const miss = range - plan.goalDistance
   const hit = Math.abs(miss) <= plan.goalWidth / 2
   // 反推：要進目標 → 要幾 rps
-  const needW = wheelForGoal(mech.wheelRadius, plan)
+  const needW = wheelForGoal(exitRadius(mech), plan)
   const spinUp = useMemo(() => fastestSpinUp(mech, plan.target, knobs.statorLimit), [mech, plan.target, knobs.statorLimit])
   const rows: { name: string; value: string; unit: string; src: string; note: string }[] = [
     { name: 'kS', value: '要量', unit: 'V', src: '量', note: '公式算不出摩擦。慢慢加電壓，飛輪剛好開始轉的電壓就是 kS' },
@@ -95,7 +97,7 @@ export function FlywheelCalcPage() {
               <NumberField label="馬達數量" value={mech.motorCount} onChange={(x) => setM({ motorCount: Math.round(x) })} min={1} max={4} step={1} unit="顆" />
               <NumberField label="齒比" value={mech.gearRatio} onChange={(x) => setM({ gearRatio: x })} min={0.2} max={5} step={0.05} unit=": 1" hint="馬達轉幾圈飛輪轉 1 圈；加速傳動小於 1" />
               <NumberField label="會轉的質量" value={mech.wheelMass} onChange={(x) => setM({ wheelMass: x })} min={0.05} max={10} step={0.1} unit="kg" hint="飛輪＋輪子＋軸" />
-              <NumberField label="輪子半徑" value={mech.wheelRadius} display={100} digits={2} onChange={(x) => setM({ wheelRadius: x })} min={1} max={15} step={0.1} unit="cm" />
+              <NumberField label="輪子半徑" value={mech.wheelRadius} display={100} digits={2} onChange={(x) => setM({ wheelRadius: x })} min={1} max={15} step={0.1} unit="cm" hint="推球的那個輪子；上下都有輪子就填大的那邊" />
               <label className="f">
                 重量分布
                 <span className="inp">
@@ -108,7 +110,28 @@ export function FlywheelCalcPage() {
                   </select>
                 </span>
               </label>
+              <label className="f">
+                球的另一邊
+                <span className="inp">
+                  <select value={mech.back} onChange={(e) => setM({ back: e.target.value === 'rollers' ? 'rollers' : 'hood' })} aria-label="球的另一邊">
+                    <option value="hood">固定導板（不會轉）</option>
+                    <option value="rollers">對面也有滾輪，一起夾著球</option>
+                  </select>
+                </span>
+              </label>
             </div>
+            {mech.back === 'rollers' && (
+              <>
+                <div className="fields three" style={{ marginTop: 12 }}>
+                  <NumberField label="對面滾輪半徑" value={mech.backRadius} display={100} digits={2} onChange={(x) => setM({ backRadius: x })} min={0.5} max={15} step={0.1} unit="cm" />
+                  <NumberField label="對面滾輪質量" value={mech.backMass} onChange={(x) => setM({ backMass: x })} min={0} max={5} step={0.05} unit="kg" hint="幾根加起來（滾輪＋軸）" />
+                  <NumberField label="對面轉速比" value={mech.backRatio} onChange={(x) => setM({ backRatio: x })} min={0.1} max={5} step={0.05} unit="倍" hint="對面滾輪轉速 ÷ 大輪轉速；同一顆馬達 1:1 帶就填 1" />
+                </div>
+                <p className="small muted" style={{ margin: '8px 0 0' }}>
+                  對面輪緣速度是大輪的 {f(backSurfaceRatio(mech), 2)} 倍。球夾在中間，球速 ≈ 0.5 ×（大輪輪緣速度 + 對面輪緣速度）；對面滾輪也會被球拖慢，所以算進轉動慣量和每一發掉的轉速。對面有好幾根的話，半徑填碰到球最後一根的。
+                </p>
+              </>
+            )}
           </div>
 
           <div className="panel">
@@ -151,7 +174,7 @@ export function FlywheelCalcPage() {
               <dt>輪緣速度</dt>
               <dd>{f(plan.target * mech.wheelRadius, 2)} m/s</dd>
               <dt>出口球速</dt>
-              <dd>{f(v, 2)} m/s（輪緣的 {EXIT_RATIO}）</dd>
+              <dd>{mech.back === 'rollers' ? `${f(v, 2)} m/s（兩邊輪緣速度的平均）` : `${f(v, 2)} m/s（輪緣的 ${EXIT_RATIO}）`}</dd>
               <dt>最高點</dt>
               <dd>離地 {f(apexHeight(v, plan.angle, plan.height), 2)} m</dd>
               <dt>落點</dt>
@@ -186,7 +209,7 @@ export function FlywheelCalcPage() {
               )}
             </div>
             <p className="small muted" style={{ marginBottom: 0 }}>
-              球速當成輪緣速度的一半（單邊飛輪）、不計空氣阻力和球的旋轉，都是近似。實際的比例要上機射幾發量落點。
+              {mech.back === 'rollers' ? '球速當成兩邊輪緣速度的平均（不打滑）' : '球速當成輪緣速度的一半（單邊飛輪）'}、不計空氣阻力和球的旋轉，都是近似。實際的比例要上機射幾發量落點。
             </p>
           </div>
 

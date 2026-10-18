@@ -11,6 +11,9 @@ import {
   apexHeight,
   ballAt,
   dipFraction,
+  backSurfaceRatio,
+  exitRadius,
+  impulseRadiusSq,
   exitSpeed,
   fastestSpinUp,
   flightTime,
@@ -242,5 +245,43 @@ describe('2026 得分物件', () => {
     expect(m['fuel-light']).toBe(0.203)
     expect(m['fuel-heavy']).toBe(0.227)
     expect(m.fuel).toBe(0.215)
+  })
+})
+
+describe('對面也有滾輪（上下夾射）', () => {
+  // 大輪半徑 2 in，對面滾輪 1 in、同一顆馬達 1:1：對面輪緣速度是大輪的一半
+  const pinch = { ...DEFAULT_FLYWHEEL, back: 'rollers' as const, backRadius: 0.0254, backMass: 0.3, backRatio: 1 }
+  it('固定導板的結果跟原本一樣', () => {
+    expect(backSurfaceRatio(DEFAULT_FLYWHEEL)).toBe(0)
+    expect(exitRadius(DEFAULT_FLYWHEEL)).toBe(DEFAULT_FLYWHEEL.wheelRadius)
+    expect(impulseRadiusSq(DEFAULT_FLYWHEEL)).toBe(DEFAULT_FLYWHEEL.wheelRadius ** 2)
+    expect(flywheelInertia(DEFAULT_FLYWHEEL)).toBeCloseTo(0.5 * 1.5 * 0.0508 ** 2, 12)
+  })
+  it('球速 = 兩邊輪緣速度的平均', () => {
+    const w = 50 * TAU
+    expect(backSurfaceRatio(pinch)).toBeCloseTo(0.5, 9)
+    expect(exitSpeed(w, exitRadius(pinch))).toBeCloseTo(0.5 * (w * 0.0508 + w * 0.0254), 9)
+    // 同樣的目標，要的轉速比較低
+    expect(wheelForGoal(exitRadius(pinch), DEFAULT_PLAN)!).toBeLessThan(wheelForGoal(exitRadius(DEFAULT_FLYWHEEL), DEFAULT_PLAN)!)
+  })
+  it('對面滾輪的慣量照轉速比平方算進去', () => {
+    const J0 = flywheelInertia(DEFAULT_FLYWHEEL)
+    expect(flywheelInertia(pinch)).toBeCloseTo(J0 + 0.5 * 0.3 * 0.0254 ** 2, 12)
+    expect(flywheelInertia({ ...pinch, backRatio: 2 })).toBeCloseTo(J0 + 0.5 * 0.3 * 0.0254 ** 2 * 4, 12)
+  })
+  it('估的掉速跟模擬接近，射出去的球速用夾射公式', () => {
+    const ffp = computeFlywheelFeedforward(pinch)
+    const g = { ...theoryGains(ffp), kP: 0 }
+    const plan = { ...DEFAULT_PLAN, shots: 1 }
+    const res = simulateFlywheel(pinch, g, IDEAL, plan)
+    const k = Math.round(plan.firstShot / 0.001)
+    const before = res.vel[k - 1]
+    let low = Infinity
+    for (let i = k; i < k + 40; i++) low = Math.min(low, res.vel[i])
+    const frac = (before - low) / before
+    expect(frac).toBeLessThan(dipFraction(pinch, plan.ballMass))
+    expect(frac).toBeGreaterThan(0.5 * dipFraction(pinch, plan.ballMass))
+    const o = shotOutcomes(res, pinch, plan)[0]
+    expect(o.exit).toBeCloseTo(0.5 * o.wheel * (0.0508 + 0.0254), 9)
   })
 })
