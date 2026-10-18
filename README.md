@@ -1,5 +1,7 @@
 # FRC 9427 機構調參學習網站
 
+**作者：FRC9427**
+
 給 FRC 9427 隊員用的前饋與 PID 學習網站。目標是讓你**搞懂**每個參數在做什麼，最後自己把機構調好，不是抄數字。
 
 **👉 打開網站：https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/**
