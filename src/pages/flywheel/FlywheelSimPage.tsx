@@ -27,9 +27,23 @@ import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange } from './flywheelTune'
 const TAU = 2 * Math.PI
 const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
-function usePersisted<T extends object>(key: string, fallback: T): [T, (v: T) => void] {
-  // 舊版存的資料缺欄位時補預設值
-  const [v, setV] = useState<T>(() => ({ ...fallback, ...loadJson<Partial<T>>(key, {}) }))
+/** 存的資料只留型別對、數字有限的欄位，其他用預設值（舊版缺欄位、資料壞掉都不會讓頁面掛掉） */
+function sanitize<T extends object>(fallback: T, saved: unknown): T {
+  if (!saved || typeof saved !== 'object') return fallback
+  const out = { ...fallback }
+  for (const k of Object.keys(fallback) as (keyof T)[]) {
+    const v = (saved as Partial<T>)[k]
+    const ok = typeof v === typeof fallback[k] && (typeof v !== 'number' || Number.isFinite(v))
+    if (ok) out[k] = v as T[keyof T]
+  }
+  return out
+}
+
+function usePersisted<T extends object>(key: string, fallback: T, check: (v: T) => boolean = () => true): [T, (v: T) => void] {
+  const [v, setV] = useState<T>(() => {
+    const s = sanitize(fallback, loadJson<unknown>(key, null))
+    return check(s) ? s : fallback
+  })
   useEffect(() => {
     saveJson(key, v)
   }, [key, v])
@@ -43,14 +57,14 @@ const SHAPES = [
 ]
 
 export function FlywheelSimPage() {
-  const [mech, setMech] = usePersisted<FlywheelMechanism>('flywheel:mechanism', DEFAULT_FLYWHEEL)
+  const [mech, setMech] = usePersisted<FlywheelMechanism>('flywheel:mechanism', DEFAULT_FLYWHEEL, (m) => m.motor in MOTOR_SPECS)
   const [plan, setPlan] = usePersisted<ShotPlan>('flywheel:plan', DEFAULT_PLAN)
   const [knobs, setKnobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
   const [spec, setSpec] = usePersisted<FlywheelSpec>('flywheel:spec', DEFAULT_FLYWHEEL_SPEC)
   const ff = useMemo(() => computeFlywheelFeedforward(mech), [mech])
   const theory = useMemo(() => theoryGains(ff), [ff])
   // null = 跟著理論值（改機構資料時一起變）
-  const [custom, setCustom] = usePersisted<{ gains: FlywheelGains | null }>('flywheel:gains', { gains: null })
+  const [custom, setCustom] = usePersisted<{ gains: FlywheelGains | null }>('flywheel:gains', { gains: null }, (g) => g.gains === null || GAIN_ROWS.every(({ k }) => Number.isFinite(g.gains?.[k])))
   const gains = custom.gains ?? theory
   const [preset, setPreset] = useState<string | null>(null)
 
@@ -213,8 +227,8 @@ export function FlywheelSimPage() {
               const t = theory[k]
               const r = gainRange(k, theory, v)
               const diff = Math.abs(v - t) > 1e-12
-              const digits = Math.max(0, Math.ceil(-Math.log10(r.step * TAU) - 1e-9))
               const show = k === 'kS' ? 1 : TAU
+              const digits = Math.max(0, Math.ceil(-Math.log10(r.step * show) - 1e-9))
               return (
                 <div className={'tune-row' + (diff ? ' changed' : '')} key={k}>
                   <div className="tune-label">

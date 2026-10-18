@@ -35,6 +35,7 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
 
 ## 規則
 
+- 改完要自己審查 5 遍（讀一次 diff，再跑 5 輪：單元測試、型別檢查、lint、建置、瀏覽器測試），5 遍都沒問題就合併上線，不用等 CodeRabbit
 - 內部一律 SI（m、m/s、kg、V；手臂角度 rad，0 = 水平、往上為正，畫面顯示度）。座標是**鼓輪線位移**；`controlTop` 只影響位置換算，不影響轉數制增益
 - 前饋公式：`kG = (m_G·g − F_cb)·r/G · R/(n·kT)`、`kV = G/(r·Kv)`、`kA = m_A·r·R/(G·n·kT)`；`m_G = Σmᵢkᵢ`、`m_A = Σmᵢkᵢ²`
 - 控制器照 Phoenix 6：前饋用**參考**速度與加速度，只有 P、D 用誤差；kS 正負號跟 v_ref
