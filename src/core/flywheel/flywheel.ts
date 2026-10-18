@@ -95,9 +95,22 @@ export interface ShotPlan {
   interval: number
   /** 球的質量 kg */
   ballMass: number
+  /** 出射仰角 rad（0 = 水平） */
+  angle: number
+  /** 出射點離地高度 m */
+  height: number
 }
 
-export const DEFAULT_PLAN: ShotPlan = { target: 50 * 2 * Math.PI, accel: 0, firstShot: 1.5, shots: 3, interval: 0.3, ballMass: 0.235 }
+export const DEFAULT_PLAN: ShotPlan = {
+  target: 50 * 2 * Math.PI,
+  accel: 0,
+  firstShot: 1.5,
+  shots: 3,
+  interval: 0.3,
+  ballMass: 0.235,
+  angle: (50 * Math.PI) / 180,
+  height: 0.5,
+}
 
 /** 球出去的速度 ≈ 輪緣速度的一半（單邊飛輪、另一邊是固定的導板） */
 export const EXIT_RATIO = 0.5
@@ -295,4 +308,98 @@ export function flywheelFailures(m: FlywheelMetrics, plan: ShotPlan, spec: Flywh
   if (m.overshoot > tol) out.push('overshoot')
   if (m.shots.some((s) => s.recovery === null || s.recovery > spec.recovery)) out.push('recovery')
   return out
+}
+
+/**
+ * 球速與射程：拋體運動，不計空氣阻力、球的旋轉（近似模型）。
+ * 球出去的速度 = EXIT_RATIO × 輪緣速度（ω·r），跟模擬裡球帶走的角動量用同一個假設。
+ */
+export const GRAVITY = 9.81
+
+export function exitSpeed(w: number, r: number): number {
+  return EXIT_RATIO * Math.max(0, w) * r
+}
+
+/** 從離地 height、仰角 angle、速度 v 射出，到落地的時間 s */
+export function flightTime(v: number, angle: number, height: number): number {
+  const vy = v * Math.sin(angle)
+  return (vy + Math.sqrt(Math.max(0, vy * vy + 2 * GRAVITY * Math.max(0, height)))) / GRAVITY
+}
+
+/** 落地點離出射點的水平距離 m */
+export function launchRange(v: number, angle: number, height: number): number {
+  return v * Math.cos(angle) * flightTime(v, angle, height)
+}
+
+/** 飛行 τ 秒後的位置（相對出射點，往上為正）m */
+export function ballAt(v: number, angle: number, tau: number): { x: number; y: number } {
+  return { x: v * Math.cos(angle) * tau, y: v * Math.sin(angle) * tau - 0.5 * GRAVITY * tau * tau }
+}
+
+/** 要射到 range 遠（落地）需要的球速 m/s；這個仰角射不到就是 null */
+export function speedForRange(range: number, angle: number, height: number): number | null {
+  const c = Math.cos(angle)
+  const d = 2 * c * c * (range * Math.tan(angle) + height)
+  if (range <= 0 || c <= 1e-6 || d <= 0) return null
+  return Math.sqrt((GRAVITY * range * range) / d)
+}
+
+/** 輪子轉速 rad/s → 射程 m */
+export function rangeAtWheel(w: number, r: number, plan: ShotPlan): number {
+  return launchRange(exitSpeed(w, r), plan.angle, plan.height)
+}
+
+/**
+ * 一發大概掉多少（比例）：球帶走 m_ball·EXIT_RATIO·ω·r² 的角動量，馬達在 30 ms 內來不及補，
+ * Δω/ω ≈ m_ball·EXIT_RATIO·r² / J = m_ball·EXIT_RATIO / (shape·m_wheel)。跟轉速、半徑都無關。
+ */
+export function dipFraction(mech: FlywheelMechanism, ballMass: number): number {
+  return (ballMass * EXIT_RATIO * mech.wheelRadius ** 2) / flywheelInertia(mech)
+}
+
+export interface ShotOutcome {
+  /** 球碰到輪子的時間 s */
+  at: number
+  /** 那時輪子的轉速 rad/s */
+  wheel: number
+  /** 出口球速 m/s */
+  exit: number
+  /** 離開輪子的時間 s */
+  release: number
+  /** 射程 m */
+  range: number
+  /** 比用目標轉速射的落點差多少 m（負的是近了） */
+  miss: number
+}
+
+export function shotOutcomes(res: FlywheelSimResult, mech: FlywheelMechanism, plan: ShotPlan): ShotOutcome[] {
+  const ideal = rangeAtWheel(plan.target, mech.wheelRadius, plan)
+  return res.shotTimes.map((at) => {
+    const k = Math.min(res.vel.length - 1, Math.round(at / CONTROL_DT))
+    const wheel = res.vel[k]
+    const exit = exitSpeed(wheel, mech.wheelRadius)
+    const range = launchRange(exit, plan.angle, plan.height)
+    return { at, wheel, exit, release: at + CONTACT, range, miss: range - ideal }
+  })
+}
+
+/**
+ * 最快到速：12 V 全開、每顆馬達電流限在 statorLimit（0 = 不限），不含摩擦和回授，
+ * 從 0 到目標的 98% 要多久 s。到不了是 null。1F 用來估「馬達夠不夠力」。
+ */
+export function fastestSpinUp(mech: FlywheelMechanism, target: number, statorLimit: number): number | null {
+  const mot = motorModel(mech.motor)
+  const J = flywheelInertia(mech)
+  const G = mech.gearRatio
+  const goal = 0.98 * target
+  if (goal >= (mot.Kv * 12) / G) return null
+  const dt = 1e-4
+  let w = 0
+  for (let t = 0; t < 30; t += dt) {
+    if (w >= goal) return t
+    let i = (12 - (w * G) / mot.Kv) / mot.R
+    if (statorLimit > 0) i = Math.min(i, statorLimit)
+    w += ((G * mech.motorCount * mot.kT * i) / J) * dt
+  }
+  return null
 }

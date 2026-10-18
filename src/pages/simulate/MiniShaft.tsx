@@ -20,9 +20,10 @@ export interface Playback {
   setSpeed: (s: number) => void
 }
 
-export function usePlayback(result: SimResult | null): Playback {
+/** 只要有時間軸 t 的結果都能播（電梯、手臂的 SimResult，飛輪的 FlywheelSimResult） */
+export function usePlayback<R extends { t: Float64Array }>(result: R | null): Playback {
   // 播放位置只對應某一次的結果；結果換了就回到「顯示最後一格」
-  const [state, setState] = useState<{ of: SimResult | null; idx: number | null; playing: boolean }>({ of: null, idx: null, playing: false })
+  const [state, setState] = useState<{ of: R | null; idx: number | null; playing: boolean }>({ of: null, idx: null, playing: false })
   const [speed, setSpeedState] = useState<number>(1)
   const raf = useRef(0)
   const current = state.of === result
@@ -109,7 +110,7 @@ export function MiniShaft({ result, travel, goal, idx }: { result: SimResult | n
   )
 }
 
-export function PlaybackBar({ result, pb, unit = 'm' }: { result: SimResult | null; pb: Playback; unit?: 'm' | 'rad' }) {
+export function PlaybackBar({ result, pb, unit = 'm', readout }: { result: { t: Float64Array; pos?: Float64Array } | null; pb: Playback; unit?: 'm' | 'rad'; readout?: (k: number) => string }) {
   const last = result ? result.t.length - 1 : 0
   const k = pb.idx ?? last
   const t = result?.t[k] ?? 0
@@ -137,7 +138,7 @@ export function PlaybackBar({ result, pb, unit = 'm' }: { result: SimResult | nu
         onChange={(e) => pb.seek(Number(e.target.value))}
       />
       <span className="small muted num-w">
-        {t.toFixed(2)} s・{result && Number.isFinite(result.pos[k]) ? (unit === 'rad' ? `${((result.pos[k] * 180) / Math.PI).toFixed(1)}°` : `${(result.pos[k] * 100).toFixed(1)} cm`) : '—'}
+        {t.toFixed(2)} s・{readout ? readout(k) : result?.pos && Number.isFinite(result.pos[k]) ? unit === 'rad' ? `${((result.pos[k] * 180) / Math.PI).toFixed(1)}°` : `${(result.pos[k] * 100).toFixed(1)} cm` : '—'}
       </span>
     </div>
     <p className="small muted" style={{ margin: 0 }}>

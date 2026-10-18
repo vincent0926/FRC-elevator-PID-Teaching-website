@@ -16,6 +16,9 @@ const FLOORS: { id: PageId; lv: string; name: string; short: string }[] = [
   { id: 'home', lv: 'G', name: '總覽', short: '總覽' },
 ]
 
+/** 射球飛輪有的樓層 */
+const FLYWHEEL_PAGES: PageId[] = ['sim', 'calc']
+
 type Theme = 'light' | 'dark' | null
 
 function isDark(t: Theme) {
@@ -25,10 +28,10 @@ function isDark(t: Theme) {
 export function Shell({ children }: { children: ReactNode }) {
   const { page: storePage, go, track, setTrack, courseChapter, pendingSection, clearPendingSection } = useStore()
   const trackName = track === 'arm' ? '手臂' : track === 'flywheel' ? '射球飛輪' : '電梯'
-  // 射球飛輪只有 3F 模擬，其他樓層和使用說明都不顯示
+  // 射球飛輪只有 1F 計算和 3F 模擬，其他樓層和使用說明都不顯示
   const flywheel = track === 'flywheel'
-  const floors = flywheel ? FLOORS.filter((f) => f.id === 'sim') : FLOORS
-  const page = flywheel ? 'sim' : storePage
+  const floors = flywheel ? FLOORS.filter((f) => FLYWHEEL_PAGES.includes(f.id)) : FLOORS
+  const page = flywheel && !FLYWHEEL_PAGES.includes(storePage) ? 'calc' : storePage
   const [theme, setTheme] = useState<Theme>(() => loadJson<Theme>('theme', null))
 
   useEffect(() => {

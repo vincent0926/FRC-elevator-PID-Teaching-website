@@ -1,6 +1,6 @@
 import { useStore, type Track } from './store'
 
-/** 進站先選機構：電梯、單關節手臂或射球飛輪。選完才進到各樓層（射球飛輪只有 3F 模擬）。 */
+/** 進站先選機構：電梯、單關節手臂或射球飛輪。選完才進到各樓層（射球飛輪只有 1F、3F）。 */
 
 const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = [
   {
@@ -19,7 +19,7 @@ const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = 
     id: 'flywheel',
     title: '射球飛輪',
     what: '控制轉速的射球機構：先轉到目標轉速，球打出去會掉速。',
-    points: ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '只有 3F 模擬：到速、掉速多少、多快回來'],
+    points: ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '1F 計算（球速、射程）、3F 模擬（側視動畫、到速、掉速、落點）'],
   },
 ]
 
@@ -79,7 +79,7 @@ export function Chooser() {
           FRC 9427 前饋與 PID 學習
         </p>
         <h1>你要調哪一種機構？</h1>
-        <p className="lead">電梯和手臂是位置控制，調參流程一樣（理論值 → 模擬 → 上機錄日誌 → 調參），差在重力怎麼算。射球飛輪是速度控制，目前只有模擬。</p>
+        <p className="lead">電梯和手臂是位置控制，調參流程一樣（理論值 → 模擬 → 上機錄日誌 → 調參），差在重力怎麼算。射球飛輪是速度控制，目前有計算和模擬。</p>
         <div className="chooser-cards">
           {CHOICES.map((c) => {
             const Icon = ICONS[c.id]

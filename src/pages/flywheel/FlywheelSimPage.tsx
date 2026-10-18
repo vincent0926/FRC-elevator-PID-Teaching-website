@@ -1,64 +1,37 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useStore } from '../../app/store'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
-import { MOTOR_SPECS, type MotorId } from '../../core/motors'
+import { MOTOR_SPECS } from '../../core/motors'
 import { flywheelJava } from '../../core/codegen/flywheel'
 import {
   computeFlywheelFeedforward,
-  DEFAULT_FLYWHEEL,
   DEFAULT_FLYWHEEL_SPEC,
   DEFAULT_KNOBS,
-  DEFAULT_PLAN,
   flywheelFailures,
   flywheelMetrics,
+  shotOutcomes,
   simulateFlywheel,
   theoryGains,
   type FlywheelGains,
   type FlywheelKnobs,
-  type FlywheelMechanism,
   type FlywheelSpec,
   type ShotPlan,
 } from '../../core/flywheel/flywheel'
-import { loadJson, saveJson } from '../../storage/local'
+import { PlaybackBar, usePlayback } from '../simulate/MiniShaft'
 import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange } from './flywheelTune'
+import { FlywheelView } from './FlywheelView'
+import { SHAPES, useFlywheelMechanism, usePersisted, useShotPlan } from './flywheelStore'
 
 /** 3F 射球飛輪模擬：轉到目標轉速、連射幾發，看掉速和恢復。內部 SI（rad/s），畫面一律 rps。 */
 
 const TAU = 2 * Math.PI
 const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
-/** 存的資料只留型別對、數字有限的欄位，其他用預設值（舊版缺欄位、資料壞掉都不會讓頁面掛掉） */
-function sanitize<T extends object>(fallback: T, saved: unknown): T {
-  if (!saved || typeof saved !== 'object') return fallback
-  const out = { ...fallback }
-  for (const k of Object.keys(fallback) as (keyof T)[]) {
-    const v = (saved as Partial<T>)[k]
-    const ok = typeof v === typeof fallback[k] && (typeof v !== 'number' || Number.isFinite(v))
-    if (ok) out[k] = v as T[keyof T]
-  }
-  return out
-}
-
-function usePersisted<T extends object>(key: string, fallback: T, check: (v: T) => boolean = () => true): [T, (v: T) => void] {
-  const [v, setV] = useState<T>(() => {
-    const s = sanitize(fallback, loadJson<unknown>(key, null))
-    return check(s) ? s : fallback
-  })
-  useEffect(() => {
-    saveJson(key, v)
-  }, [key, v])
-  return [v, setV]
-}
-
-const SHAPES = [
-  { v: 0.5, label: '實心圓盤（0.5）' },
-  { v: 0.75, label: '外圈比較重（0.75）' },
-  { v: 1, label: '薄環，重量都在外圈（1.0）' },
-]
-
 export function FlywheelSimPage() {
-  const [mech, setMech] = usePersisted<FlywheelMechanism>('flywheel:mechanism', DEFAULT_FLYWHEEL, (m) => m.motor in MOTOR_SPECS)
-  const [plan, setPlan] = usePersisted<ShotPlan>('flywheel:plan', DEFAULT_PLAN)
+  const { go } = useStore()
+  const [mech] = useFlywheelMechanism()
+  const [plan, setPlan] = useShotPlan()
   const [knobs, setKnobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
   const [spec, setSpec] = usePersisted<FlywheelSpec>('flywheel:spec', DEFAULT_FLYWHEEL_SPEC)
   const ff = useMemo(() => computeFlywheelFeedforward(mech), [mech])
@@ -68,7 +41,6 @@ export function FlywheelSimPage() {
   const gains = custom.gains ?? theory
   const [preset, setPreset] = useState<string | null>(null)
 
-  const setM = (p: Partial<FlywheelMechanism>) => setMech({ ...mech, ...p })
   const setP = (p: Partial<ShotPlan>) => setPlan({ ...plan, ...p })
   const setK = (p: Partial<FlywheelKnobs>) => setKnobs({ ...knobs, ...p })
   const setGain = (k: keyof FlywheelGains, v: number) => {
@@ -79,6 +51,9 @@ export function FlywheelSimPage() {
   const result = useMemo(() => simulateFlywheel(mech, gains, knobs, plan), [mech, gains, knobs, plan])
   const metrics = useMemo(() => flywheelMetrics(result, plan, spec), [result, plan, spec])
   const fails = flywheelFailures(metrics, plan, spec)
+  const outcomes = useMemo(() => shotOutcomes(result, mech, plan), [result, mech, plan])
+  const pb = usePlayback(result)
+  const cursorX = pb.idx !== null ? result.t[pb.idx] : null
   const tol = (spec.tolPct / 100) * plan.target
   const reachable = plan.target < ff.freeSpeed * 0.9
 
@@ -112,55 +87,29 @@ export function FlywheelSimPage() {
       <div className="head">
         <div>
           <h1 id="t-fw-sim">射球飛輪・模擬</h1>
-          <p className="lead">從靜止轉到目標轉速，連射幾發，看每一發掉多少、多快回來。數字都是 Phoenix 6 的 rps，可以直接填進程式。</p>
+          <p className="lead">從靜止轉到目標轉速，連射幾發，看每一發掉多少、多快回來，球落在哪裡。數字都是 Phoenix 6 的 rps，可以直接填進程式。</p>
         </div>
       </div>
 
-      <div className="grid2">
-        <div className="panel">
-          <h2>機構</h2>
-          <div className="fields">
-            <label className="f">
-              馬達
-              <span className="inp">
-                <select value={mech.motor} onChange={(e) => setM({ motor: e.target.value as MotorId })} aria-label="馬達">
-                  {Object.values(MOTOR_SPECS).map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </span>
-            </label>
-            <NumberField label="馬達數量" value={mech.motorCount} onChange={(v) => setM({ motorCount: Math.round(v) })} min={1} max={4} step={1} unit="顆" />
-            <NumberField label="齒比" value={mech.gearRatio} onChange={(v) => setM({ gearRatio: v })} min={0.2} max={5} step={0.05} unit=": 1" hint="馬達轉幾圈飛輪轉 1 圈；加速傳動小於 1" />
-            <NumberField label="會轉的質量" value={mech.wheelMass} onChange={(v) => setM({ wheelMass: v })} min={0.05} max={10} step={0.1} unit="kg" hint="飛輪＋輪子＋軸" />
-            <NumberField label="輪子半徑" value={mech.wheelRadius} display={100} digits={2} onChange={(v) => setM({ wheelRadius: v })} min={1} max={15} step={0.1} unit="cm" />
-            <label className="f">
-              重量分布
-              <span className="inp">
-                <select value={mech.shape} onChange={(e) => setM({ shape: Number(e.target.value) })} aria-label="重量分布">
-                  {SHAPES.map((s) => (
-                    <option key={s.v} value={s.v}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </span>
-            </label>
-          </div>
-          <dl className="fw-derived">
-            <dt>轉動慣量 J</dt>
-            <dd>{(ff.J * 1e4).toFixed(2)} kg·cm²</dd>
-            <dt>理論 kV</dt>
-            <dd>{f(ff.kV * TAU, 4)} V/rps</dd>
-            <dt>理論 kA</dt>
-            <dd>{f(ff.kA * TAU, 4)} V/(rps/s)</dd>
-            <dt>最高轉速</dt>
-            <dd>約 {f(ff.freeSpeed / TAU, 0)} rps（12 V，不含摩擦）</dd>
-          </dl>
-        </div>
+      <div className="panel fw-mech">
+        <b>機構</b>
+        <span className="small">
+          {MOTOR_SPECS[mech.motor].label} × {mech.motorCount}、齒比 {mech.gearRatio} : 1、{mech.wheelMass} kg、半徑 {f(mech.wheelRadius * 100, 2)} cm、{SHAPES.find((x) => x.v === mech.shape)?.label ?? `形狀 ${mech.shape}`}
+        </span>
+        <span className="small muted">J {(ff.J * 1e4).toFixed(2)} kg·cm²，最高約 {f(ff.freeSpeed / TAU, 0)} rps</span>
+        <button className="linkbtn small" type="button" onClick={() => go('calc')}>
+          到 1F 改機構
+        </button>
+      </div>
 
+      <div className="panel" style={{ marginTop: 20 }}>
+        <FlywheelView result={result} mech={mech} plan={plan} tol={tol} shots={outcomes} idx={pb.idx} />
+        <div style={{ marginTop: 10 }}>
+          <PlaybackBar result={result} pb={pb} readout={(k) => `${f(result.vel[k] / TAU, 1)} rps`} />
+        </div>
+      </div>
+
+      <div className="grid2" style={{ marginTop: 20 }}>
         <div className="panel">
           <h2>射球</h2>
           <div className="fields">
@@ -170,8 +119,13 @@ export function FlywheelSimPage() {
             <NumberField label="每發間隔" value={plan.interval} onChange={(v) => setP({ interval: v })} min={0.05} max={2} step={0.05} unit="s" />
             <NumberField label="第一發" value={plan.firstShot} onChange={(v) => setP({ firstShot: v })} min={0.2} max={5} step={0.1} unit="s" hint="從靜止開始算" />
             <NumberField label="球的質量" value={plan.ballMass} onChange={(v) => setP({ ballMass: v })} min={0.01} max={1} step={0.005} unit="kg" />
+            <NumberField label="出射仰角" value={plan.angle} display={180 / Math.PI} digits={0} onChange={(v) => setP({ angle: v })} min={5} max={85} step={1} unit="°" />
+            <NumberField label="出射高度" value={plan.height} onChange={(v) => setP({ height: v })} min={0} max={2} step={0.05} unit="m" hint="離地多高" />
           </div>
-          <h3 style={{ marginTop: 14 }}>真實一點（近似模型）</h3>
+        </div>
+
+        <div className="panel">
+          <h2>真實一點（近似模型）</h2>
           <div className="fields">
             <NumberField label="摩擦（等效 kS）" value={knobs.friction} onChange={(v) => setK({ friction: v })} min={0} max={2} step={0.01} unit="V" />
             <NumberField label="Stator 電流限制" value={knobs.statorLimit} onChange={(v) => setK({ statorLimit: v })} min={0} max={200} step={5} unit="A" hint="每顆馬達；0 = 不限" />
@@ -181,7 +135,7 @@ export function FlywheelSimPage() {
             PeakReverseVoltage = 0（不出反向電壓，掉速時只靠摩擦慢下來）
           </label>
           <p className="small muted" style={{ marginBottom: 0 }}>
-            球帶走的轉速用動量估：球出去的速度當成輪緣速度的一半。這是近似模型。
+            球帶走的轉速用動量估：球出去的速度當成輪緣速度的一半。射程用拋體運動算，不計空氣阻力。這些都是近似模型。
           </p>
         </div>
       </div>
@@ -265,9 +219,9 @@ export function FlywheelSimPage() {
         <p className="small muted" style={{ margin: '14px 0 6px' }}>
           以下是模擬結果，不是實測。灰色直條是球碰到輪子的時間。
         </p>
-        <Chart title="轉速" x={result.t} series={charts.vel} height={240} yLabel="rps" syncKey="flywheel" bands={shotBands} note="虛線是目標，實線是飛輪真的轉速。每一發都會往下掉一個缺口，缺口越淺、越快填回來越好。" />
-        <Chart title="電壓（前饋 + 回授）" x={result.t} series={charts.volt} height={190} yLabel="V" syncKey="flywheel" bands={shotBands} note="綠線是前饋（kS + kV·目標轉速 + kA·加速度），紅線是回授（看誤差補的）。穩定轉的時候紅線應該接近 0。" />
-        <Chart title="電流" x={result.t} series={charts.cur} height={170} yLabel="A" syncKey="flywheel" bands={shotBands} note="貼著電流限制時馬達已經出全力，調 PID 沒有用。" />
+        <Chart title="轉速" x={result.t} series={charts.vel} height={240} yLabel="rps" syncKey="flywheel" bands={shotBands} cursorX={cursorX} note="虛線是目標，實線是飛輪真的轉速。每一發都會往下掉一個缺口，缺口越淺、越快填回來越好。" />
+        <Chart title="電壓（前饋 + 回授）" x={result.t} series={charts.volt} height={190} yLabel="V" syncKey="flywheel" bands={shotBands} cursorX={cursorX} note="綠線是前饋（kS + kV·目標轉速 + kA·加速度），紅線是回授（看誤差補的）。穩定轉的時候紅線應該接近 0。" />
+        <Chart title="電流" x={result.t} series={charts.cur} height={170} yLabel="A" syncKey="flywheel" bands={shotBands} cursorX={cursorX} note="貼著電流限制時馬達已經出全力，調 PID 沒有用。" />
       </div>
 
       <div className="panel" style={{ marginTop: 20 }}>
@@ -328,6 +282,36 @@ export function FlywheelSimPage() {
             </tbody>
           </table>
         </div>
+        <h3 style={{ margin: '16px 0 6px' }}>每一發的球</h3>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>發</th>
+                <th className="num">輪子轉速</th>
+                <th className="num">出口球速</th>
+                <th className="num">落點</th>
+                <th className="num">比目標</th>
+              </tr>
+            </thead>
+            <tbody>
+              {outcomes.map((o, i) => (
+                <tr key={i}>
+                  <td>第 {i + 1} 發</td>
+                  <td className="num">{f(o.wheel / TAU, 1)} rps</td>
+                  <td className="num">{f(o.exit, 2)} m/s</td>
+                  <td className="num">{f(o.range, 2)} m</td>
+                  <td className="num">
+                    {o.miss >= 0 ? '遠' : '近'} {f(Math.abs(o.miss) * 100, 0)} cm
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="small muted" style={{ margin: '6px 0 0' }}>
+          「比目標」是跟用目標轉速射的落點比。轉速差一點，落點就差一截：射程大約跟球速的平方成正比。
+        </p>
         <p className="small" style={{ margin: '10px 0 0' }}>
           整體：{fails.length === 0 ? <b className="pass">全部達標</b> : <b className="fail">{fails.length} 項沒過</b>}
         </p>
