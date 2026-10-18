@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { MOTOR_SPECS } from '../../core/motors'
 import { DEFAULT_FLYWHEEL, DEFAULT_PLAN, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
-import { loadJson, saveJson } from '../../storage/local'
+import { loadJson, loadSession, saveJson, saveSession } from '../../storage/local'
 
 /**
  * 射球飛輪 1F、3F 共用的資料：存在 localStorage，換頁時重新讀，所以 1F 改機構 3F 會跟著變。
@@ -27,7 +27,15 @@ export function usePersisted<T extends object>(key: string, fallback: T, check: 
   useEffect(() => {
     saveJson(key, v)
   }, [key, v])
-  return [v, setV]
+  // 改了馬上存：改完立刻換頁（例如 1F 選好軌跡就到 3F）時，effect 來不及跑
+  const set = useCallback(
+    (x: T) => {
+      saveJson(key, x)
+      setV(x)
+    },
+    [key],
+  )
+  return [v, set]
 }
 
 export const useFlywheelMechanism = () => usePersisted<FlywheelMechanism>('flywheel:mechanism', DEFAULT_FLYWHEEL, (m) => m.motor in MOTOR_SPECS && (m.back === 'hood' || m.back === 'rollers'))
@@ -45,6 +53,18 @@ export function useShotPlan() {
   // 要在 usePersisted 讀存檔之前改好
   useState(migratePlan)
   return usePersisted<ShotPlan>('flywheel:plan', DEFAULT_PLAN)
+}
+
+/**
+ * 進站選的用法，跟選的機構一樣存在這個分頁（sessionStorage）：
+ * 彈道 = 1F 算轉速和仰角（選軌跡）→ 3F 連射模擬；客製化 = 1F 原本的計算頁、3F 連射模擬參數自己設。
+ */
+export type FlywheelStyle = 'ballistic' | 'custom'
+export function loadFlywheelStyle(): FlywheelStyle {
+  return loadSession('flywheel:style') === 'ballistic' ? 'ballistic' : 'custom'
+}
+export function saveFlywheelStyle(s: FlywheelStyle) {
+  saveSession('flywheel:style', s)
 }
 
 export const SHAPES = [

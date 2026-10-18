@@ -488,7 +488,7 @@ export function fastestSpinUp(mech: FlywheelMechanism, target: number, statorLim
   return null
 }
 
-/** 模式 1「算轉速和仰角」的一條候選軌跡 */
+/** 彈道 1F「算轉速和仰角」的一條候選軌跡 */
 export interface TrajectoryOption {
   /** 出射仰角 rad */
   angle: number
@@ -506,7 +506,7 @@ export interface TrajectoryOption {
   reachable: boolean
 }
 
-/** 模式 1 列出來給人選的仰角：20° 到 75°，每 5° 一條 */
+/** 彈道 1F 列出來給人選的仰角：20° 到 75°，每 5° 一條 */
 export const TRAJECTORY_ANGLES = Array.from({ length: 12 }, (_, i) => ((20 + i * 5) * Math.PI) / 180)
 
 /**

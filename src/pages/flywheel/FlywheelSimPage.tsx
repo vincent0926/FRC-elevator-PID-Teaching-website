@@ -24,23 +24,15 @@ import {
 import { PlaybackBar, usePlayback } from '../simulate/MiniShaft'
 import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText } from './flywheelTune'
 import { FlywheelView } from './FlywheelView'
-import { FlywheelAim } from './FlywheelAim'
 import { BallFields, HubPreset, MechFields } from './FlywheelForms'
 import { SHAPES, useFlywheelMechanism, usePersisted, useShotPlan } from './flywheelStore'
 
-/**
- * 3F 射球飛輪，兩種模式：
- * 1. 算轉速和仰角（FlywheelAim）：給基本參數和距離，列出每個仰角要的轉速，自己選一條軌跡
- * 2. 連射模擬：轉到目標轉速、連射幾發，看掉速和恢復。內部 SI（rad/s），畫面一律 rps。
- */
+/** 3F 射球飛輪連射模擬：轉到目標轉速、連射幾發，看掉速和恢復。內部 SI（rad/s），畫面一律 rps。 */
 
 const TAU = 2 * Math.PI
 const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
-type Mode = 'aim' | 'sim'
-
 export function FlywheelSimPage() {
-  const [{ mode }, setMode] = usePersisted<{ mode: Mode }>('flywheel:mode', { mode: 'aim' }, (m) => m.mode === 'aim' || m.mode === 'sim')
   const [mech, setMech] = useFlywheelMechanism()
   const [plan, setPlan] = useShotPlan()
   return (
@@ -48,40 +40,15 @@ export function FlywheelSimPage() {
       <div className="head">
         <div>
           <h1 id="t-fw-sim">射球飛輪・模擬</h1>
-          <p className="lead">
-            {mode === 'aim'
-              ? '先填機構和球，再填離目標多遠，看每個仰角要幾 rps，選一條軌跡。'
-              : '從靜止轉到目標轉速，連射幾發，看每一發掉多少、多快回來，球落在哪裡。數字都是 Phoenix 6 的 rps，可以直接填進程式。'}
-          </p>
+          <p className="lead">從靜止轉到目標轉速，連射幾發，看每一發掉多少、多快回來，球落在哪裡。數字都是 Phoenix 6 的 rps，可以直接填進程式。</p>
         </div>
       </div>
-      <div className="seg fa-mode" role="group" aria-label="模式">
-        <button type="button" aria-pressed={mode === 'aim'} onClick={() => setMode({ mode: 'aim' })}>
-          ① 算轉速和仰角
-        </button>
-        <button type="button" aria-pressed={mode === 'sim'} onClick={() => setMode({ mode: 'sim' })}>
-          ② 連射模擬
-        </button>
-      </div>
-      {mode === 'aim' ? (
-        <FlywheelAim
-          mech={mech}
-          setMech={setMech}
-          plan={plan}
-          setPlan={setPlan}
-          onSimulate={() => {
-            setMode({ mode: 'sim' })
-            window.scrollTo({ top: 0 })
-          }}
-        />
-      ) : (
-        <ShotSim mech={mech} setMech={setMech} plan={plan} setPlan={setPlan} />
-      )}
+      <ShotSim mech={mech} setMech={setMech} plan={plan} setPlan={setPlan} />
     </section>
   )
 }
 
-/** 模式 2：連射模擬（原本的 3F） */
+/** 連射模擬本體 */
 function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; setMech: (m: FlywheelMechanism) => void; plan: ShotPlan; setPlan: (p: ShotPlan) => void }) {
   const { go } = useStore()
   const [knobs, setKnobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)

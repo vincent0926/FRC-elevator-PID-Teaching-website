@@ -524,7 +524,6 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .fv-read b { color: var(--ink) }
 .fv-read em { font-style: normal; color: var(--ink-3); margin-left: 2px }
 .fw-mech { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
-.fa-mode { margin: 4px 0 18px }
 .fa-step { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; background: var(--yellow); color: var(--yellow-ink); font-size: 13px; font-weight: 700; vertical-align: 2px }
 .fa-view { display: block; margin: 6px auto 10px; max-height: 420px }
 .fa-path { cursor: pointer }
