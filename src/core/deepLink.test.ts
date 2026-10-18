@@ -11,6 +11,7 @@ describe('課程深層連結', () => {
     })
   })
   it('不合法的值一律忽略，不會拿來用', () => {
+    expect(parseDeepLink('?track=flywheel')).toEqual({ track: 'flywheel' })
     expect(parseDeepLink('?track=robot&scenario=<script>&section=a%20b&from=course&ch=99')).toEqual({})
     expect(parseDeepLink('?from=evil&ch=3')).toEqual({})
     expect(parseDeepLink('?from=course&ch=-1')).toEqual({})

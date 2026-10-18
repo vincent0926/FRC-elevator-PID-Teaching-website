@@ -1,7 +1,7 @@
 /**
  * 從 FRC 9427 程式課程（教學網站）連進來的深層連結。
  *
- *   ?track=elevator|arm   直接進電梯或手臂，不用先選
+ *   ?track=elevator|arm|flywheel   直接進電梯、手臂或射球飛輪，不用先選
  *   &scenario=<情境 id>    進 3F 時直接載入這個教學情境
  *   &section=<元素 id>     捲到這個區塊（<details> 會自動打開），例如 4F 的 unit4
  *   &from=course&ch=<章>   顯示「回到課程第幾章」的連結
@@ -16,7 +16,7 @@ export const COURSE_URL = 'https://vincent0926.github.io/FRC9427teaching-website
 export const COURSE_CHAPTERS = 20
 export const DEEP_LINK_PARAMS = ['track', 'scenario', 'section', 'from', 'ch'] as const
 
-export type DeepLinkTrack = 'elevator' | 'arm'
+export type DeepLinkTrack = 'elevator' | 'arm' | 'flywheel'
 
 export interface DeepLink {
   track?: DeepLinkTrack
@@ -32,7 +32,7 @@ export function parseDeepLink(search: string): DeepLink {
   const q = new URLSearchParams(search)
   const out: DeepLink = {}
   const track = q.get('track')
-  if (track === 'elevator' || track === 'arm') out.track = track
+  if (track === 'elevator' || track === 'arm' || track === 'flywheel') out.track = track
   const scenario = q.get('scenario')
   if (scenario && ID.test(scenario)) out.scenario = scenario
   const section = q.get('section')

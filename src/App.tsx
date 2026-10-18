@@ -12,10 +12,18 @@ import { ArmSimPage } from './pages/arm/ArmSimPage'
 import { ArmTuningPage } from './pages/arm/ArmTuningPage'
 import { ArmLearnPage } from './pages/arm/ArmLearnPage'
 import { GuidePage } from './pages/guide/GuidePage'
+import { FlywheelSimPage } from './pages/flywheel/FlywheelSimPage'
 
 export default function App() {
   const { page, track } = useStore()
   if (!track) return <Chooser />
+  // 射球飛輪只有一頁：不管網址停在哪一樓都顯示模擬
+  if (track === 'flywheel')
+    return (
+      <Shell>
+        <FlywheelSimPage />
+      </Shell>
+    )
   if (track === 'arm')
     return (
       <Shell>
