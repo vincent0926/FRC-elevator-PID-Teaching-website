@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import {
+  apexHeight,
   ballAt,
   CONTACT,
   flightTime,
@@ -10,10 +11,11 @@ import {
   type ShotOutcome,
   type ShotPlan,
 } from '../../core/flywheel/flywheel'
+import { missText } from './flywheelTune'
 
 /**
- * 射球飛輪側視圖：左邊是飛輪（畫面轉速放慢，輪子不照比例），右邊是球飛出去的路線（照比例，不計空氣阻力）。
- * 虛線是用目標轉速射的路線；每一發實際的路線和落點畫在上面，掉速的那發會落在虛線前面。
+ * 射球飛輪側視圖：左邊是飛輪（畫面轉速放慢，輪子不照比例），右邊是球飛出去的路線和目標（照比例，不計空氣阻力）。
+ * 虛線是用目標轉速射的路線；每一發往下掉經過目標高度的地方畫一個點，進了是綠色、沒進是紅色。
  */
 
 const W = 640
@@ -56,15 +58,18 @@ export function FlywheelView({
   }, [result])
 
   const idealV = exitSpeed(plan.target, mech.wheelRadius)
-  const idealRange = launchRange(idealV, plan.angle, plan.height)
-  // 比例尺：所有路線都放得下
+  // 比例尺：所有路線和目標都放得下
   const speeds = [idealV, ...shots.map((s) => s.exit)]
-  const xMax = Math.max(1, ...speeds.map((v) => launchRange(v, plan.angle, plan.height))) * 1.06
-  const yMax = Math.max(0.5, ...speeds.map((v) => plan.height + (v * Math.sin(plan.angle)) ** 2 / (2 * 9.81))) * 1.12
+  const xMax = Math.max(1, plan.goalDistance + plan.goalWidth / 2, ...speeds.map((v) => launchRange(v, plan.angle, plan.height))) * 1.06
+  const yMax = Math.max(0.5, plan.goalHeight, ...speeds.map((v) => apexHeight(v, plan.angle, plan.height))) * 1.12
   const s = Math.min((W - LX - 24) / xMax, (GROUND - 18) / yMax)
   const ly = GROUND - plan.height * s
   const px = (x: number) => LX + x * s
   const py = (y: number) => ly - y * s
+  // 目標：開口是一條橫線，遠的那一邊有支柱到地面
+  const gy = GROUND - plan.goalHeight * s
+  const g0 = px(plan.goalDistance - plan.goalWidth / 2)
+  const g1 = px(plan.goalDistance + plan.goalWidth / 2)
   const dir = { x: Math.cos(plan.angle), y: -Math.sin(plan.angle) }
   // 球從輪子頂端切線方向出去：輪心在出射點的垂直下方那一側
   const cx = LX + R * Math.sin(plan.angle)
@@ -94,18 +99,20 @@ export function FlywheelView({
     <div className="fw-view">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`射球側視圖：轉速 ${f(w / TAU, 1)} rps，已射 ${fired.length} 發`}>
         <rect x={0} y={GROUND} width={W} height={H - GROUND} className="ev-base" />
+        <line x1={g1} y1={gy} x2={g1} y2={GROUND} className="fv-goal-post" />
+        <line x1={g0} y1={gy} x2={g1} y2={gy} className="fv-goal" />
         {/* 用目標轉速射的路線 */}
         <polyline points={path(idealV, Infinity)} className="fv-ideal" />
-        <line x1={px(idealRange)} y1={GROUND - 10} x2={px(idealRange)} y2={GROUND} className="fv-ideal-tick" />
         {shots.map((sh, i) => {
           if (sh.release > now && idx !== null) return null
           const tau = idx === null ? Infinity : now - sh.release
           const T = flightTime(sh.exit, plan.angle, plan.height)
+          const Tg = flightTime(sh.exit, plan.angle, plan.height, plan.goalHeight)
           const p = ballAt(sh.exit, plan.angle, Math.min(tau, T))
           return (
             <g key={i}>
               <polyline points={path(sh.exit, tau)} className="fv-path" />
-              {tau >= T && <circle cx={px(sh.exit * Math.cos(plan.angle) * T)} cy={GROUND - 2} r={3} className="fv-land" />}
+              {Number.isFinite(Tg) && tau >= Tg && <circle cx={px(sh.range)} cy={gy} r={4} className={sh.hit ? 'fv-hit' : 'fv-miss'} />}
               {idx !== null && tau < T && <circle cx={px(p.x)} cy={py(p.y)} r={BALL} className="fv-ball" />}
             </g>
           )
@@ -141,13 +148,12 @@ export function FlywheelView({
         </span>
         {lastShot && (
           <span>
-            第 {fired.length} 發：球速 <b>{f(lastShot.exit, 2)} m/s</b>，落點 <b>{f(lastShot.range, 2)} m</b>
-            <em>（{lastShot.miss >= 0 ? '遠' : '近'} {f(Math.abs(lastShot.miss) * 100, 0)} cm）</em>
+            第 {fired.length} 發：球速 <b>{f(lastShot.exit, 2)} m/s</b>，{missText(lastShot, plan.goalHeight)}
           </span>
         )}
       </div>
       <p className="small muted" style={{ margin: '4px 0 0' }}>
-        上面的條是轉速，淺色區是「可以射」的範圍。虛線是用目標轉速射的路線（直線短標是落點），實線是每一發真的路線。輪子畫面轉速放慢 {VIS_SLOW} 倍、不照比例；路線照比例，不計空氣阻力。
+        上面的條是轉速，淺色區是「可以射」的範圍。右邊的橫線是目標（開口），虛線是用目標轉速射的路線，實線是每一發真的路線；球往下掉經過目標高度的地方畫一個點，綠色是進了、紅色是沒進。輪子畫面轉速放慢 {VIS_SLOW} 倍、不照比例；路線和目標照比例，不計空氣阻力。
       </p>
     </div>
   )

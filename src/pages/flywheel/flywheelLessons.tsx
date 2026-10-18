@@ -83,7 +83,7 @@ export const FLYWHEEL_LESSONS: FlywheelLesson[] = [
   },
   {
     id: 'fw-range',
-    title: '3. 轉速 → 球速 → 射程',
+    title: '3. 轉速 → 球速 → 落點',
     sub: '為什麼掉速球就射不準',
     goal: '會從轉速算球速和射程，知道轉速差一點落點差多少',
     Body: ({ m, plan }) => {
@@ -97,10 +97,10 @@ export const FLYWHEEL_LESSONS: FlywheelLesson[] = [
           </p>
           <p className="mono">球速 ≈ 0.5 × 轉速 [rps] × 2π × 半徑</p>
           <p>
-            你的機構：{f(plan.target / TAU, 0)} rps × 2π × {f(m.wheelRadius, 4)} m × 0.5 ≈ <b>{f(v, 2)} m/s</b>。仰角 {f((plan.angle * 180) / Math.PI, 0)}°、離地 {f(plan.height, 2)} m 射出，不計空氣阻力，大約落在 <b>{f(r, 2)} m</b>。
+            你的機構：{f(plan.target / TAU, 0)} rps × 2π × {f(m.wheelRadius, 4)} m × 0.5 ≈ <b>{f(v, 2)} m/s</b>。仰角 {f((plan.angle * 180) / Math.PI, 0)}°、離地 {f(plan.height, 2)} m 射出，不計空氣阻力，往下掉經過目標高度 {f(plan.goalHeight, 2)} m 的地方離出射點 <b>{Number.isFinite(r) ? `${f(r, 2)} m` : '（打不到那麼高）'}</b>（目標在 {f(plan.goalDistance, 2)} m）。
           </p>
           <p>
-            轉速少 5%，落點變成 {f(r95, 2)} m，近了 {f((r - r95) * 100, 0)} cm。射程大約跟球速的平方成正比，所以轉速差一點，落點差兩倍的比例。這就是為什麼要等轉速回來才射下一發。
+            轉速少 5%，落點變成 {Number.isFinite(r95) ? `${f(r95, 2)} m，近了 ${f((r - r95) * 100, 0)} cm` : '打不到目標高度'}。射程大約跟球速的平方成正比（目標比出射點高的時候差得更多），所以轉速差一點，落點差一截。這就是為什麼要等轉速回來才射下一發。
           </p>
           <p className="small muted">0.5 和不計空氣阻力都是近似，實際的比例要上機量（射幾發量落點）。</p>
         </>

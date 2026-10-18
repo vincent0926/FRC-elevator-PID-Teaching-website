@@ -99,6 +99,12 @@ export interface ShotPlan {
   angle: number
   /** 出射點離地高度 m */
   height: number
+  /** 目標離出射點的水平距離 m */
+  goalDistance: number
+  /** 目標高度 m（球往下掉經過這個高度的地方算落點；0 = 地面） */
+  goalHeight: number
+  /** 目標開口寬度 m：落點離目標距離在一半以內算進 */
+  goalWidth: number
 }
 
 export const DEFAULT_PLAN: ShotPlan = {
@@ -110,6 +116,9 @@ export const DEFAULT_PLAN: ShotPlan = {
   ballMass: 0.235,
   angle: (50 * Math.PI) / 180,
   height: 0.5,
+  goalDistance: 4.6,
+  goalHeight: 2,
+  goalWidth: 0.6,
 }
 
 /** 球出去的速度 ≈ 輪緣速度的一半（單邊飛輪、另一邊是固定的導板） */
@@ -320,15 +329,25 @@ export function exitSpeed(w: number, r: number): number {
   return EXIT_RATIO * Math.max(0, w) * r
 }
 
-/** 從離地 height、仰角 angle、速度 v 射出，到落地的時間 s */
-export function flightTime(v: number, angle: number, height: number): number {
+/**
+ * 從離地 height、仰角 angle、速度 v 射出，往下掉經過 goal 高度的時間 s。
+ * 最高點比 goal 低（打不到那麼高）是 NaN。
+ */
+export function flightTime(v: number, angle: number, height: number, goal = 0): number {
   const vy = v * Math.sin(angle)
-  return (vy + Math.sqrt(Math.max(0, vy * vy + 2 * GRAVITY * Math.max(0, height)))) / GRAVITY
+  const disc = vy * vy - 2 * GRAVITY * (goal - Math.max(0, height))
+  if (disc < 0) return NaN
+  return (vy + Math.sqrt(disc)) / GRAVITY
 }
 
-/** 落地點離出射點的水平距離 m */
-export function launchRange(v: number, angle: number, height: number): number {
-  return v * Math.cos(angle) * flightTime(v, angle, height)
+/** 往下掉經過 goal 高度時離出射點的水平距離 m；打不到那麼高是 NaN */
+export function launchRange(v: number, angle: number, height: number, goal = 0): number {
+  return v * Math.cos(angle) * flightTime(v, angle, height, goal)
+}
+
+/** 最高點離地多高 m */
+export function apexHeight(v: number, angle: number, height: number): number {
+  return Math.max(0, height) + (v * Math.sin(angle)) ** 2 / (2 * GRAVITY)
 }
 
 /** 飛行 τ 秒後的位置（相對出射點，往上為正）m */
@@ -336,17 +355,29 @@ export function ballAt(v: number, angle: number, tau: number): { x: number; y: n
   return { x: v * Math.cos(angle) * tau, y: v * Math.sin(angle) * tau - 0.5 * GRAVITY * tau * tau }
 }
 
-/** 要射到 range 遠（落地）需要的球速 m/s；這個仰角射不到就是 null */
-export function speedForRange(range: number, angle: number, height: number): number | null {
+/**
+ * 要在 range 遠的地方、往下掉經過 goal 高度，需要的球速 m/s。
+ * 這個仰角做不到（或只能在往上飛的時候經過）是 null。
+ */
+export function speedForRange(range: number, angle: number, height: number, goal = 0): number | null {
   const c = Math.cos(angle)
-  const d = 2 * c * c * (range * Math.tan(angle) + height)
+  const d = 2 * c * c * (range * Math.tan(angle) + Math.max(0, height) - goal)
   if (range <= 0 || c <= 1e-6 || d <= 0) return null
-  return Math.sqrt((GRAVITY * range * range) / d)
+  const v = Math.sqrt((GRAVITY * range * range) / d)
+  // 最高點的水平距離要在 range 之前，球才是往下掉進去
+  if ((v * v * Math.sin(angle) * c) / GRAVITY > range + 1e-9) return null
+  return v
 }
 
-/** 輪子轉速 rad/s → 射程 m */
+/** 要進目標（距離、高度）需要的輪子轉速 rad/s；這個仰角做不到是 null */
+export function wheelForGoal(r: number, plan: ShotPlan): number | null {
+  const v = speedForRange(plan.goalDistance, plan.angle, plan.height, plan.goalHeight)
+  return v === null ? null : v / (EXIT_RATIO * r)
+}
+
+/** 輪子轉速 rad/s → 到目標高度時的水平距離 m（打不到那麼高是 NaN） */
 export function rangeAtWheel(w: number, r: number, plan: ShotPlan): number {
-  return launchRange(exitSpeed(w, r), plan.angle, plan.height)
+  return launchRange(exitSpeed(w, r), plan.angle, plan.height, plan.goalHeight)
 }
 
 /**
@@ -366,20 +397,22 @@ export interface ShotOutcome {
   exit: number
   /** 離開輪子的時間 s */
   release: number
-  /** 射程 m */
+  /** 往下掉經過目標高度時的水平距離 m；打不到那麼高是 NaN */
   range: number
-  /** 比用目標轉速射的落點差多少 m（負的是近了） */
+  /** 落點減目標距離 m（負的是近了；打不到那麼高是 NaN） */
   miss: number
+  /** 有沒有進（落點離目標在開口一半以內） */
+  hit: boolean
 }
 
 export function shotOutcomes(res: FlywheelSimResult, mech: FlywheelMechanism, plan: ShotPlan): ShotOutcome[] {
-  const ideal = rangeAtWheel(plan.target, mech.wheelRadius, plan)
   return res.shotTimes.map((at) => {
     const k = Math.min(res.vel.length - 1, Math.round(at / CONTROL_DT))
     const wheel = res.vel[k]
     const exit = exitSpeed(wheel, mech.wheelRadius)
-    const range = launchRange(exit, plan.angle, plan.height)
-    return { at, wheel, exit, release: at + CONTACT, range, miss: range - ideal }
+    const range = launchRange(exit, plan.angle, plan.height, plan.goalHeight)
+    const miss = range - plan.goalDistance
+    return { at, wheel, exit, release: at + CONTACT, range, miss, hit: Math.abs(miss) <= plan.goalWidth / 2 }
   })
 }
 

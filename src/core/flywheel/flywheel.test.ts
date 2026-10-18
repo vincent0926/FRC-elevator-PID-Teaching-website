@@ -6,6 +6,7 @@ import {
   DEFAULT_FLYWHEEL_SPEC,
   DEFAULT_KNOBS,
   DEFAULT_PLAN,
+  apexHeight,
   ballAt,
   dipFraction,
   exitSpeed,
@@ -15,9 +16,11 @@ import {
   flywheelInertia,
   flywheelMetrics,
   launchRange,
+  rangeAtWheel,
   shotOutcomes,
   simulateFlywheel,
   speedForRange,
+  wheelForGoal,
   theoryGains,
   type FlywheelGains,
   type FlywheelKnobs,
@@ -152,7 +155,7 @@ describe('球速與射程', () => {
     const strong = shotOutcomes(run({ ...theory, kS: DEFAULT_KNOBS.friction, kP: 1 / TAU }, DEFAULT_KNOBS, plan).res, DEFAULT_FLYWHEEL, plan)
     expect(weak).toHaveLength(3)
     expect(weak[1].range).toBeLessThan(strong[1].range)
-    expect(weak[1].miss).toBeLessThan(0)
+    expect(weak[1].miss).toBeLessThan(strong[1].miss)
     expect(strong[0].release).toBeCloseTo(plan.firstShot + 0.03, 9)
   })
 })
@@ -168,5 +171,57 @@ describe('最快到速', () => {
     const target = 50 * TAU
     expect(fastestSpinUp(DEFAULT_FLYWHEEL, target, 40)!).toBeGreaterThan(fastestSpinUp(DEFAULT_FLYWHEEL, target, 0)!)
     expect(fastestSpinUp(DEFAULT_FLYWHEEL, ff.freeSpeed * 1.05, 80)).toBeNull()
+  })
+})
+
+describe('目標高度', () => {
+  const a = (50 * Math.PI) / 180
+
+  it('往下掉經過目標高度的那一刻，y 剛好是目標高度', () => {
+    const v = 8
+    const T = flightTime(v, a, 0.5, 2)
+    expect(0.5 + ballAt(v, a, T).y).toBeCloseTo(2, 9)
+    // 是往下掉的那一次：比最高點晚
+    expect(T).toBeGreaterThan((v * Math.sin(a)) / 9.81)
+  })
+
+  it('目標越高，經過的地方越近；比最高點還高就打不到（NaN）', () => {
+    const v = 8
+    expect(launchRange(v, a, 0.5, 2)).toBeLessThan(launchRange(v, a, 0.5, 0))
+    expect(launchRange(v, a, 0.5, apexHeight(v, a, 0.5) + 0.1)).toBeNaN()
+  })
+
+  it('反推球速：有目標高度也算得回原本的速度；往上飛時才經過的距離不算', () => {
+    const v = 8
+    expect(speedForRange(launchRange(v, a, 0.5, 2), a, 0.5, 2)).toBeCloseTo(v, 9)
+    expect(speedForRange(0.5, a, 0.5, 2)).toBeNull()
+  })
+
+  it('要進目標的轉速：用那個轉速射，落點剛好是目標距離', () => {
+    const w = wheelForGoal(DEFAULT_FLYWHEEL.wheelRadius, DEFAULT_PLAN)!
+    expect(rangeAtWheel(w, DEFAULT_FLYWHEEL.wheelRadius, DEFAULT_PLAN)).toBeCloseTo(DEFAULT_PLAN.goalDistance, 9)
+    // 預設目標大約要 50 rps
+    expect(w / TAU).toBeGreaterThan(48)
+    expect(w / TAU).toBeLessThan(52)
+    expect(wheelForGoal(DEFAULT_FLYWHEEL.wheelRadius, { ...DEFAULT_PLAN, goalDistance: 0.3 })).toBeNull()
+  })
+
+  it('每一發：落點減目標距離，開口一半以內算進；打不到那麼高算沒進', () => {
+    const res = run({ ...theory, kS: DEFAULT_KNOBS.friction, kP: 1 / TAU }).res
+    const o = shotOutcomes(res, DEFAULT_FLYWHEEL, DEFAULT_PLAN)
+    expect(o[0].miss).toBeCloseTo(o[0].range - DEFAULT_PLAN.goalDistance, 9)
+    expect(o[0].hit).toBe(Math.abs(o[0].miss) <= DEFAULT_PLAN.goalWidth / 2)
+    expect(o.every((x) => x.hit)).toBe(true)
+    const high = shotOutcomes(res, DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalHeight: 10 })
+    expect(high[0].range).toBeNaN()
+    expect(high[0].hit).toBe(false)
+  })
+
+  it('每一發的落點用目標高度算；預設 2 m', () => {
+    expect(DEFAULT_PLAN.goalHeight).toBe(2)
+    const res = run({ ...theory, kS: DEFAULT_KNOBS.friction, kP: 1 / TAU }).res
+    const o = shotOutcomes(res, DEFAULT_FLYWHEEL, DEFAULT_PLAN)
+    expect(o[0].range).toBeCloseTo(launchRange(o[0].exit, DEFAULT_PLAN.angle, DEFAULT_PLAN.height, 2), 9)
+    expect(o[0].range).toBeLessThan(launchRange(o[0].exit, DEFAULT_PLAN.angle, DEFAULT_PLAN.height, 0))
   })
 })

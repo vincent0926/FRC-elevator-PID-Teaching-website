@@ -1,4 +1,4 @@
-import type { FlywheelGains, FlywheelKnobs } from '../../core/flywheel/flywheel'
+import type { FlywheelGains, FlywheelKnobs, ShotOutcome } from '../../core/flywheel/flywheel'
 
 /** 射球飛輪的滑桿：範圍跟著理論值，單位一律 Phoenix 6 的 rps（kS 是伏特）。內部值是 SI（rad/s）。 */
 
@@ -61,3 +61,13 @@ export const FLYWHEEL_PRESETS: FlywheelPreset[] = [
     gains: (t, k) => ({ ...t, kS: k.friction, kP: 1 / TAU }),
   },
 ]
+
+const fx = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
+
+/** 「進了」「近 12 cm」「打不到 2.0 m 高」 */
+export function missText(o: ShotOutcome, goalHeight?: number): string {
+  if (!Number.isFinite(o.range)) return goalHeight === undefined ? '打不到目標高度' : `打不到 ${fx(goalHeight, 1)} m 高`
+  const d = `${o.miss >= 0 ? '遠' : '近'} ${fx(Math.abs(o.miss) * 100, 0)} cm`
+  return o.hit ? `進了（${d}）` : `沒進，${d}`
+}
+
