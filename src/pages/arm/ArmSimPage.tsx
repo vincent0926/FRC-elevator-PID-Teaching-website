@@ -312,6 +312,7 @@ export function ArmSimPage() {
             onResetAll={resetToTheory}
             units={ARM_UNITS}
             display={{ cruiseVelocity: R2D, acceleration: R2D }}
+            rotation={{ perRot: 2 * Math.PI, note: '手臂轉 1 圈 = 2π rad = 360°' }}
           />
           {charts && result && (
             <>

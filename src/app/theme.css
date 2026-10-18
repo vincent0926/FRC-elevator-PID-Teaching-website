@@ -490,3 +490,5 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important }
 }
+.tune-units { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px }
+.tune-units .seg button { padding: 4px 10px; font-size: 13px }

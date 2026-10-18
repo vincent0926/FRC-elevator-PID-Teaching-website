@@ -1,11 +1,13 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { NumberField } from './NumberField'
-import { getGain, setGain, sliderRange, snap, type TuneGains, type TuneKey } from '../pages/simulate/tuneRange'
+import { loadJson, saveJson } from '../storage/local'
+import { getGain, rotationView, setGain, sliderRange, snap, type TuneGains, type TuneKey, type TuneUnitMode } from '../pages/simulate/tuneRange'
 
 /**
  * 3F「親手調參數」：放在播放列正下方，拖了馬上重新模擬。
  * 每條滑桿都標出理論值（刻度＋文字），可以單項或全部回到理論值。
  * 目前看的不是「自訂」時，第一次拖動會用畫面上的參數當起點切到「自訂」（由 onEdit 處理）。
+ * 可以切到 Phoenix 6 轉數制（rot、rps）：只換顯示和輸入的數字，模擬照樣用 SI。
  */
 
 type Mech = 'elevator' | 'arm'
@@ -59,10 +61,25 @@ export interface TuneSlidersProps<T extends TuneGains> {
   display?: Partial<Record<TuneKey, number>>
   /** 不能調的欄位與原因（例如電梯開了往下 Slot 1 時的 kS、kG） */
   disabled?: Partial<Record<TuneKey, string>>
+  /** 轉數制：機構轉 1 圈的 SI 量（電梯 2πr 公尺、手臂 2π rad）和給人看的說明；copy 是「要填到哪裡」，沒給就是 Slot0Configs、MotionMagicConfigs */
+  rotation: { perRot: number; note: string; copy?: string }
 }
 
-export function TuneSliders<T extends TuneGains>({ mechanism, values, theory, editingCustom, sourceLabel, onEdit, onResetAll, units, display = {}, disabled = {} }: TuneSlidersProps<T>) {
+/** 轉數制下 kV、巡航速度的提示要改講 rps */
+const ROT_HINT: Partial<Record<TuneKey, Record<Mech, string>>> = {
+  kV: { elevator: '每 1 rps（鼓輪每秒 1 圈）要多少電壓。太小落後軌跡，太大超前', arm: '每 1 rps（手臂每秒 1 圈）要多少電壓。太小落後軌跡，太大超前' },
+}
+
+export function TuneSliders<T extends TuneGains>({ mechanism, values, theory, editingCustom, sourceLabel, onEdit, onResetAll, units: siUnits, display: siDisplay = {}, disabled = {}, rotation }: TuneSlidersProps<T>) {
   const id = useId()
+  const [mode, setModeState] = useState<TuneUnitMode>(() => (loadJson<string>('tuneUnits', 'si') === 'rot' ? 'rot' : 'si'))
+  const setMode = (m: TuneUnitMode) => {
+    setModeState(m)
+    saveJson('tuneUnits', m)
+  }
+  const rot = mode === 'rot' ? rotationView(rotation.perRot) : null
+  const units = rot ? rot.units : siUnits
+  const display: Partial<Record<TuneKey, number>> = rot ? rot.display : siDisplay
   const changed = GROUPS.some((g) => g.keys.some(({ k }) => Math.abs(getGain(values, k) - getGain(theory, k)) > 1e-9))
   return (
     <section className="tune" aria-label="親手調參數">
@@ -76,6 +93,22 @@ export function TuneSliders<T extends TuneGains>({ mechanism, values, theory, ed
         <button className="btn small" type="button" onClick={onResetAll} disabled={editingCustom && !changed}>
           全部回到理論值
         </button>
+      </div>
+      <div className="tune-units">
+        <span className="small muted">單位</span>
+        <div className="seg" role="group" aria-label="滑桿單位">
+          <button type="button" aria-pressed={mode === 'si'} onClick={() => setMode('si')}>
+            {mechanism === 'arm' ? 'SI（rad、°）' : 'SI（m）'}
+          </button>
+          <button type="button" aria-pressed={mode === 'rot'} onClick={() => setMode('rot')}>
+            Phoenix 6（rps）
+          </button>
+        </div>
+        {rot && (
+          <span className="small muted">
+            SensorToMechanismRatio 設成齒比後，1 rot = {rotation.note}。{rotation.copy ?? '這裡的數字就是 Slot0Configs、MotionMagicConfigs 要填的值。'}
+          </span>
+        )}
       </div>
       <div className="tune-groups">
         {GROUPS.map((g) => (
@@ -97,11 +130,12 @@ export function TuneSliders<T extends TuneGains>({ mechanism, values, theory, ed
                 <div className={'tune-row' + (diff ? ' changed' : '')} key={k}>
                   <div className="tune-label">
                     <b>{label}</b>
-                    <span className="small muted">{off ?? hint[mechanism]}</span>
+                    <span className="small muted">{off ?? (rot && ROT_HINT[k] ? ROT_HINT[k][mechanism] : hint[mechanism])}</span>
                   </div>
                   <input
                     type="range"
                     aria-label={`${label}（${units[k]}）`}
+                    aria-valuetext={`${(v * s).toFixed(digits)} ${units[k]}`}
                     min={r.min}
                     max={r.max}
                     step={r.step}
