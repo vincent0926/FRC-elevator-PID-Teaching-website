@@ -11,6 +11,11 @@ import {
   wheelForGoal,
   wheelLimit,
   exitRadius,
+  moveFixes,
+  moveWindow,
+  NARROW_WINDOW,
+  type AimWindow,
+  type MoveFix,
   type FlywheelMechanism,
   type ShotPlan,
   type TrajectoryOption,
@@ -28,7 +33,8 @@ import { yawText } from './flywheelTune'
 const TAU = 2 * Math.PI
 const DEG = 180 / Math.PI
 const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
-const deg = (a: number) => Math.round(a * DEG)
+// 到 0.1°：範圍很窄時候選仰角會有小數
+const deg = (a: number) => Math.round(a * DEG * 10) / 10
 
 export function FlywheelAim({
   mech,
@@ -56,6 +62,19 @@ export function FlywheelAim({
   const maxWheel = wheelLimit(ff.freeSpeed, limit.rps)
   const opts = useMemo(() => trajectoryOptions(mech, plan, maxWheel, undefined, { toward, side }), [mech, plan, maxWheel, toward, side])
   const noneOk = opts.length > 0 && opts.every((o) => !o.reachable)
+  // 邊移動邊射：能打進的仰角範圍太窄（或沒有）就給參數修正意見
+  const win = useMemo(() => (move ? moveWindow(exitRadius(mech), plan, { toward, side }, maxWheel, Math.PI / 1800) : null), [move, mech, plan, toward, side, maxWheel])
+  const narrow = !!move && (win === null || win.width < NARROW_WINDOW)
+  const fixes = useMemo(
+    () => (narrow ? moveFixes(mech, plan, { toward, side }, maxWheel, ff.freeSpeed * DEFAULT_LIMIT_FRACTION) : []),
+    [narrow, mech, plan, toward, side, maxWheel, ff.freeSpeed],
+  )
+  const applyFix = (x: MoveFix) => {
+    if (x.param === 'toward') setMove({ toward: x.value })
+    else if (x.param === 'side') setMove({ side: x.value })
+    else if (x.param === 'distance') setP({ goalDistance: x.value })
+    else setLimit({ rps: Math.round(x.value / TAU) })
+  }
   // 每 5° 找到太少、改成每 1° 找的（有不是 5 的倍數的仰角）
   const fine = opts.some((o) => deg(o.angle) % 5 !== 0)
   const setMove = (p: Partial<MoveSettings>) => move?.set({ ...move.settings, ...p })
@@ -136,6 +155,7 @@ export function FlywheelAim({
         <h2>
           <span className="fa-step">{pickStep}</span>選一條軌跡
         </h2>
+        {narrow && <FixAdvice win={win} fixes={fixes} values={{ toward, side, distance: plan.goalDistance, limit: maxWheel }} onApply={applyFix} />}
         {opts.length === 0 ? (
           <p className="fail">{move ? '這個距離、高度和機器人速度，10°～85° 都射不進（目標太近、太高，或機器人開太快）。改距離、出射高度或機器人速度。' : '這個距離和高度，10°～85° 都射不進（目標太近或太高）。改距離或出射高度。'}</p>
         ) : (
@@ -143,9 +163,9 @@ export function FlywheelAim({
             <p className="small muted" style={{ marginTop: 0 }}>
               同一個距離，仰角不同要的轉速也不同。每條線是一個仰角剛好打到目標中心的路線{move ? '（畫的是球對地的路線，已經加上機器人速度；標的度數是發射機構的仰角）' : ''}，點一條（或下面的按鈕）看它要幾 rps。
             </p>
-            {fine && (
+            {fine && !narrow && (
               <p className="small muted">
-                {move ? '機器人開得快，' : ''}能打進{noneOk ? '' : '、轉速又在上限內'}的仰角只剩 {deg(opts[0].angle)}°～{deg(opts[opts.length - 1].angle)}°，每 5° 找不到幾條，所以改成每 1° 找，從這個範圍平均挑 {opts.length} 條給你選。範圍越窄，仰角差一點就打不進。
+                {move ? '機器人開得快，' : ''}能打進{noneOk ? '' : '、轉速又在上限內'}的仰角只剩 {deg(opts[0].angle)}°～{deg(opts[opts.length - 1].angle)}°，每 5° 找不到幾條，所以改成每 0.1° 找，從這個範圍平均挑 {opts.length} 條給你選。範圍越窄，仰角差一點就打不進。
               </p>
             )}
             {noneOk && (
@@ -232,6 +252,39 @@ export function FlywheelAim({
   )
 }
 
+const FIX_LABEL = { toward: '往目標方向的速度', side: '側向速度', distance: '目標距離', limit: '轉速上限' } as const
+
+/** 邊移動邊射的參數修正意見：一次改一個，按「套用」直接改 */
+function FixAdvice({ win, fixes, values, onApply }: { win: AimWindow | null; fixes: MoveFix[]; values: Record<MoveFix['param'], number>; onApply: (x: MoveFix) => void }) {
+  const show = (p: MoveFix['param'], v: number) => (p === 'limit' ? `${f(v / TAU, 0)} rps` : p === 'distance' ? `${f(v, 1)} m` : `${f(v, 1)} m/s`)
+  return (
+    <div className="warn fa-fix">
+      <p style={{ marginTop: 0 }}>
+        <b>{win ? `能打進的仰角只有 ${deg(win.lo)}°～${deg(win.hi)}°（${f(win.width * DEG, 1)}° 寬）` : '沒有仰角打得進'}</b>
+        ，至少要 {f(NARROW_WINDOW * DEG, 0)}° 寬才比較射得到（實際的仰角、轉速都會有誤差）。
+        {fixes.length ? '改下面其中一個就好：' : ''}
+      </p>
+      {fixes.length ? (
+        <ul className="fa-fixes">
+          {fixes.map((x) => (
+            <li key={x.param}>
+              <span>
+                「{FIX_LABEL[x.param]}」{show(x.param, values[x.param])} → <b>{show(x.param, x.value)}</b>
+                <span className="small muted">（仰角 {deg(x.window.lo)}°～{deg(x.window.hi)}°）</span>
+              </span>
+              <button className="btn small" type="button" onClick={() => onApply(x)}>
+                套用
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p style={{ marginBottom: 0 }}>速度在 ±5 m/s、距離 15 m 以內都找不到：改出射高度，或換機構試試。</p>
+      )}
+    </div>
+  )
+}
+
 /** 轉速上限欄位下面的說明 */
 function limitHint(rps: number, freeSpeed: number): string {
   const motor = (freeSpeed * DEFAULT_LIMIT_FRACTION) / TAU
@@ -284,7 +337,7 @@ function AimView({ plan, opts, sel, onPick }: { plan: ShotPlan; opts: Trajectory
           <polyline points={path(o)} className="fa-line" />
           {/* 比較好點的透明粗線 */}
           <polyline points={path(o)} className="fa-hit" />
-          {(o === sel || deg(o.angle) % 10 === 0) && (
+          {(o === sel || deg(o.angle) % 10 === 0 || o === opts[0] || o === opts[opts.length - 1]) && (
             <text x={px(Math.min(xMax / 1.08, (o.fieldExit * o.fieldExit * Math.sin(2 * o.fieldAngle)) / (2 * GRAVITY)))} y={py(o.apex - plan.height) - 4} className="fa-label">
               {deg(o.angle)}°
             </text>
