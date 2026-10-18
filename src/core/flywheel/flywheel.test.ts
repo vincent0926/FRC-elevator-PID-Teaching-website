@@ -287,7 +287,7 @@ describe('對面也有滾輪（上下夾射）', () => {
   })
 })
 
-describe('模式 1：同一個距離的候選軌跡', () => {
+describe('彈道：同一個距離的候選軌跡', () => {
   const ffd = computeFlywheelFeedforward(DEFAULT_FLYWHEEL)
   const opts = trajectoryOptions(DEFAULT_FLYWHEEL, DEFAULT_PLAN, ffd.freeSpeed)
   it('每一條都剛好打到目標中心、往下掉進去', () => {

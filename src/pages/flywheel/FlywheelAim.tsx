@@ -14,8 +14,8 @@ import {
 import { BallFields, HubPreset, MechFields } from './FlywheelForms'
 
 /**
- * 3F 模式 1「算轉速和仰角」：① 基本參數 → ② 離目標多遠 → ③ 列出每個仰角要的轉速，自己選一條軌跡。
- * 選好可以直接帶到模式 2 連射模擬。
+ * 彈道 1F「算轉速和仰角」：① 基本參數 → ② 離目標多遠 → ③ 列出每個仰角要的轉速，自己選一條軌跡。
+ * 選好可以直接帶到 3F 連射模擬。
  */
 
 const TAU = 2 * Math.PI
@@ -34,7 +34,7 @@ export function FlywheelAim({
   setMech: (m: FlywheelMechanism) => void
   plan: ShotPlan
   setPlan: (p: ShotPlan) => void
-  /** 選好的轉速、仰角已經寫進射球資料，換到連射模擬 */
+  /** 選好的轉速、仰角已經寫進射球資料，到 3F 連射模擬 */
   onSimulate: () => void
 }) {
   const setM = (p: Partial<FlywheelMechanism>) => setMech({ ...mech, ...p })
@@ -146,7 +146,7 @@ export function FlywheelAim({
                   </dd>
                 </dl>
                 <button className="btn primary" type="button" onClick={() => apply(sel)}>
-                  用這組跑連射模擬
+                  用這組到 3F 連射模擬
                 </button>
               </div>
             ) : (

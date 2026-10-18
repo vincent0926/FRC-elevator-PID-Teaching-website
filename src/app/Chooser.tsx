@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { saveJson } from '../storage/local'
+import { saveFlywheelStyle } from '../pages/flywheel/flywheelStore'
 import { useStore, type Track } from './store'
 
 /**
  * 進站先選機構：電梯、單關節手臂或射球飛輪。選完才進到各樓層（射球飛輪只有 1F、3F）。
- * 射球飛輪每次都再問一次要「彈道」（1F 參數 → 3F 算轉速和仰角）還是「客製化」（直接到 3F 連射模擬，自己設）。
+ * 射球飛輪每次都再問一次要「彈道」（1F 算轉速和仰角 → 3F 連射模擬）還是「客製化」（直接到 3F 連射模擬，自己設）。
  */
 
 const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = [
@@ -24,7 +24,7 @@ const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = 
     id: 'flywheel',
     title: '射球飛輪',
     what: '控制轉速的射球機構：先轉到目標轉速，球打出去會掉速。',
-    points: ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '彈道：1F 參數 → 3F 選軌跡得到 RPS 和仰角', '客製化：直接連射模擬，參數自己設'],
+    points: ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '彈道：1F 選軌跡得到 RPS 和仰角 → 3F 連射', '客製化：直接連射模擬，參數自己設'],
   },
 ]
 
@@ -75,21 +75,19 @@ function FlywheelIcon() {
 
 const ICONS = { elevator: ElevatorIcon, arm: ArmIcon, flywheel: FlywheelIcon }
 
-/** 射球飛輪的兩種進法；mode 是 3F 的模式（存在 flywheel:mode，跟 FlywheelSimPage 同一份） */
+/** 射球飛輪的兩種進法（存在這個分頁，見 flywheelStore 的 FlywheelStyle） */
 const FLYWHEEL_STYLES = [
   {
     id: 'ballistic',
     title: '彈道',
-    what: '照步驟來：先在 1F 填機構、算 Slot0 參數，再到 3F 給距離，看每個仰角要幾 RPS，選一條軌跡。',
+    what: '照步驟來：在 1F 填機構和球，給離目標多遠，看每個仰角要幾 RPS，選一條軌跡，再到 3F 連射模擬。',
     start: 'calc',
-    mode: 'aim',
   },
   {
     id: 'custom',
     title: '客製化',
     what: '直接到 3F 連射模擬：機構、仰角、RPS、發數、間隔、kP 全部自己設，看轉速撐不撐得住、球進不進。',
     start: 'sim',
-    mode: 'sim',
   },
 ] as const
 
@@ -114,7 +112,7 @@ function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
               type="button"
               className="chooser-card ch-style"
               onClick={() => {
-                saveJson('flywheel:mode', { mode: st.mode })
+                saveFlywheelStyle(st.id)
                 setTrack('flywheel', st.start)
               }}
             >
@@ -127,7 +125,7 @@ function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <p className="small muted" style={{ margin: '10px 0 0' }}>
-          兩種用同一份機構和射球資料；進去之後 3F 上方也可以切換。
+          兩種用同一份機構和射球資料；要換的話，左邊導覽的「換機構」再選一次。
         </p>
         <button type="button" className="btn small" onClick={onClose}>
           回去選機構
