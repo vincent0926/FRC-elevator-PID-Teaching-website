@@ -1,6 +1,9 @@
 import { Slot0Controller, type AntiWindup, type GravityType, type Slot0Gains } from '../controller/slot0'
 import { trapezoidProfile, type TrapezoidProfile } from '../profile'
-import { applyCurrentLimit, stepRK4, type PlantParams, type PlantState } from './elevator'
+import { applyCurrentLimit, MIN_SUPPLY_VOLTAGE, sagVoltage, stepRK4, type PlantParams, type PlantState } from './elevator'
+
+/** 電池電壓和 Supply 限流互相影響，每一步最多來回解幾次 */
+const SAG_ITERATIONS = 5
 
 /**
  * 閉迴路模擬：Motion Magic 軌跡 → Slot0 控制公式 → 受控體（RK4）。
@@ -237,11 +240,19 @@ export function simulate(input: SimInput): SimResult {
     }
 
     const coast = neutral && coastMode
-    const drive = applyCurrentLimit(p, u, s.vel, coast)
-    // 供電電流 ≈ Stator 電流 × 佔空比，用它估電池壓降
+    // 電池電壓、Supply 電流限制要用同一個電壓：電壓決定限流，限流後的電流又決定電壓。
+    // 從上一步的電壓開始，解壓降（sagVoltage）再重算限流，來回幾次就收斂（限流只會讓電流變小、電壓變高）
+    let drive = applyCurrentLimit(p, u, s.vel, coast, supplyVoltage)
+    for (let it = 0; it < SAG_ITERATIONS; it++) {
+      const v = sagVoltage(p, p.motorCount * drive.statorCurrent * drive.effectiveVoltage)
+      const same = Math.abs(v - supplyVoltage) < 1e-9
+      supplyVoltage = v
+      if (same) break
+      drive = applyCurrentLimit(p, u, s.vel, coast, supplyVoltage)
+    }
+    // 供電電流 ≈ Stator 電流 × 佔空比（加上的電壓 ÷ 電池電壓）
     // 有正負號：正的是從電池拿電，負的是回充（煞車往下時）
-    const supplyCurrent = p.motorCount * drive.statorCurrent * (drive.effectiveVoltage / Math.max(supplyVoltage, 1))
-    supplyVoltage = p.batteryVoltage - p.batteryResistance * Math.abs(supplyCurrent)
+    const supplyCurrent = (p.motorCount * drive.statorCurrent * drive.effectiveVoltage) / Math.max(supplyVoltage, MIN_SUPPLY_VOLTAGE)
 
     out.t[i] = t
     out.pos[i] = s.pos
@@ -260,7 +271,7 @@ export function simulate(input: SimInput): SimResult {
     softBlocked[i] = softBlockedNow ? 1 : 0
     supplyLimitedArr[i] = drive.supplyLimited ? 1 : 0
 
-    s = stepRK4(p, s, u, dt, coast)
+    s = stepRK4(p, s, u, dt, coast, supplyVoltage)
   }
 
   for (let k = 0; k < moves.length; k++) {

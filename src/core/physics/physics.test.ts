@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_SUBSTEPS, stepRK4, type PlantParams } from './elevator'
+import { applyCurrentLimit, MAX_SUBSTEPS, stepRK4, type PlantParams } from './elevator'
 import { resampleByTime, simulate } from './simulate'
 import { computeFeedforward } from '../feedforward'
 import { DEFAULT_MECHANISM } from '../../schema/parameterSet'
@@ -232,6 +232,39 @@ describe('馬達控制器的限制（Current Limit、Soft Limit、Peak Output、
     expect(Math.max(...free.supplyCurrent) / plant.motorCount).toBeGreaterThan(15)
     expect(lim.moves[0].supplyLimitFraction).toBeGreaterThan(0)
     expect(lim.moves[0].maxFollowingError).toBeGreaterThan(free.moves[0].maxFollowingError)
+  })
+
+  it('Supply 電流限制 × 電池壓降：四種組合，電池端電流都照當下的電池電壓算、不超過上限', () => {
+    const perMotor = (r: ReturnType<typeof run>) => Math.max(...r.supplyCurrent) / plant.motorCount
+    const finite = (r: ReturnType<typeof run>) => [r.pos, r.vel, r.supplyVoltage, r.supplyCurrent, r.statorCurrent].every((a) => a.every(Number.isFinite))
+    // (a) 標準電壓、沒限制
+    const nominal = run()
+    expect(Math.min(...nominal.supplyVoltage)).toBe(plant.batteryVoltage)
+    // (b) 只有壓降：電壓會掉，但不會掉到 0 以下
+    const sag = run({}, { batteryResistance: 0.1 })
+    expect(Math.min(...sag.supplyVoltage)).toBeLessThan(plant.batteryVoltage - 1)
+    expect(Math.min(...sag.supplyVoltage)).toBeGreaterThan(0)
+    // (c) 只有 Supply 限制
+    const lim = run({}, { supplyCurrentLimit: 15 })
+    expect(perMotor(lim)).toBeLessThan(15 * 1.02)
+    // (d) 壓降加 Supply 限制：電壓掉下來時佔空比變大，同樣的 Stator 電流從電池拿更多電，要照掉下來的電壓限制
+    const both = run({}, { batteryResistance: 0.1, supplyCurrentLimit: 15 })
+    expect(perMotor(both)).toBeLessThan(15 * 1.02)
+    expect(both.moves[0].supplyLimitFraction).toBeGreaterThanOrEqual(lim.moves[0].supplyLimitFraction)
+    for (const r of [nominal, sag, lim, both]) expect(finite(r)).toBe(true)
+  })
+
+  it('Supply 限制用的電池電壓：沒給就用標準電壓；電壓越低，同樣的限制給的 Stator 電流越小', () => {
+    const p = { ...plant, supplyCurrentLimit: 15, statorCurrentLimit: null }
+    const at = (v?: number) => applyCurrentLimit(p, 12, 0.2, false, v)
+    expect(at()).toEqual(at(p.batteryVoltage))
+    const low = at(9)
+    expect(low.supplyLimited).toBe(true)
+    expect(Math.abs(low.statorCurrent)).toBeLessThan(Math.abs(at(p.batteryVoltage).statorCurrent))
+    // 限制後電池端電流剛好等於上限（用同一個電壓算）
+    expect((low.statorCurrent * low.effectiveVoltage) / 9).toBeCloseTo(15, 6)
+    // 電壓接近 0 也不會算出 NaN
+    expect(Number.isFinite(at(1e-6).statorCurrent)).toBe(true)
   })
 
   it('Supply 限制比 Stator 限制寬鬆時不會觸發（低速時佔空比小）', () => {
