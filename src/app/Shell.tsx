@@ -23,8 +23,12 @@ function isDark(t: Theme) {
 }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { page, go, track, setTrack, courseChapter, pendingSection, clearPendingSection } = useStore()
-  const trackName = track === 'arm' ? '手臂' : '電梯'
+  const { page: storePage, go, track, setTrack, courseChapter, pendingSection, clearPendingSection } = useStore()
+  const trackName = track === 'arm' ? '手臂' : track === 'flywheel' ? '射球飛輪' : '電梯'
+  // 射球飛輪只有 3F 模擬，其他樓層和使用說明都不顯示
+  const flywheel = track === 'flywheel'
+  const floors = flywheel ? FLOORS.filter((f) => f.id === 'sim') : FLOORS
+  const page = flywheel ? 'sim' : storePage
   const [theme, setTheme] = useState<Theme>(() => loadJson<Theme>('theme', null))
 
   useEffect(() => {
@@ -67,14 +71,16 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="floors">
             <div className="rail" aria-hidden="true" />
             {/* 樓層固定高 58px、靠下對齊，車廂從底部算第幾層就好，不必量 DOM */}
-            <div className="car" aria-hidden="true" style={{ transform: `translateY(${-(FLOORS.length - 1 - (page === 'guide' ? -1 : FLOORS.findIndex((f) => f.id === page))) * 58}px)` }} />
+            <div className="car" aria-hidden="true" style={{ transform: `translateY(${-(floors.length - 1 - (page === 'guide' ? -1 : floors.findIndex((f) => f.id === page))) * 58}px)` }} />
             {/* 使用說明放在最上面一格：樓層是靠下對齊，加在上面不會動到原本的樓層位置；車廂從 G 往上數剛好停在這一格 */}
-            <button type="button" className="floor" data-floor="guide" aria-current={page === 'guide' ? 'page' : undefined} onClick={() => go('guide')}>
-              <span className="lv">？</span>
-              <span className="nm">使用說明</span>
-              <span className="nm-short">說明</span>
-            </button>
-            {FLOORS.map((f) => (
+            {!flywheel && (
+              <button type="button" className="floor" data-floor="guide" aria-current={page === 'guide' ? 'page' : undefined} onClick={() => go('guide')}>
+                <span className="lv">？</span>
+                <span className="nm">使用說明</span>
+                <span className="nm-short">說明</span>
+              </button>
+            )}
+            {floors.map((f) => (
               <button
                 key={f.id}
                 type="button"

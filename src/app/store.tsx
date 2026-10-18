@@ -18,8 +18,8 @@ import type { SimLogHandoff } from './simLog'
 export type PageId = 'home' | 'calc' | 'tune' | 'sim' | 'learn' | 'guide'
 export const PAGES: PageId[] = ['home', 'calc', 'tune', 'sim', 'learn', 'guide']
 export type SimSource = 'theory' | 'tuning' | 'custom'
-/** 網站的兩條線：電梯、手臂。null = 還沒選（每次進站都要選，同一個分頁重新整理不用重選） */
-export type Track = 'elevator' | 'arm'
+/** 網站的三條線：電梯、手臂、射球飛輪（只有 3F 模擬）。null = 還沒選（每次進站都要選，同一個分頁重新整理不用重選） */
+export type Track = 'elevator' | 'arm' | 'flywheel'
 
 export const UNIT0_ITEMS = 5
 
@@ -191,15 +191,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     if (new URLSearchParams(location.search).get(SHARE_PARAM)) return 'elevator'
     const t = loadSession('track')
-    return t === 'elevator' || t === 'arm' ? t : null
+    return t === 'elevator' || t === 'arm' || t === 'flywheel' ? t : null
   })
   // 手動選機構（或換機構）一律回到總覽：換了機構，原本停的樓層可能還沒做（例如手臂 4F）
   const setTrack = useCallback((t: Track | null) => {
     setTrackState(t)
     saveSession('track', t)
     if (t) {
-      if (location.hash !== '#home') location.hash = 'home'
-      setPage('home')
+      // 射球飛輪只有 3F 模擬
+      const first: PageId = t === 'flywheel' ? 'sim' : 'home'
+      if (location.hash !== '#' + first) location.hash = first
+      setPage(first)
     }
     window.scrollTo(0, 0)
   }, [])

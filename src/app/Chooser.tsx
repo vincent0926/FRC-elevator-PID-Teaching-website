@@ -1,6 +1,6 @@
 import { useStore, type Track } from './store'
 
-/** 進站先選機構：電梯或單關節手臂。選完才進到原本的總覽與各樓層。 */
+/** 進站先選機構：電梯、單關節手臂或射球飛輪。選完才進到各樓層（射球飛輪只有 3F 模擬）。 */
 
 const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = [
   {
@@ -14,6 +14,12 @@ const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = 
     title: '手臂',
     what: '繞一個轉軸轉動的單關節手臂。',
     points: ['重力跟角度有關：kG·cos θ', '轉動慣量、重心距離', '1F～4F 完整：計算參數（內建編碼器或 CANcoder）、日誌診斷、模擬、實機教學'],
+  },
+  {
+    id: 'flywheel',
+    title: '射球飛輪',
+    what: '控制轉速的射球機構：先轉到目標轉速，球打出去會掉速。',
+    points: ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '只有 3F 模擬：到速、掉速多少、多快回來'],
   },
 ]
 
@@ -46,6 +52,24 @@ function ArmIcon() {
   )
 }
 
+function FlywheelIcon() {
+  return (
+    <svg viewBox="0 0 80 80" width="80" height="80" aria-hidden="true">
+      <rect x="10" y="72" width="60" height="4" className="ch-base" />
+      <path d="M14 68 L14 30 Q14 12 34 12 L66 12" className="ch-frame" />
+      {/* 滑過卡片時輪子轉起來 */}
+      <g className="ch-wheel-spin">
+        <circle cx="34" cy="40" r="16" className="ch-stage" />
+        <rect x="32" y="24" width="4" height="10" className="ch-car" />
+      </g>
+      <circle cx="34" cy="40" r="4" className="ch-pivot" />
+      <circle cx="60" cy="22" r="7" className="ch-car" />
+    </svg>
+  )
+}
+
+const ICONS = { elevator: ElevatorIcon, arm: ArmIcon, flywheel: FlywheelIcon }
+
 export function Chooser() {
   const { setTrack } = useStore()
   return (
@@ -55,11 +79,13 @@ export function Chooser() {
           FRC 9427 前饋與 PID 學習
         </p>
         <h1>你要調哪一種機構？</h1>
-        <p className="lead">兩種的調參流程一樣（理論值 → 模擬 → 上機錄日誌 → 調參），差在重力怎麼算。</p>
+        <p className="lead">電梯和手臂是位置控制，調參流程一樣（理論值 → 模擬 → 上機錄日誌 → 調參），差在重力怎麼算。射球飛輪是速度控制，目前只有模擬。</p>
         <div className="chooser-cards">
-          {CHOICES.map((c) => (
+          {CHOICES.map((c) => {
+            const Icon = ICONS[c.id]
+            return (
             <button key={c.id} type="button" className="chooser-card" onClick={() => setTrack(c.id)}>
-              {c.id === 'elevator' ? <ElevatorIcon /> : <ArmIcon />}
+              <Icon />
               <b>{c.title}</b>
               <span className="small">{c.what}</span>
               <ul className="small">
@@ -71,9 +97,10 @@ export function Chooser() {
                 進入{c.title}
               </span>
             </button>
-          ))}
+            )
+          })}
         </div>
-        <p className="small muted">每次打開網站都會先問；同一個分頁重新整理不用重選。進去之後，左邊導覽的「換機構」可以隨時切換，兩邊的資料分開存。</p>
+        <p className="small muted">每次打開網站都會先問；同一個分頁重新整理不用重選。進去之後，左邊導覽的「換機構」可以隨時切換，每個機構的資料分開存。</p>
       </div>
     </div>
   )
