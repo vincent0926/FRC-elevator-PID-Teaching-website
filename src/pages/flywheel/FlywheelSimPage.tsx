@@ -478,7 +478,7 @@ function ShotSim({
 
       <div className="panel" style={{ marginTop: 20 }}>
         <h2>程式設定</h2>
-        <p className="small muted">現在滑桿上的數字。兩顆以上馬達時，其他顆用 Follower 跟著。</p>
+        <p className="small muted">現在滑桿上的數字，只是設定片段，不是完整的子系統：CAN ID、馬達方向（Inverted）、Follower 方向、限位和安全的測試步驟要照你們的機器人自己寫。兩顆以上馬達時，其他顆用 Follower 跟著。</p>
         <pre className="code">{flywheelJava(gains, mech, knobs, plan)}</pre>
       </div>
     </>

@@ -121,9 +121,12 @@ export interface Drive {
  * - Stator 電流 I = (u − kV·v) / R；超過 Stator 上限時控制器降電壓，讓 |I| = 上限
  * - Supply（電池端）電流 ≈ I × u / V電池（佔空比 × Stator 電流），只在馬達出力（u 與 I 同號）時限制。
  *   限制時解 R·I² + b·I = I_sup·V電池（b 是反電動勢在出力方向的分量）
+ * - V電池用 supplyVoltage（模擬時是當下壓降後的電壓，見 sagVoltage）；沒給就用標準電壓 p.batteryVoltage。
+ *   低於 1 V 當成 1 V，避免除以 0
  * - coast：輸出 neutral 且設成 Coast，馬達等於斷路，電流是 0（Brake 則是短路，等於 u = 0）
  */
-export function applyCurrentLimit(p: PlantParams, u: number, vel: number, coast = false): Drive {
+export function applyCurrentLimit(p: PlantParams, u: number, vel: number, coast = false, supplyVoltage = p.batteryVoltage): Drive {
+  const vBat = Math.max(supplyVoltage, MIN_SUPPLY_VOLTAGE)
   const backEmf = p.kV * vel
   if (coast) return { effectiveVoltage: backEmf, statorCurrent: 0, currentLimited: false, supplyLimited: false }
   const R = p.motorResistance
@@ -138,10 +141,10 @@ export function applyCurrentLimit(p: PlantParams, u: number, vel: number, coast 
   if (lim != null && lim > 0 && current !== 0) {
     const dir = Math.sign(current)
     const uEff = backEmf + current * R
-    const supply = (current * uEff) / p.batteryVoltage
+    const supply = (current * uEff) / vBat
     if (supply > lim) {
       const b = dir * backEmf
-      const a = (-b + Math.sqrt(b * b + 4 * R * lim * p.batteryVoltage)) / (2 * R)
+      const a = (-b + Math.sqrt(b * b + 4 * R * lim * vBat)) / (2 * R)
       if (a < Math.abs(current)) {
         current = dir * a
         supplyLimited = true
@@ -149,6 +152,22 @@ export function applyCurrentLimit(p: PlantParams, u: number, vel: number, coast 
     }
   }
   return { effectiveVoltage: limited || supplyLimited ? backEmf + current * R : u, statorCurrent: current, currentLimited: limited, supplyLimited }
+}
+
+/** Supply 電流換算時電池電壓的下限 V（避免除以 0） */
+export const MIN_SUPPLY_VOLTAGE = 1
+
+/**
+ * 電池壓降後的電壓：V = V0 − Rb·I電池，I電池 = P / V（P = 所有馬達的 Stator 電流 × 加上的電壓，取絕對值；回充也當成壓降，跟原本一樣）。
+ * 兩式聯立是 V² − V0·V + Rb·P = 0，取大的根；電池給不出這麼多功率（判別式 < 0）時取 V0/2（最大功率點，電壓不會再低）。
+ * 直接解代數方程，不用上一步的電流：內阻大、電流大時，用上一步的值會來回震盪到發散（NaN）。
+ */
+export function sagVoltage(p: PlantParams, power: number): number {
+  const v0 = p.batteryVoltage
+  const rb = p.batteryResistance
+  if (!(rb > 0)) return v0
+  const disc = v0 * v0 - 4 * rb * Math.abs(power)
+  return disc > 0 ? (v0 + Math.sqrt(disc)) / 2 : v0 / 2
 }
 
 /** 移動方向 dir（+1 往上、−1 往下）的摩擦 */
@@ -166,8 +185,8 @@ export function gravity(p: PlantParams, pos: number): number {
   return g
 }
 
-export function acceleration(p: PlantParams, s: PlantState, u: number, coast = false): number {
-  const { effectiveVoltage } = applyCurrentLimit(p, u, s.vel, coast)
+export function acceleration(p: PlantParams, s: PlantState, u: number, coast = false, supplyVoltage = p.batteryVoltage): number {
+  const { effectiveVoltage } = applyCurrentLimit(p, u, s.vel, coast, supplyVoltage)
   let net = (p.gearboxEfficiency ?? 1) * (effectiveVoltage - p.kV * s.vel) - gravity(p, s.pos)
   if (hasFriction(p)) {
     if (Math.abs(s.vel) > STICK_VELOCITY) {
@@ -189,14 +208,14 @@ export function acceleration(p: PlantParams, s: PlantState, u: number, coast = f
  */
 export const MAX_SUBSTEPS = 1000
 
-export function stepRK4(p: PlantParams, s: PlantState, u: number, dt: number, coast = false): PlantState {
+export function stepRK4(p: PlantParams, s: PlantState, u: number, dt: number, coast = false, supplyVoltage = p.batteryVoltage): PlantState {
   const tau = p.kA / Math.max(p.kV * (p.gearboxEfficiency ?? 1), 1e-12)
   const need = Math.max(1, Math.ceil(dt / (0.5 * tau)))
   let st = s
   if (need <= MAX_SUBSTEPS) {
-    for (let i = 0; i < need; i++) st = rk4Once(p, st, u, dt / need, coast)
+    for (let i = 0; i < need; i++) st = rk4Once(p, st, u, dt / need, coast, supplyVoltage)
   } else {
-    for (let i = 0; i < MAX_SUBSTEPS; i++) st = implicitOnce(p, st, u, dt / MAX_SUBSTEPS, coast)
+    for (let i = 0; i < MAX_SUBSTEPS; i++) st = implicitOnce(p, st, u, dt / MAX_SUBSTEPS, coast, supplyVoltage)
   }
   return st
 }
@@ -205,15 +224,15 @@ export function stepRK4(p: PlantParams, s: PlantState, u: number, dt: number, co
  * 線性化後向 Euler：v⁺ = v + h·a(v) / (1 + h·k)，k = η·kV/kA 是速度項的剛性。
  * 電流限制作用時馬達輸出跟速度無關（k = 0）。穩定但只有一階精度，只給極端機構用。
  */
-function implicitOnce(p: PlantParams, s: PlantState, u: number, dt: number, coast: boolean): PlantState {
-  const a = acceleration(p, s, u, coast)
-  const drive = applyCurrentLimit(p, u, s.vel, coast)
+function implicitOnce(p: PlantParams, s: PlantState, u: number, dt: number, coast: boolean, vs: number): PlantState {
+  const a = acceleration(p, s, u, coast, vs)
+  const drive = applyCurrentLimit(p, u, s.vel, coast, vs)
   // Coast 時馬達斷路（反電動勢跟速度項抵消），電流限制時輸出跟速度無關：這兩種都沒有速度項的剛性
   const k = coast || drive.currentLimited || drive.supplyLimited ? 0 : ((p.gearboxEfficiency ?? 1) * p.kV) / p.kA
   let vel = s.vel + (dt * a) / (1 + dt * k)
   let pos = s.pos + dt * vel
   if (hasFriction(p) && (Math.sign(vel) !== Math.sign(s.vel) || Math.abs(vel) < STICK_VELOCITY)) {
-    if (acceleration(p, { pos, vel: 0 }, u, coast) === 0) vel = 0
+    if (acceleration(p, { pos, vel: 0 }, u, coast, vs) === 0) vel = 0
   }
   if (pos < p.minPosition) {
     pos = p.minPosition
@@ -225,21 +244,21 @@ function implicitOnce(p: PlantParams, s: PlantState, u: number, dt: number, coas
   return { pos, vel }
 }
 
-function rk4Once(p: PlantParams, s: PlantState, u: number, dt: number, coast: boolean): PlantState {
-  const a1 = acceleration(p, s, u, coast)
+function rk4Once(p: PlantParams, s: PlantState, u: number, dt: number, coast: boolean, vs: number): PlantState {
+  const a1 = acceleration(p, s, u, coast, vs)
   const s2 = { pos: s.pos + 0.5 * dt * s.vel, vel: s.vel + 0.5 * dt * a1 }
-  const a2 = acceleration(p, s2, u, coast)
+  const a2 = acceleration(p, s2, u, coast, vs)
   const s3 = { pos: s.pos + 0.5 * dt * s2.vel, vel: s.vel + 0.5 * dt * a2 }
-  const a3 = acceleration(p, s3, u, coast)
+  const a3 = acceleration(p, s3, u, coast, vs)
   const s4 = { pos: s.pos + dt * s3.vel, vel: s.vel + dt * a3 }
-  const a4 = acceleration(p, s4, u, coast)
+  const a4 = acceleration(p, s4, u, coast, vs)
 
   let pos = s.pos + (dt / 6) * (s.vel + 2 * s2.vel + 2 * s3.vel + s4.vel)
   let vel = s.vel + (dt / 6) * (a1 + 2 * a2 + 2 * a3 + a4)
 
   // 靜摩擦：速度穿越 0 而且力不夠大時停住
   if (hasFriction(p) && (Math.sign(vel) !== Math.sign(s.vel) || Math.abs(vel) < STICK_VELOCITY)) {
-    if (acceleration(p, { pos, vel: 0 }, u, coast) === 0) vel = 0
+    if (acceleration(p, { pos, vel: 0 }, u, coast, vs) === 0) vel = 0
   }
 
   if (pos < p.minPosition) {

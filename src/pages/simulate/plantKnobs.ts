@@ -181,7 +181,7 @@ export type ToggleKey = 'friction' | 'batterySag' | 'gearbox' | 'sensor' | 'stag
 export const TOGGLES: { key: ToggleKey; label: string; what: string }[] = [
   { key: 'voltageLimit', label: '電壓飽和', what: '輸出最多只有電池電壓。關掉只是讓你看「如果馬達要多少給多少」會怎樣，真的馬達做不到。' },
   { key: 'friction', label: '摩擦', what: '滑軌、軸承的庫侖摩擦，速度接近 0 時會卡住。往上往下可以不一樣。' },
-  { key: 'batterySag', label: '電池壓降', what: '電池內阻 0.02 Ω，電流大時電壓往下掉，飽和上限跟著變低。' },
+  { key: 'batterySag', label: '電池壓降', what: '電池內阻 0.02 Ω，電流大時電壓往下掉，飽和上限跟著變低；Supply 電流限制也照掉下來的電壓算。' },
   { key: 'gearbox', label: '齒輪箱效率', what: '馬達出力打折，要多一點電壓才撐得住。理論 kG 會偏小。' },
   { key: 'sensor', label: '感測延遲與雜訊', what: '控制器看到的位置、速度是舊的而且會抖。kP、kD 太大時最容易出事。' },
   { key: 'stageJump', label: '換級 kG 跳變', what: '連續式電梯換級時，被拉動的質量改變，kG 在行程一半突然變大。' },
