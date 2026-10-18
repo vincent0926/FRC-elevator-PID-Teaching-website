@@ -61,8 +61,8 @@ export interface TuneSlidersProps<T extends TuneGains> {
   display?: Partial<Record<TuneKey, number>>
   /** 不能調的欄位與原因（例如電梯開了往下 Slot 1 時的 kS、kG） */
   disabled?: Partial<Record<TuneKey, string>>
-  /** 轉數制：機構轉 1 圈的 SI 量（電梯 2πr 公尺、手臂 2π rad）和給人看的說明 */
-  rotation: { perRot: number; note: string }
+  /** 轉數制：機構轉 1 圈的 SI 量（電梯 2πr 公尺、手臂 2π rad）和給人看的說明；copy 是「要填到哪裡」，沒給就是 Slot0Configs、MotionMagicConfigs */
+  rotation: { perRot: number; note: string; copy?: string }
 }
 
 /** 轉數制下 kV、巡航速度的提示要改講 rps */
@@ -106,7 +106,7 @@ export function TuneSliders<T extends TuneGains>({ mechanism, values, theory, ed
         </div>
         {rot && (
           <span className="small muted">
-            SensorToMechanismRatio 設成齒比後，1 rot = {rotation.note}。這裡的數字就是 Slot0Configs、MotionMagicConfigs 要填的值。
+            SensorToMechanismRatio 設成齒比後，1 rot = {rotation.note}。{rotation.copy ?? '這裡的數字就是 Slot0Configs、MotionMagicConfigs 要填的值。'}
           </span>
         )}
       </div>
@@ -135,6 +135,7 @@ export function TuneSliders<T extends TuneGains>({ mechanism, values, theory, ed
                   <input
                     type="range"
                     aria-label={`${label}（${units[k]}）`}
+                    aria-valuetext={`${(v * s).toFixed(digits)} ${units[k]}`}
                     min={r.min}
                     max={r.max}
                     step={r.step}
