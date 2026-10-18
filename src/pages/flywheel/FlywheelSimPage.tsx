@@ -54,6 +54,16 @@ export function FlywheelSimPage() {
   const fails = flywheelFailures(metrics, plan, spec)
   const outcomes = useMemo(() => shotOutcomes(result, mech, plan), [result, mech, plan])
   const hits = outcomes.filter((o) => o.hit).length
+  const recoveryOk = (r: number | null) => r !== null && r <= spec.recovery
+  const shotStats = useMemo(() => {
+    let maxDip = 0
+    let slowest: number | null = 0
+    for (const sh of metrics.shots) {
+      maxDip = Math.max(maxDip, sh.dip)
+      slowest = slowest === null || sh.recovery === null ? null : Math.max(slowest, sh.recovery)
+    }
+    return { maxDip, slowest, recoveryFails: metrics.shots.filter((sh) => !(sh.recovery !== null && sh.recovery <= spec.recovery)).length }
+  }, [metrics, spec.recovery])
   const goalW = wheelForGoal(mech.wheelRadius, plan)
   const pb = usePlayback(result)
   const cursorX = pb.idx !== null ? result.t[pb.idx] : null
@@ -118,7 +128,7 @@ export function FlywheelSimPage() {
           <div className="fields">
             <NumberField label="目標轉速" value={plan.target} display={1 / TAU} digits={1} onChange={(v) => setP({ target: v })} min={1} max={150} step={1} unit="rps" />
             <NumberField label="加速度限制" value={plan.accel} display={1 / TAU} digits={0} onChange={(v) => setP({ accel: v })} min={0} max={2000} step={10} unit="rps/s" hint="0 = VelocityVoltage 直接跳到目標；大於 0 = MotionMagicVelocityVoltage" />
-            <NumberField label="發數" value={plan.shots} onChange={(v) => setP({ shots: Math.round(v) })} min={1} max={8} step={1} unit="發" />
+            <NumberField label="發數" value={plan.shots} onChange={(v) => setP({ shots: Math.round(v) })} min={1} max={100} step={1} unit="發" />
             <NumberField label="每發間隔" value={plan.interval} onChange={(v) => setP({ interval: v })} min={0.05} max={2} step={0.05} unit="s" />
             <NumberField label="第一發" value={plan.firstShot} onChange={(v) => setP({ firstShot: v })} min={0.2} max={5} step={0.1} unit="s" hint="從靜止開始算" />
             <NumberField label="球的質量" value={plan.ballMass} onChange={(v) => setP({ ballMass: v })} min={0.01} max={1} step={0.005} unit="kg" />
@@ -280,18 +290,25 @@ export function FlywheelSimPage() {
                 <td className="num">{f(metrics.overshoot / TAU)} rps</td>
                 <td>{fails.includes('overshoot') ? <b className="fail">✕</b> : <b className="pass">✓</b>}</td>
               </tr>
-              {metrics.shots.map((s, i) => {
-                const ok = s.recovery !== null && s.recovery <= spec.recovery
-                return (
-                  <tr key={i}>
-                    <td>
-                      第 {i + 1} 發：掉 {f(s.dip / TAU, 1)} rps（{f((s.dip / plan.target) * 100, 0)}%）
-                    </td>
-                    <td className="num">{s.recovery === null ? '回不來' : `${f(s.recovery)} s 回來`}</td>
-                    <td>{ok ? <b className="pass">✓</b> : <b className="fail">✕</b>}</td>
-                  </tr>
-                )
-              })}
+              <tr>
+                <td>每一發掉速（最多）</td>
+                <td className="num">
+                  {f(shotStats.maxDip / TAU, 1)} rps（{f((shotStats.maxDip / plan.target) * 100, 0)}%）
+                </td>
+                <td />
+              </tr>
+              <tr>
+                <td>每一發恢復（最慢）</td>
+                <td className="num">{shotStats.slowest === null ? '有一發回不來' : `${f(shotStats.slowest)} s`}</td>
+                <td>{shotStats.recoveryFails > 0 ? <b className="fail">✕ {shotStats.recoveryFails} 發太慢</b> : <b className="pass">✓</b>}</td>
+              </tr>
+              <tr>
+                <td>進了幾發</td>
+                <td className="num">
+                  {hits} / {outcomes.length}
+                </td>
+                <td />
+              </tr>
               <tr>
                 <td>峰值電流（每顆）</td>
                 <td className="num">{f(metrics.peakCurrent, 0)} A</td>
@@ -305,12 +322,17 @@ export function FlywheelSimPage() {
             </tbody>
           </table>
         </div>
-        <h3 style={{ margin: '16px 0 6px' }}>每一發的球</h3>
+        <details className="fw-detail">
+          <summary>
+            每一發的明細（{outcomes.length} 發，進了 {hits} 發）
+          </summary>
         <div style={{ overflowX: 'auto' }}>
           <table className="tbl">
             <thead>
               <tr>
                 <th>發</th>
+                <th className="num">掉速</th>
+                <th className="num">恢復</th>
                 <th className="num">輪子轉速</th>
                 <th className="num">出口球速</th>
                 <th className="num">落點</th>
@@ -321,6 +343,8 @@ export function FlywheelSimPage() {
               {outcomes.map((o, i) => (
                 <tr key={i}>
                   <td>第 {i + 1} 發</td>
+                  <td className="num">{f(metrics.shots[i].dip / TAU, 1)} rps</td>
+                  <td className={'num ' + (recoveryOk(metrics.shots[i].recovery) ? '' : 'fail')}>{metrics.shots[i].recovery === null ? '回不來' : `${f(metrics.shots[i].recovery!)} s`}</td>
                   <td className="num">{f(o.wheel / TAU, 1)} rps</td>
                   <td className="num">{f(o.exit, 2)} m/s</td>
                   <td className="num">{Number.isFinite(o.range) ? `${f(o.range, 2)} m` : '—'}</td>
@@ -330,8 +354,9 @@ export function FlywheelSimPage() {
             </tbody>
           </table>
         </div>
+        </details>
         <p className="small muted" style={{ margin: '6px 0 0' }}>
-          落點是球往下掉經過目標高度（{f(plan.goalHeight, 2)} m）時離出射點多遠，離目標距離在開口一半（±{f((plan.goalWidth / 2) * 100, 0)} cm）以內算進。轉速差一點，落點就差一截。進了 {hits} / {outcomes.length} 發。
+          落點是球往下掉經過目標高度（{f(plan.goalHeight, 2)} m）時離出射點多遠，離目標距離在開口一半（±{f((plan.goalWidth / 2) * 100, 0)} cm）以內算進。轉速差一點，落點就差一截。
         </p>
         <p className="small" style={{ margin: '10px 0 0' }}>
           整體：{fails.length === 0 ? <b className="pass">全部達標</b> : <b className="fail">{fails.length} 項沒過</b>}
