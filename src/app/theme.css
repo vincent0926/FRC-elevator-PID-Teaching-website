@@ -500,3 +500,25 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .fw-derived { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 10px 0 0; font-size: 13.5px }
 .fw-derived dt { color: var(--ink-2) }
 .fw-derived dd { margin: 0; font-family: var(--mono) }
+/* 射球飛輪側視圖 */
+.fw-view { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px 10px }
+.fw-view svg { display: block; height: auto }
+.fv-ideal { fill: none; stroke: var(--steel); stroke-width: 1.5; stroke-dasharray: 5 4 }
+.fv-ideal-tick { stroke: var(--steel); stroke-width: 2 }
+.fv-path { fill: none; stroke: var(--blue); stroke-width: 2; opacity: .6 }
+.fv-land { fill: var(--blue) }
+.fv-ball { fill: var(--yellow); stroke: var(--ink-2); stroke-width: 1 }
+.fv-wheel { fill: var(--panel); stroke: var(--ink); stroke-width: 2.5 }
+.fv-spoke { stroke: var(--ink-3); stroke-width: 2 }
+.fv-mark { fill: var(--yellow) }
+.fv-gauge-bg { fill: var(--line-2) }
+.fv-gauge-tol { fill: var(--green-soft); stroke: var(--green); stroke-width: 1 }
+.fv-gauge-ok { fill: var(--green) }
+.fv-gauge-low { fill: var(--amber) }
+.fv-gauge-target { stroke: var(--ink); stroke-width: 1.5 }
+.fv-read { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-top: 6px }
+.fv-read b { color: var(--ink) }
+.fv-read em { font-style: normal; color: var(--ink-3); margin-left: 2px }
+.fw-mech { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
+.fw-need { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2) }
+.fw-need b { font-size: 18px; color: var(--ink) }

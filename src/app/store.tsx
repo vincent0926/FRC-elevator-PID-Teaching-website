@@ -198,8 +198,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setTrackState(t)
     saveSession('track', t)
     if (t) {
-      // 射球飛輪只有 3F 模擬
-      const first: PageId = t === 'flywheel' ? 'sim' : 'home'
+      // 射球飛輪沒有總覽，從 1F 開始
+      const first: PageId = t === 'flywheel' ? 'calc' : 'home'
       if (location.hash !== '#' + first) location.hash = first
       setPage(first)
     }

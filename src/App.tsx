@@ -13,17 +13,14 @@ import { ArmTuningPage } from './pages/arm/ArmTuningPage'
 import { ArmLearnPage } from './pages/arm/ArmLearnPage'
 import { GuidePage } from './pages/guide/GuidePage'
 import { FlywheelSimPage } from './pages/flywheel/FlywheelSimPage'
+import { FlywheelCalcPage } from './pages/flywheel/FlywheelCalcPage'
 
 export default function App() {
   const { page, track } = useStore()
   if (!track) return <Chooser />
-  // 射球飛輪只有一頁：不管網址停在哪一樓都顯示模擬
+  // 射球飛輪只有 1F 和 3F：停在其他樓層（例如深層連結）就顯示 1F
   if (track === 'flywheel')
-    return (
-      <Shell>
-        <FlywheelSimPage />
-      </Shell>
-    )
+    return <Shell>{page === 'sim' ? <FlywheelSimPage /> : <FlywheelCalcPage />}</Shell>
   if (track === 'arm')
     return (
       <Shell>
