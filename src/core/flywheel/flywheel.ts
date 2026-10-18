@@ -195,13 +195,19 @@ export interface FlywheelSimResult {
   /** 輸出被夾到上下限 */
   saturated: Uint8Array
   shotTimes: number[]
+  /** 每一發射的時候的目標轉速 rad/s（沒給 targets 時都是 plan.target） */
+  shotTargets: number[]
 }
 
 export function simEnd(plan: ShotPlan): number {
   return plan.firstShot + (plan.shots - 1) * plan.interval + TAIL
 }
 
-export function simulateFlywheel(mech: FlywheelMechanism, gains: FlywheelGains, knobs: FlywheelKnobs, plan: ShotPlan): FlywheelSimResult {
+/**
+ * targets：每一發各自的目標轉速 rad/s（邊移動邊射時每一發的距離不同）。
+ * 第一發前用 targets[0]，第 s 發離開輪子後換成 targets[s + 1]。沒給就全部用 plan.target。
+ */
+export function simulateFlywheel(mech: FlywheelMechanism, gains: FlywheelGains, knobs: FlywheelKnobs, plan: ShotPlan, targets?: number[]): FlywheelSimResult {
   const mot = motorModel(mech.motor)
   const J = flywheelInertia(mech)
   const G = mech.gearRatio
@@ -219,11 +225,14 @@ export function simulateFlywheel(mech: FlywheelMechanism, gains: FlywheelGains, 
     motorCurrent: new Float64Array(steps),
     saturated: new Uint8Array(steps),
     shotTimes: Array.from({ length: plan.shots }, (_, i) => plan.firstShot + i * plan.interval),
+    shotTargets: Array.from({ length: plan.shots }, (_, i) => targets?.[i] ?? plan.target),
   }
   // 每一發的角衝量在球碰到輪子那一刻決定（當時轉速越高，球帶走越多）
   const impulse: number[] = new Array(plan.shots).fill(0)
   const shotStep = out.shotTimes.map((s) => Math.round(s / CONTROL_DT))
   const contactSteps = Math.round(CONTACT / CONTROL_DT)
+  let next = 0
+  let target = out.shotTargets[0] ?? plan.target
   let w = 0
   let ref = 0
   let integ = 0
@@ -233,13 +242,17 @@ export function simulateFlywheel(mech: FlywheelMechanism, gains: FlywheelGains, 
   for (let k = 0; k < steps; k++) {
     const t = k * CONTROL_DT
     // 參考轉速：直接跳，或照加速度限制往目標爬
+    while (next < plan.shots && k >= shotStep[next] + contactSteps) {
+      next++
+      if (next < plan.shots) target = out.shotTargets[next]
+    }
     let aRef = 0
     if (plan.accel > 0) {
-      if (ref < plan.target) {
-        ref = Math.min(plan.target, ref + plan.accel * CONTROL_DT)
-        aRef = ref < plan.target ? plan.accel : 0
-      }
-    } else ref = plan.target
+      if (ref < target) {
+        ref = Math.min(target, ref + plan.accel * CONTROL_DT)
+        aRef = ref < target ? plan.accel : 0
+      } else ref = target
+    } else ref = target
     const err = ref - w
     integ += err * CONTROL_DT
     const deriv = k === 0 ? 0 : (err - prevErr) / CONTROL_DT
@@ -326,20 +339,22 @@ function settleTime(res: FlywheelSimResult, from: number, to: number, target: nu
 }
 
 export function flywheelMetrics(res: FlywheelSimResult, plan: ShotPlan, spec: FlywheelSpec): FlywheelMetrics {
-  const tol = (spec.tolPct / 100) * plan.target
+  // 每一發看它自己的目標轉速（邊移動邊射時每一發不同）
+  const goal = (s: number) => res.shotTargets[s] ?? plan.target
+  const tolOf = (s: number) => (spec.tolPct / 100) * goal(s)
   const idx = (t: number) => Math.min(res.t.length, Math.max(0, Math.round(t / CONTROL_DT)))
   const first = idx(plan.firstShot)
   let overshoot = 0
-  for (let i = 0; i < first; i++) overshoot = Math.max(overshoot, res.vel[i] - plan.target)
+  for (let i = 0; i < first; i++) overshoot = Math.max(overshoot, res.vel[i] - goal(0))
   const avgFrom = idx(plan.firstShot - 0.2)
   let sum = 0
-  for (let i = avgFrom; i < first; i++) sum += plan.target - res.vel[i]
+  for (let i = avgFrom; i < first; i++) sum += goal(0) - res.vel[i]
   const shots: ShotMetrics[] = res.shotTimes.map((at, s) => {
     const a = idx(at)
     const b = s + 1 < res.shotTimes.length ? idx(res.shotTimes[s + 1]) : res.t.length
     let low = Infinity
     for (let i = a; i < b; i++) low = Math.min(low, res.vel[i])
-    return { at, dip: Math.max(0, plan.target - low), recovery: settleTime(res, a, b, plan.target, tol) }
+    return { at, dip: Math.max(0, goal(s) - low), recovery: settleTime(res, a, b, goal(s), tolOf(s)) }
   })
   let peak = 0
   let sat = 0
@@ -348,7 +363,7 @@ export function flywheelMetrics(res: FlywheelSimResult, plan: ShotPlan, spec: Fl
     sat += res.saturated[i]
   }
   return {
-    spinUp: settleTime(res, 0, first, plan.target, tol),
+    spinUp: settleTime(res, 0, first, goal(0), tolOf(0)),
     overshoot,
     steadyError: first > avgFrom ? sum / (first - avgFrom) : 0,
     shots,
@@ -490,12 +505,17 @@ export function fastestSpinUp(mech: FlywheelMechanism, target: number, statorLim
 
 /** 彈道 1F「算轉速和仰角」的一條候選軌跡 */
 export interface TrajectoryOption {
-  /** 出射仰角 rad */
+  /** 出射仰角 rad（發射機構相對機器人的仰角） */
   angle: number
   /** 打到目標中心要的輪子轉速 rad/s */
   wheel: number
-  /** 出口球速 m/s */
+  /** 出口球速 m/s（相對機器人） */
   exit: number
+  /** 底盤要往哪偏才會進 rad，往左為正；機器人沒動時是 0 */
+  yaw: number
+  /** 加上機器人速度後，球對地的速度 m/s 和仰角 rad（畫軌跡用；沒動時跟 exit、angle 一樣） */
+  fieldExit: number
+  fieldAngle: number
   /** 轉速可以差多少還會進（比例，取偏低、偏高比較小的那邊）；算不出來是 null */
   tolerance: number | null
   /** 球往下掉進目標高度時跟水平的夾角 rad（越大越陡） */
@@ -512,29 +532,205 @@ export const TRAJECTORY_ANGLES = Array.from({ length: 12 }, (_, i) => ((20 + i *
 /**
  * 同一個距離，不同仰角各要多少轉速才會打到目標中心（往下掉進去）。打不進的仰角不列。
  * 容許誤差：開口近邊、遠邊各要多少轉速，跟中心比，取比較小的那邊。
+ * 給 motion（邊移動邊射）時，轉速和底盤偏角用 solveMovingShot 算。
  */
-export function trajectoryOptions(mech: FlywheelMechanism, plan: ShotPlan, freeSpeed: number, angles = TRAJECTORY_ANGLES): TrajectoryOption[] {
+export function trajectoryOptions(mech: FlywheelMechanism, plan: ShotPlan, freeSpeed: number, angles = TRAJECTORY_ANGLES, motion: RobotMotion = STILL): TrajectoryOption[] {
   const rx = exitRadius(mech)
+  const moving = motion.toward !== 0 || motion.side !== 0
+  const solve = (angle: number, d: number) => (moving ? solveMovingShot(rx, plan, angle, motion, d) : stillShot(rx, { ...plan, angle, goalDistance: d }))
   const out: TrajectoryOption[] = []
   for (const angle of angles) {
-    const p = { ...plan, angle }
-    const wheel = wheelForGoal(rx, p)
-    if (wheel === null) continue
-    const exit = exitSpeed(wheel, rx)
-    const near = wheelForGoal(rx, { ...p, goalDistance: plan.goalDistance - plan.goalWidth / 2 })
-    const far = wheelForGoal(rx, { ...p, goalDistance: plan.goalDistance + plan.goalWidth / 2 })
-    const tolerance = near === null || far === null ? null : Math.min(wheel - near, far - wheel) / wheel
-    const T = flightTime(exit, angle, plan.height, plan.goalHeight)
-    const vy = exit * Math.sin(angle) - GRAVITY * T
+    const s = solve(angle, plan.goalDistance)
+    if (s === null) continue
+    const near = solve(angle, plan.goalDistance - plan.goalWidth / 2)
+    const far = solve(angle, plan.goalDistance + plan.goalWidth / 2)
+    const tolerance = near === null || far === null ? null : Math.min(s.wheel - near.wheel, far.wheel - s.wheel) / s.wheel
+    const T = flightTime(s.fieldExit, s.fieldAngle, plan.height, plan.goalHeight)
+    const vy = s.fieldExit * Math.sin(s.fieldAngle) - GRAVITY * T
     out.push({
       angle,
-      wheel,
-      exit,
+      ...s,
       tolerance,
-      entry: Math.atan2(-vy, exit * Math.cos(angle)),
-      apex: apexHeight(exit, angle, plan.height),
-      reachable: wheel <= freeSpeed * 0.9,
+      entry: Math.atan2(-vy, s.fieldExit * Math.cos(s.fieldAngle)),
+      apex: apexHeight(s.fieldExit, s.fieldAngle, plan.height),
+      reachable: s.wheel <= freeSpeed * 0.9,
     })
   }
   return out
+}
+
+/**
+ * 邊移動邊射（shoot on the move）：機器人在動，球出去的對地速度 = 發射機構給的速度 + 機器人的速度。
+ * 沒有砲塔，左右靠底盤轉（偏角 yaw）。不計空氣阻力；機器人速度用出射那一刻的。
+ */
+export interface RobotMotion {
+  /** 往目標方向的速度 m/s（離目標越來越近為正） */
+  toward: number
+  /** 側向速度 m/s（面向目標時往左為正） */
+  side: number
+}
+export const STILL: RobotMotion = { toward: 0, side: 0 }
+
+export interface MovingShot {
+  /** 要的輪子轉速 rad/s */
+  wheel: number
+  /** 發射機構給的球速（相對機器人）m/s */
+  exit: number
+  /** 底盤要偏的角度 rad，往左為正（面向目標時） */
+  yaw: number
+  /** 球對地的速度 m/s、仰角 rad */
+  fieldExit: number
+  fieldAngle: number
+}
+
+/** 機器人沒動：就是 wheelForGoal */
+function stillShot(rx: number, plan: ShotPlan): MovingShot | null {
+  const wheel = wheelForGoal(rx, plan)
+  if (wheel === null) return null
+  const exit = exitSpeed(wheel, rx)
+  return { wheel, exit, yaw: 0, fieldExit: exit, fieldAngle: plan.angle }
+}
+
+/**
+ * 仰角 pitch 固定（發射機構相對機器人），離目標 distance 遠、機器人速度 motion 時，
+ * 要多少球速、底盤偏多少，球才會往下掉進目標中心。做不到是 null。
+ *
+ * 球對地的水平速度要正對目標：側向 vs·cos(pitch)·sin(yaw) + side = 0，
+ * 往目標 H = √((vs·cos pitch)² − side²) + toward，往上 vz = vs·sin(pitch)。
+ * 射程 H·T(vz) 隨 vs 變大，用二分法找剛好等於 distance 的 vs。
+ */
+export function solveMovingShot(rx: number, plan: ShotPlan, pitch: number, motion: RobotMotion, distance = plan.goalDistance): MovingShot | null {
+  const c = Math.cos(pitch)
+  const sn = Math.sin(pitch)
+  if (distance <= 0 || c <= 1e-6 || sn <= 1e-6) return null
+  const rise = plan.goalHeight - Math.max(0, plan.height)
+  const at = (vs: number) => {
+    const q = vs * c
+    const H = Math.sqrt(Math.max(0, q * q - motion.side * motion.side)) + motion.toward
+    const vz = vs * sn
+    const disc = vz * vz - 2 * GRAVITY * rise
+    const T = disc < 0 ? NaN : (vz + Math.sqrt(disc)) / GRAVITY
+    return { H, vz, range: H * T }
+  }
+  // 最小速度：要能抵銷側向速度、要打得到目標高度
+  let lo = Math.max(Math.abs(motion.side) / c, Math.sqrt(2 * GRAVITY * Math.max(0, rise)) / sn) * (1 + 1e-12) + 1e-9
+  let hi = lo * 2 + 1
+  const r0 = at(lo).range
+  if (Number.isFinite(r0) && r0 > distance) return null
+  while (!(at(hi).range >= distance)) {
+    hi *= 2
+    if (hi > 1e4) return null
+  }
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2
+    if (at(mid).range >= distance) hi = mid
+    else lo = mid
+  }
+  const vs = hi
+  const { H, vz } = at(vs)
+  // 球要往下掉進去：最高點的水平距離要在目標之前
+  if (H <= 0 || (H * vz) / GRAVITY > distance + 1e-9) return null
+  const q = vs * c
+  return {
+    wheel: vs / (EXIT_RATIO * rx),
+    exit: vs,
+    // + 0：沒有側向速度時不要出現 -0
+    yaw: Math.atan2(-motion.side, Math.sqrt(Math.max(0, q * q - motion.side * motion.side))) + 0,
+    fieldExit: Math.hypot(H, vz),
+    fieldAngle: Math.atan2(vz, H),
+  }
+}
+
+/** 3F 邊移動邊射的設定 */
+export interface MoveSetup {
+  motion: RobotMotion
+  /** 有補償：每一發照當時的距離和速度算轉速、底盤偏角。沒補償：照靜止的轉速表（只看距離），底盤正對目標 */
+  compensate: boolean
+}
+
+/** 每一發出射時機器人在哪、怎麼動（目標在原點；第一發時機器人在目標正前方 plan.goalDistance） */
+export interface MovePose {
+  /** 機器人位置 m（x 往目標，y 往左，以第一發時的方向為準） */
+  x: number
+  y: number
+  distance: number
+  /** 這時的往目標、側向速度（以這時面向目標為準） */
+  motion: RobotMotion
+}
+
+export function movePose(plan: ShotPlan, motion: RobotMotion, t: number): MovePose {
+  const tau = t - plan.firstShot
+  const x = -plan.goalDistance + motion.toward * tau
+  const y = motion.side * tau
+  const d = Math.hypot(x, y)
+  // u：往目標的單位向量；n：u 往左轉 90°
+  const ux = d > 0 ? -x / d : 1
+  const uy = d > 0 ? -y / d : 0
+  return { x, y, distance: d, motion: { toward: motion.toward * ux + motion.side * uy, side: -motion.toward * uy + motion.side * ux } }
+}
+
+export interface MoveAim {
+  pose: MovePose
+  /** 這一發的目標轉速 rad/s */
+  target: number
+  /** 底盤偏角 rad */
+  yaw: number
+  /** 算不出來（太近、太遠、做不到）：沿用前一發的轉速、底盤正對目標 */
+  solved: boolean
+}
+
+/** 每一發要設的轉速和底盤偏角 */
+export function moveAims(mech: FlywheelMechanism, plan: ShotPlan, setup: MoveSetup): MoveAim[] {
+  const rx = exitRadius(mech)
+  let last = plan.target
+  return Array.from({ length: plan.shots }, (_, i) => {
+    const pose = movePose(plan, setup.motion, plan.firstShot + i * plan.interval)
+    const p = { ...plan, goalDistance: pose.distance }
+    const sol = setup.compensate ? solveMovingShot(rx, p, plan.angle, pose.motion) : stillShot(rx, p)
+    if (sol) last = sol.wheel
+    return { pose, target: last, yaw: sol ? sol.yaw : 0, solved: sol !== null }
+  })
+}
+
+export interface MoveOutcome extends ShotOutcome {
+  pose: MovePose
+  yaw: number
+  /** 球掉到目標高度時的位置 m（目標在原點） */
+  landX: number
+  landY: number
+  /** 偏右的距離 m（往左偏是負的；面向目標看） */
+  side: number
+}
+
+/**
+ * 邊移動邊射每一發落在哪：用模擬裡那一發的真實轉速，加上機器人速度。
+ * miss 是往目標方向的遠近，side 是左右偏，落點離目標中心在開口一半以內算進（開口當成圓的）。
+ */
+export function moveOutcomes(res: FlywheelSimResult, mech: FlywheelMechanism, plan: ShotPlan, aims: MoveAim[]): MoveOutcome[] {
+  const c = Math.cos(plan.angle)
+  const sn = Math.sin(plan.angle)
+  return res.shotTimes.map((at, i) => {
+    const k = Math.min(res.vel.length - 1, Math.round(at / CONTROL_DT))
+    const wheel = res.vel[k]
+    const exit = exitSpeed(wheel, exitRadius(mech))
+    const { pose, yaw } = aims[i]
+    const d = pose.distance
+    const ux = d > 0 ? -pose.x / d : 1
+    const uy = d > 0 ? -pose.y / d : 0
+    // 球對地的水平速度：發射機構（往目標轉 yaw）+ 機器人
+    const along = exit * c * Math.cos(yaw) + pose.motion.toward
+    const left = exit * c * Math.sin(yaw) + pose.motion.side
+    const vz = exit * sn
+    const disc = vz * vz - 2 * GRAVITY * (plan.goalHeight - Math.max(0, plan.height))
+    const T = disc < 0 ? NaN : (vz + Math.sqrt(disc)) / GRAVITY
+    const a = along * T
+    const l = left * T
+    const landX = pose.x + a * ux - l * uy
+    const landY = pose.y + a * uy + l * ux
+    const miss = a - d
+    const side = -l
+    const range = Math.hypot(a, l)
+    const hit = Number.isFinite(T) && Math.hypot(miss, side) <= plan.goalWidth / 2
+    return { at, wheel, exit, release: at + CONTACT, range, miss: Number.isFinite(T) ? miss : NaN, hit, pose, yaw, landX, landY, side }
+  })
 }

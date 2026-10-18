@@ -1,4 +1,4 @@
-import type { FlywheelGains, FlywheelKnobs, ShotOutcome } from '../../core/flywheel/flywheel'
+import type { FlywheelGains, FlywheelKnobs, MoveOutcome, ShotOutcome } from '../../core/flywheel/flywheel'
 
 /** 射球飛輪的滑桿：範圍跟著理論值，單位一律 Phoenix 6 的 rps（kS 是伏特）。內部值是 SI（rad/s）。 */
 
@@ -71,3 +71,17 @@ export function missText(o: ShotOutcome, goalHeight?: number): string {
   return o.hit ? `進了（${d}）` : `沒進，${d}`
 }
 
+
+/** 邊移動邊射每一發偏多少：遠近、左右 */
+export function moveMissText(o: MoveOutcome, goalHeight: number): string {
+  if (!Number.isFinite(o.miss)) return `打不到 ${fx(goalHeight, 1)} m 高`
+  const d = `${o.miss >= 0 ? '遠' : '近'} ${fx(Math.abs(o.miss) * 100, 0)} cm、偏${o.side >= 0 ? '右' : '左'} ${fx(Math.abs(o.side) * 100, 0)} cm`
+  return o.hit ? `進了（${d}）` : `沒進，${d}`
+}
+
+/** 底盤偏角：面向目標時往左、往右偏幾度 */
+export function yawText(yaw: number): string {
+  const d = Math.abs((yaw * 180) / Math.PI)
+  if (d < 0.05) return '正對目標'
+  return `往${yaw > 0 ? '左' : '右'}偏 ${fx(d, 1)}°`
+}

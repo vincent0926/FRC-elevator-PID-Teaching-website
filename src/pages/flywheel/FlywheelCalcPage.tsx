@@ -21,12 +21,13 @@ import {
 import { FLYWHEEL_LESSONS } from './flywheelLessons'
 import { BallFields, HubPreset, MechFields } from './FlywheelForms'
 import { FlywheelAim } from './FlywheelAim'
-import { loadFlywheelStyle, useFlywheelMechanism, usePersisted, useShotPlan } from './flywheelStore'
+import { loadFlywheelStyle, useFlywheelMechanism, useMoveSettings, usePersisted, useShotPlan } from './flywheelStore'
 
 /**
  * 射球飛輪 1F，看進站選的用法：
  * - 彈道：算轉速和仰角（FlywheelAim）：基本參數 → 距離 → 選軌跡，再到 3F 連射模擬
  * - 客製化：機構資料 → kV、kA，轉速 → 球速 → 射程，加上三個教學關卡。內部 SI，畫面 rps。
+ * - 邊移動邊射：跟彈道一樣，多填機器人速度，算轉速、仰角和底盤偏角
  */
 
 const TAU = 2 * Math.PI
@@ -36,7 +37,26 @@ const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 export function FlywheelCalcPage() {
   // 讀一次就好：換用法要回進站重選，整頁會重新掛上
   const [style] = useState(loadFlywheelStyle)
+  if (style === 'move') return <MoveCalc />
   return style === 'ballistic' ? <BallisticCalc /> : <CustomCalc />
+}
+
+function MoveCalc() {
+  const { go } = useStore()
+  const [mech, setMech] = useFlywheelMechanism()
+  const [plan, setPlan] = useShotPlan()
+  const [move, setMove] = useMoveSettings()
+  return (
+    <section aria-labelledby="t-fw-move">
+      <div className="head">
+        <div>
+          <h1 id="t-fw-move">射球飛輪・邊移動邊射</h1>
+          <p className="lead">Shoot on the move：先填機構和球、離目標多遠，再填機器人怎麼動，看每個仰角要幾 rps、底盤要偏幾度，選一條軌跡，再到 3F 邊開邊射。</p>
+        </div>
+      </div>
+      <FlywheelAim mech={mech} setMech={setMech} plan={plan} setPlan={setPlan} onSimulate={() => go('sim')} move={{ settings: move, set: setMove }} />
+    </section>
+  )
 }
 
 function BallisticCalc() {
