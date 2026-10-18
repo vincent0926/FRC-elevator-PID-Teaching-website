@@ -487,3 +487,54 @@ export function fastestSpinUp(mech: FlywheelMechanism, target: number, statorLim
   }
   return null
 }
+
+/** 模式 1「算轉速和仰角」的一條候選軌跡 */
+export interface TrajectoryOption {
+  /** 出射仰角 rad */
+  angle: number
+  /** 打到目標中心要的輪子轉速 rad/s */
+  wheel: number
+  /** 出口球速 m/s */
+  exit: number
+  /** 轉速可以差多少還會進（比例，取偏低、偏高比較小的那邊）；算不出來是 null */
+  tolerance: number | null
+  /** 球往下掉進目標高度時跟水平的夾角 rad（越大越陡） */
+  entry: number
+  /** 最高點離地 m */
+  apex: number
+  /** 轉得到（不超過最高轉速的 90%） */
+  reachable: boolean
+}
+
+/** 模式 1 列出來給人選的仰角：20° 到 75°，每 5° 一條 */
+export const TRAJECTORY_ANGLES = Array.from({ length: 12 }, (_, i) => ((20 + i * 5) * Math.PI) / 180)
+
+/**
+ * 同一個距離，不同仰角各要多少轉速才會打到目標中心（往下掉進去）。打不進的仰角不列。
+ * 容許誤差：開口近邊、遠邊各要多少轉速，跟中心比，取比較小的那邊。
+ */
+export function trajectoryOptions(mech: FlywheelMechanism, plan: ShotPlan, freeSpeed: number, angles = TRAJECTORY_ANGLES): TrajectoryOption[] {
+  const rx = exitRadius(mech)
+  const out: TrajectoryOption[] = []
+  for (const angle of angles) {
+    const p = { ...plan, angle }
+    const wheel = wheelForGoal(rx, p)
+    if (wheel === null) continue
+    const exit = exitSpeed(wheel, rx)
+    const near = wheelForGoal(rx, { ...p, goalDistance: plan.goalDistance - plan.goalWidth / 2 })
+    const far = wheelForGoal(rx, { ...p, goalDistance: plan.goalDistance + plan.goalWidth / 2 })
+    const tolerance = near === null || far === null ? null : Math.min(wheel - near, far - wheel) / wheel
+    const T = flightTime(exit, angle, plan.height, plan.goalHeight)
+    const vy = exit * Math.sin(angle) - GRAVITY * T
+    out.push({
+      angle,
+      wheel,
+      exit,
+      tolerance,
+      entry: Math.atan2(-vy, exit * Math.cos(angle)),
+      apex: apexHeight(exit, angle, plan.height),
+      reachable: wheel <= freeSpeed * 0.9,
+    })
+  }
+  return out
+}

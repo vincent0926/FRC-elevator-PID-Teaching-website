@@ -518,6 +518,24 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .fv-read b { color: var(--ink) }
 .fv-read em { font-style: normal; color: var(--ink-3); margin-left: 2px }
 .fw-mech { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
+.fa-mode { margin: 4px 0 18px }
+.fa-step { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; background: var(--yellow); color: var(--yellow-ink); font-size: 13px; font-weight: 700; vertical-align: 2px }
+.fa-view { display: block; margin: 6px auto 10px; max-height: 420px }
+.fa-path { cursor: pointer }
+.fa-path.no { cursor: default }
+.fa-line { fill: none; stroke: var(--steel); stroke-width: 1.5; opacity: .55 }
+.fa-path.sel .fa-line { stroke: var(--blue); stroke-width: 3; opacity: 1 }
+.fa-path.no .fa-line { stroke: var(--red); stroke-dasharray: 4 4; opacity: .4 }
+.fa-hit { fill: none; stroke: transparent; stroke-width: 12 }
+.fa-label { font-size: 11px; fill: var(--ink-3); text-anchor: middle }
+.fa-path.sel .fa-label { fill: var(--blue); font-weight: 700 }
+.fa-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px }
+.fa-opt { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); cursor: pointer; font-size: 13px }
+.fa-opt[aria-pressed="true"] { border-color: var(--blue); background: var(--blue-soft) }
+.fa-opt:disabled { opacity: .5; cursor: not-allowed }
+.fa-result { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-2) }
+.fa-big { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 14px; color: var(--ink-2); margin-bottom: 8px }
+.fa-big b { font-size: 24px; color: var(--ink); margin-left: 4px }
 .fw-preset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px }
 .fw-need { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2) }
 .fw-need b { font-size: 18px; color: var(--ink) }

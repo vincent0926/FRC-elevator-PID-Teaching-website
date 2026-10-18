@@ -26,6 +26,7 @@ import {
   simulateFlywheel,
   speedForRange,
   wheelForGoal,
+  trajectoryOptions,
   theoryGains,
   type FlywheelGains,
   type FlywheelKnobs,
@@ -283,5 +284,36 @@ describe('對面也有滾輪（上下夾射）', () => {
     expect(frac).toBeGreaterThan(0.5 * dipFraction(pinch, plan.ballMass))
     const o = shotOutcomes(res, pinch, plan)[0]
     expect(o.exit).toBeCloseTo(0.5 * o.wheel * (0.0508 + 0.0254), 9)
+  })
+})
+
+describe('模式 1：同一個距離的候選軌跡', () => {
+  const ffd = computeFlywheelFeedforward(DEFAULT_FLYWHEEL)
+  const opts = trajectoryOptions(DEFAULT_FLYWHEEL, DEFAULT_PLAN, ffd.freeSpeed)
+  it('每一條都剛好打到目標中心、往下掉進去', () => {
+    expect(opts.length).toBeGreaterThan(3)
+    for (const o of opts) {
+      expect(launchRange(o.exit, o.angle, DEFAULT_PLAN.height, DEFAULT_PLAN.goalHeight)).toBeCloseTo(DEFAULT_PLAN.goalDistance, 6)
+      expect(o.entry).toBeGreaterThan(0)
+      expect(o.apex).toBeGreaterThan(DEFAULT_PLAN.goalHeight)
+      expect(o.exit).toBeCloseTo(exitSpeed(o.wheel, exitRadius(DEFAULT_FLYWHEEL)), 9)
+    }
+  })
+  it('容許誤差：差這麼多轉速剛好打到開口邊緣', () => {
+    const o = opts.find((x) => x.tolerance !== null)!
+    const edge = (w: number) => Math.abs(rangeAtWheel(w, exitRadius(DEFAULT_FLYWHEEL), { ...DEFAULT_PLAN, angle: o.angle }) - DEFAULT_PLAN.goalDistance)
+    const lo = edge(o.wheel * (1 - o.tolerance!))
+    const hi = edge(o.wheel * (1 + o.tolerance!))
+    // 比較小的那邊剛好在邊緣，另一邊還在開口裡
+    expect(Math.max(lo, hi)).toBeCloseTo(DEFAULT_PLAN.goalWidth / 2, 6)
+    expect(Math.min(lo, hi)).toBeLessThanOrEqual(DEFAULT_PLAN.goalWidth / 2 + 1e-9)
+  })
+  it('仰角越高，進框角度越陡', () => {
+    for (let i = 1; i < opts.length; i++) expect(opts[i].entry).toBeGreaterThan(opts[i - 1].entry)
+  })
+  it('打不進的仰角不列；轉速超過 90% 最高轉速標成轉不到', () => {
+    const far = trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 12 }, ffd.freeSpeed)
+    expect(far.some((o) => !o.reachable)).toBe(true)
+    expect(trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 0.3 }, ffd.freeSpeed)).toEqual([])
   })
 })
