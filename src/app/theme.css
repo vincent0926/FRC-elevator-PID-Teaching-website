@@ -518,6 +518,7 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .fv-read b { color: var(--ink) }
 .fv-read em { font-style: normal; color: var(--ink-3); margin-left: 2px }
 .fw-mech { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
+.fw-preset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px }
 .fw-need { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2) }
 .fw-need b { font-size: 18px; color: var(--ink) }
 .fv-goal { stroke: var(--violet); stroke-width: 4; stroke-linecap: round }
