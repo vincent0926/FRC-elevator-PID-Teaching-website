@@ -26,6 +26,8 @@ import {
   simulateFlywheel,
   speedForRange,
   wheelForGoal,
+  wheelLimit,
+  TRAJECTORY_ANGLES,
   trajectoryOptions,
   theoryGains,
   moveAims,
@@ -295,7 +297,8 @@ describe('對面也有滾輪（上下夾射）', () => {
 
 describe('彈道：同一個距離的候選軌跡', () => {
   const ffd = computeFlywheelFeedforward(DEFAULT_FLYWHEEL)
-  const opts = trajectoryOptions(DEFAULT_FLYWHEEL, DEFAULT_PLAN, ffd.freeSpeed)
+  const lim = wheelLimit(ffd.freeSpeed, 0)
+  const opts = trajectoryOptions(DEFAULT_FLYWHEEL, DEFAULT_PLAN, lim)
   it('每一條都剛好打到目標中心、往下掉進去', () => {
     expect(opts.length).toBeGreaterThan(3)
     for (const o of opts) {
@@ -317,10 +320,15 @@ describe('彈道：同一個距離的候選軌跡', () => {
   it('仰角越高，進框角度越陡', () => {
     for (let i = 1; i < opts.length; i++) expect(opts[i].entry).toBeGreaterThan(opts[i - 1].entry)
   })
-  it('打不進的仰角不列；轉速超過 90% 最高轉速標成轉不到', () => {
-    const far = trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 12 }, ffd.freeSpeed)
+  it('打不進的仰角不列；轉速超過上限（預設空載的 90%）標成超過上限', () => {
+    const far = trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 12 }, lim)
     expect(far.some((o) => !o.reachable)).toBe(true)
-    expect(trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 0.3 }, ffd.freeSpeed)).toEqual([])
+    const close = { ...DEFAULT_PLAN, goalDistance: 0.3 }
+    expect(trajectoryOptions(DEFAULT_FLYWHEEL, close, lim, TRAJECTORY_ANGLES)).toEqual([])
+    // 每 5° 都打不進時改每 1° 找：太近只有很陡的仰角掉得進去
+    const steep = trajectoryOptions(DEFAULT_FLYWHEEL, close, lim)
+    for (const o of steep) expect(o.angle).toBeGreaterThan((75 * Math.PI) / 180)
+    expect(trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 0.05 }, lim)).toEqual([])
   })
 })
 
@@ -361,12 +369,62 @@ describe('邊移動邊射', () => {
   })
   it('候選軌跡帶機器人速度：對地的軌跡打到目標中心', () => {
     const m = { toward: 1, side: 1 }
-    const opts = trajectoryOptions(DEFAULT_FLYWHEEL, DEFAULT_PLAN, ff.freeSpeed, undefined, m)
+    const opts = trajectoryOptions(DEFAULT_FLYWHEEL, DEFAULT_PLAN, wheelLimit(ff.freeSpeed, 0), undefined, m)
     expect(opts.length).toBeGreaterThan(3)
     for (const o of opts) {
       expect(launchRange(o.fieldExit, o.fieldAngle, DEFAULT_PLAN.height, DEFAULT_PLAN.goalHeight)).toBeCloseTo(DEFAULT_PLAN.goalDistance, 6)
       expect(o.yaw).toBeLessThan(0)
     }
+  })
+  it('開很快、能打進的仰角範圍很窄時，改每 1° 找，還是有好幾條可以選', () => {
+    const plan = { ...DEFAULT_PLAN, ...HUB_2026, goalDistance: 3.5 }
+    const m = { toward: 3.5, side: 3.5 }
+    // 每 5° 只找得到幾條
+    expect(trajectoryOptions(DEFAULT_FLYWHEEL, plan, wheelLimit(ff.freeSpeed, 0), TRAJECTORY_ANGLES, m).length).toBeLessThan(5)
+    const opts = trajectoryOptions(DEFAULT_FLYWHEEL, plan, wheelLimit(ff.freeSpeed, 0), undefined, m)
+    expect(opts.length).toBe(6)
+    for (let i = 1; i < opts.length; i++) expect(opts[i].angle).toBeGreaterThan(opts[i - 1].angle)
+    for (const o of opts) expect(launchRange(o.fieldExit, o.fieldAngle, plan.height, plan.goalHeight)).toBeCloseTo(plan.goalDistance, 6)
+    // 頭尾是能打進的最低、最高仰角：再低 1°、再高 1° 都打不進
+    const rx = exitRadius(DEFAULT_FLYWHEEL)
+    const deg = Math.PI / 180
+    expect(solveMovingShot(rx, plan, opts[0].angle - deg, m)).toBeNull()
+    expect(solveMovingShot(rx, plan, opts[5].angle + deg, m)).toBeNull()
+    // 站著射每 5° 就夠多，不會改
+    expect(trajectoryOptions(DEFAULT_FLYWHEEL, plan, wheelLimit(ff.freeSpeed, 0)).map((o) => o.angle)).toEqual(trajectoryOptions(DEFAULT_FLYWHEEL, plan, wheelLimit(ff.freeSpeed, 0), TRAJECTORY_ANGLES).map((o) => o.angle))
+  })
+  it('轉速上限：只從上限內的仰角挑；上限填太高也只算到空載的 90%', () => {
+    expect(wheelLimit(ff.freeSpeed, 0)).toBeCloseTo(ff.freeSpeed * 0.9, 9)
+    expect(wheelLimit(ff.freeSpeed, 1e6)).toBeCloseTo(ff.freeSpeed * 0.9, 9)
+    expect(wheelLimit(ff.freeSpeed, 40)).toBeCloseTo(40 * TAU, 9)
+    const plan = { ...DEFAULT_PLAN, ...HUB_2026, goalDistance: 3.5 }
+    const m = { toward: 3.5, side: 3.5 }
+    const free = trajectoryOptions(DEFAULT_FLYWHEEL, plan, wheelLimit(ff.freeSpeed, 0), undefined, m)
+    // 上限設在中間：挑出來的都在上限內，而且還是有好幾條
+    const cap = (free[0].wheel + free[free.length - 1].wheel) / 2
+    const opts = trajectoryOptions(DEFAULT_FLYWHEEL, plan, cap, undefined, m)
+    expect(opts.length).toBeGreaterThan(2)
+    for (const o of opts) {
+      expect(o.reachable).toBe(true)
+      expect(o.wheel).toBeLessThanOrEqual(cap)
+    }
+    // 上限低到一條都不行：還是列出來，全部標成超過上限
+    const none = trajectoryOptions(DEFAULT_FLYWHEEL, plan, 1, undefined, m)
+    expect(none.length).toBeGreaterThan(0)
+    expect(none.every((o) => !o.reachable)).toBe(true)
+  })
+  it('邊開邊射要的轉速超過上限：只給到上限，標出來', () => {
+    const plan = { ...DEFAULT_PLAN, shots: 4, interval: 0.5 }
+    const motion = { toward: -1.5, side: 0 }
+    const free = moveAims(DEFAULT_FLYWHEEL, plan, { motion, compensate: true })
+    // 往後退，越來越遠，要的轉速越來越高
+    const cap = (free[0].target + free[3].target) / 2
+    const aims = moveAims(DEFAULT_FLYWHEEL, plan, { motion, compensate: true, maxWheel: cap })
+    expect(aims[0].capped).toBe(false)
+    expect(aims[0].target).toBe(free[0].target)
+    expect(aims[3].capped).toBe(true)
+    expect(aims[3].target).toBe(cap)
+    for (const a of aims) expect(a.target).toBeLessThanOrEqual(cap)
   })
   it('第一發時機器人在目標正前方，之後照速度移動', () => {
     const p0 = movePose(DEFAULT_PLAN, { toward: 1, side: 2 }, DEFAULT_PLAN.firstShot)

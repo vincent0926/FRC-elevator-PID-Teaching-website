@@ -6,6 +6,7 @@ import { MOTOR_SPECS } from '../../core/motors'
 import { flywheelJava } from '../../core/codegen/flywheel'
 import {
   computeFlywheelFeedforward,
+  DEFAULT_LIMIT_FRACTION,
   DEFAULT_FLYWHEEL_SPEC,
   DEFAULT_KNOBS,
   flywheelFailures,
@@ -16,6 +17,7 @@ import {
   moveOutcomes,
   type MoveOutcome,
   wheelForGoal,
+  wheelLimit,
   exitRadius,
   theoryGains,
   type FlywheelGains,
@@ -29,7 +31,7 @@ import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText, moveMissText, yawText
 import { FlywheelView } from './FlywheelView'
 import { MoveView } from './MoveView'
 import { BallFields, HubPreset, MechFields } from './FlywheelForms'
-import { loadFlywheelStyle, SHAPES, useFlywheelMechanism, useMoveSettings, usePersisted, useShotPlan, type MoveSettings } from './flywheelStore'
+import { loadFlywheelStyle, SHAPES, useFlywheelMechanism, useMoveSettings, usePersisted, useRpsLimit, useShotPlan, type MoveSettings } from './flywheelStore'
 
 /**
  * 3F 射球飛輪連射模擬：轉到目標轉速、連射幾發，看掉速和恢復。內部 SI（rad/s），畫面一律 rps。
@@ -82,6 +84,10 @@ function ShotSim({
   const [spec, setSpec] = usePersisted<FlywheelSpec>('flywheel:spec', DEFAULT_FLYWHEEL_SPEC)
   const ff = useMemo(() => computeFlywheelFeedforward(mech), [mech])
   const theory = useMemo(() => theoryGains(ff), [ff])
+  const [limit, setLimit] = useRpsLimit()
+  const maxWheel = wheelLimit(ff.freeSpeed, limit.rps)
+  // 有填轉速上限，而且比馬達做得到的低
+  const userLimit = limit.rps > 0 && limit.rps * TAU < ff.freeSpeed * DEFAULT_LIMIT_FRACTION
   // null = 跟著理論值（改機構資料時一起變）
   const [custom, setCustom] = usePersisted<{ gains: FlywheelGains | null }>('flywheel:gains', { gains: null }, (g) => g.gains === null || GAIN_ROWS.every(({ k }) => Number.isFinite(g.gains?.[k])))
   const gains = custom.gains ?? theory
@@ -92,8 +98,8 @@ function ShotSim({
   const setMv = (p: Partial<MoveSettings>) => move?.set({ ...move.settings, ...p })
   // 邊移動邊射：發數、間隔用自己的；每一發的目標轉速照當時的距離算，第一發的當成模擬的目標轉速
   const aims = useMemo(
-    () => (mv ? moveAims(mech, { ...basePlan, shots: mv.shots, interval: mv.interval }, { motion: { toward: mv.toward, side: mv.side }, compensate: mv.compensate }) : null),
-    [mech, basePlan, mv],
+    () => (mv ? moveAims(mech, { ...basePlan, shots: mv.shots, interval: mv.interval }, { motion: { toward: mv.toward, side: mv.side }, compensate: mv.compensate, maxWheel }) : null),
+    [mech, basePlan, mv, maxWheel],
   )
   const plan = useMemo(() => (mv && aims ? { ...basePlan, shots: mv.shots, interval: mv.interval, target: aims[0].target } : basePlan), [basePlan, mv, aims])
   const setK = (p: Partial<FlywheelKnobs>) => setKnobs({ ...knobs, ...p })
@@ -125,8 +131,9 @@ function ShotSim({
   const cursorX = pb.idx !== null ? result.t[pb.idx] : null
   const tol = (spec.tolPct / 100) * plan.target
   const maxTarget = aims ? Math.max(...aims.map((a) => a.target)) : plan.target
-  const reachable = maxTarget < ff.freeSpeed * 0.9
+  const reachable = maxTarget <= maxWheel
   const unsolved = aims ? aims.filter((a) => !a.solved).length : 0
+  const capped = aims ? aims.filter((a) => a.capped).length : 0
 
   const charts = useMemo(() => {
     const rps = (a: Float64Array) => Array.from(a, (x) => x / TAU)
@@ -145,7 +152,8 @@ function ShotSim({
   const shotBands = result.shotTimes.map((s): [number, number] => [s, s + 0.03])
 
   const hints: string[] = []
-  if (!reachable) hints.push(`目標 ${f(maxTarget / TAU, 0)} rps 太接近最高轉速（約 ${f(ff.freeSpeed / TAU, 0)} rps，還沒扣摩擦）：電壓不夠，調參數也到不了。降低目標或改齒比。`)
+  if (!reachable && userLimit) hints.push(`目標 ${f(maxTarget / TAU, 0)} rps 超過你設的轉速上限 ${f(limit.rps, 0)} rps。降低目標，或確定機構轉得了再提高上限。`)
+  else if (!reachable) hints.push(`目標 ${f(maxTarget / TAU, 0)} rps 太接近最高轉速（約 ${f(ff.freeSpeed / TAU, 0)} rps，還沒扣摩擦）：電壓不夠，調參數也到不了。降低目標或改齒比。`)
   if (fails.includes('steady'))
     hints.push(metrics.steadyError > 0 ? '轉速一直差一點：先把 kS 補成摩擦的大小，再檢查 kV；最後一點點才用 kI。' : '轉速一直偏高：kV 或 kS 太大。')
   if (fails.includes('overshoot')) hints.push('衝過頭：kI 在起步時累積太多，或 kP、kV 太大。飛輪通常不用 kI。')
@@ -198,6 +206,7 @@ function ShotSim({
               <p className="small" style={{ margin: '6px 0 12px' }}>
                 {mv.compensate ? '有補償' : '沒補償：照站著射的轉速表（只看距離），底盤正對目標'}。這 {mv.shots} 發機器人開了 {f(Math.hypot(mv.toward, mv.side) * (mv.shots - 1) * mv.interval, 2)} m，目標轉速 {f(Math.min(...aims!.map((a) => a.target)) / TAU, 1)}～{f(maxTarget / TAU, 1)} rps
                 {mv.compensate && `，底盤${yawRange(aims!)}`}。
+                {capped > 0 && <span className="fail"> 有 {capped} 發要的轉速超過轉速上限 {f(maxWheel / TAU, 0)} rps，只給到上限，球會打近。</span>}
                 {unsolved > 0 && <span className="fail"> 有 {unsolved} 發算不出來（太近、太遠或射不進），沿用前一發的轉速、底盤正對目標。</span>}
               </p>
             </>
@@ -210,6 +219,16 @@ function ShotSim({
             ) : (
               <NumberField label="目標轉速" value={plan.target} display={1 / TAU} digits={1} onChange={(v) => setP({ target: v })} min={1} max={150} step={1} unit="rps" />
             )}
+            <NumberField
+              label="轉速上限"
+              value={limit.rps}
+              onChange={(v) => setLimit({ rps: Math.max(0, v) })}
+              min={0}
+              max={300}
+              step={1}
+              unit="rps"
+              hint={limit.rps > 0 ? (userLimit ? (mv ? '每一發要的轉速超過就只給到上限' : '目標超過會提示') : `比馬達做得到的高，用空載的 90%（約 ${f((ff.freeSpeed * DEFAULT_LIMIT_FRACTION) / TAU, 0)} rps）`) : `0 = 用馬達空載轉速的 90%（約 ${f((ff.freeSpeed * DEFAULT_LIMIT_FRACTION) / TAU, 0)} rps）`}
+            />
             <NumberField label="加速度限制" value={plan.accel} display={1 / TAU} digits={0} onChange={(v) => setP({ accel: v })} min={0} max={2000} step={10} unit="rps/s" hint="0 = VelocityVoltage 直接跳到目標；大於 0 = MotionMagicVelocityVoltage" />
             <NumberField label="發數" value={plan.shots} onChange={(v) => (mv ? setMv({ shots: Math.round(v) }) : setP({ shots: Math.round(v) }))} min={1} max={100} step={1} unit="發" />
             <NumberField label="每發間隔" value={plan.interval} onChange={(v) => (mv ? setMv({ interval: v }) : setP({ interval: v }))} min={0.05} max={2} step={0.05} unit="s" />

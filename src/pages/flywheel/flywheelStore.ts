@@ -78,6 +78,8 @@ export interface MoveSettings {
   interval: number
 }
 export const DEFAULT_MOVE: MoveSettings = { toward: 0, side: 1.5, compensate: true, shots: 8, interval: 0.25 }
+/** 轉速上限 rps（0 = 沒填，用馬達空載轉速的 90%）；彈道、邊移動邊射選軌跡，和 3F 邊開邊射都用它 */
+export const useRpsLimit = () => usePersisted<{ rps: number }>('flywheel:rpsLimit', { rps: 0 }, (r) => r.rps >= 0)
 export const useMoveSettings = () => usePersisted<MoveSettings>('flywheel:move', DEFAULT_MOVE, (m) => m.shots >= 1 && m.interval > 0)
 
 export const SHAPES = [
