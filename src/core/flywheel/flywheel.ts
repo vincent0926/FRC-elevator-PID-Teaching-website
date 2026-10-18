@@ -540,11 +540,11 @@ export function wheelLimit(freeSpeed: number, userRps: number): number {
 
 /** 彈道 1F 列出來給人選的仰角：20° 到 75°，每 5° 一條 */
 export const TRAJECTORY_ANGLES = Array.from({ length: 12 }, (_, i) => ((20 + i * 5) * Math.PI) / 180)
-/** 每 5° 找到的太少（邊移動邊射、距離很近時，能打進的仰角範圍會很窄）時，改用 10°～85° 每 1° 找 */
-export const FINE_TRAJECTORY_ANGLES = Array.from({ length: 76 }, (_, i) => ((10 + i) * Math.PI) / 180)
-/** 每 5° 找到少於這麼多條，就改用每 1° 找 */
+/** 每 5° 找到的太少（邊移動邊射、距離很近時，能打進的仰角範圍會很窄，可能不到 1°）時，改用 10°～85° 每 0.1° 找 */
+export const FINE_TRAJECTORY_ANGLES = Array.from({ length: 751 }, (_, i) => ((100 + i) * Math.PI) / 1800)
+/** 每 5° 找到少於這麼多條，就改用每 0.1° 找 */
 const MIN_OPTIONS = 5
-/** 每 1° 找的時候，平均挑這麼多條（含頭尾） */
+/** 每 0.1° 找的時候，平均挑這麼多條（含頭尾） */
 const FINE_PICKS = 6
 
 /**
@@ -552,8 +552,8 @@ const FINE_PICKS = 6
  * 容許誤差：開口近邊、遠邊各要多少轉速，跟中心比，取比較小的那邊。
  * 給 motion（邊移動邊射）時，轉速和底盤偏角用 solveMovingShot 算。
  * maxWheel 是轉速上限 rad/s（見 wheelLimit），超過的標成 reachable = false。
- * 沒指定 angles 時用預設仰角（每 5°）；在上限內的少於 5 條時，改成每 1° 找，從能打進、又在上限內的仰角平均挑 6 條（含最低、最高的仰角）。
- * 每 1° 找也沒有在上限內的，就從能打進的平均挑（都標成超過上限），讓人看得到差多少。
+ * 沒指定 angles 時用預設仰角（每 5°）；在上限內的少於 5 條時，改成每 0.1° 找，從能打進、又在上限內的仰角平均挑 6 條（含最低、最高的仰角）。
+ * 每 0.1° 找也沒有在上限內的，就從能打進的平均挑（都標成超過上限），讓人看得到差多少。
  */
 export function trajectoryOptions(mech: FlywheelMechanism, plan: ShotPlan, maxWheel: number, angles?: number[], motion: RobotMotion = STILL): TrajectoryOption[] {
   // 有指定仰角就只算那些
@@ -563,7 +563,7 @@ export function trajectoryOptions(mech: FlywheelMechanism, plan: ShotPlan, maxWh
   if (ok(out).length >= MIN_OPTIONS) return out
   const all = optionsAt(mech, plan, maxWheel, FINE_TRAJECTORY_ANGLES, motion)
   const fine = ok(all).length ? ok(all) : all
-  // 每 1° 找也沒有比較多，維持每 5°
+  // 每 0.1° 找也沒有比較多，維持每 5°
   if (fine.length <= (fine === all ? out.length : ok(out).length)) return out
   if (fine.length <= FINE_PICKS) return fine
   const idx = new Set(Array.from({ length: FINE_PICKS }, (_, i) => Math.round((i * (fine.length - 1)) / (FINE_PICKS - 1))))
@@ -731,6 +731,76 @@ export function moveAims(mech: FlywheelMechanism, plan: ShotPlan, setup: MoveSet
     const capped = setup.maxWheel !== undefined && last > setup.maxWheel
     return { pose, target: capped ? setup.maxWheel! : last, yaw: sol ? sol.yaw : 0, solved: sol !== null, capped }
   })
+}
+
+/** 邊移動邊射：能打進的仰角範圍窄於這個就很難射（仰角差一點就不進），給參數修正意見 */
+export const NARROW_WINDOW = (3 * Math.PI) / 180
+
+/** 能打進、轉速又在上限內的仰角範圍 rad */
+export interface AimWindow {
+  lo: number
+  hi: number
+  width: number
+}
+
+/** 10°～85° 每 step 試一次，找能打進、轉速在上限內的仰角範圍；一個都沒有回傳 null */
+export function moveWindow(rx: number, plan: ShotPlan, motion: RobotMotion, maxWheel: number, step = (0.5 * Math.PI) / 180): AimWindow | null {
+  let lo = NaN
+  let hi = NaN
+  const n = Math.round(((75 * Math.PI) / 180) / step)
+  for (let i = 0; i <= n; i++) {
+    const a = (10 * Math.PI) / 180 + i * step
+    const s = solveMovingShot(rx, plan, a, motion)
+    if (s === null || s.wheel > maxWheel) continue
+    if (Number.isNaN(lo)) lo = a
+    hi = a
+  }
+  return Number.isNaN(lo) ? null : { lo, hi, width: hi - lo }
+}
+
+/** 修正意見改哪個參數：往目標速度、側向速度 m/s，目標距離 m，轉速上限 rad/s */
+export type MoveFixParam = 'toward' | 'side' | 'distance' | 'limit'
+export interface MoveFix {
+  param: MoveFixParam
+  /** 改成多少 */
+  value: number
+  /** 改了之後的仰角範圍 */
+  window: AimWindow
+}
+
+/**
+ * 邊移動邊射的參數修正意見：一次只改一個參數，找離現在最近、仰角範圍有 NARROW_WINDOW 以上的值。
+ * 速度在 ±5 m/s（0.1 m/s 一格，同樣近的先挑慢的）、距離 0.5～15 m（0.1 m 一格）、轉速上限到 motorMax（1 rps 一格）裡找，找不到的不列。
+ */
+export function moveFixes(mech: FlywheelMechanism, plan: ShotPlan, motion: RobotMotion, maxWheel: number, motorMax: number): MoveFix[] {
+  const rx = exitRadius(mech)
+  const good = (w: AimWindow | null): w is AimWindow => w !== null && w.width >= NARROW_WINDOW - 1e-9
+  const nearest = (cur: number, min: number, max: number, step: number, test: (v: number) => AimWindow | null) => {
+    for (let k = 1; ; k++) {
+      const cands = [cur - k * step, cur + k * step].map((v) => Math.round(v / step) * step).filter((v) => v >= min - 1e-9 && v <= max + 1e-9)
+      if (!cands.length) return null
+      for (const v of cands.sort((a, b) => Math.abs(a) - Math.abs(b))) {
+        const w = test(v)
+        if (good(w)) return { value: Number(v.toFixed(6)), window: w }
+      }
+    }
+  }
+  const out: MoveFix[] = []
+  const push = (param: MoveFixParam, r: { value: number; window: AimWindow } | null) => r && out.push({ param, ...r })
+  push('toward', nearest(motion.toward, -5, 5, 0.1, (v) => moveWindow(rx, plan, { ...motion, toward: v }, maxWheel)))
+  push('side', nearest(motion.side, -5, 5, 0.1, (v) => moveWindow(rx, plan, { ...motion, side: v }, maxWheel)))
+  push('distance', nearest(plan.goalDistance, 0.5, 15, 0.1, (v) => moveWindow(rx, { ...plan, goalDistance: v }, motion, maxWheel)))
+  if (maxWheel < motorMax && good(moveWindow(rx, plan, motion, motorMax))) {
+    const TAU_ = 2 * Math.PI
+    for (let rps = Math.floor(maxWheel / TAU_) + 1; rps * TAU_ <= motorMax + 1e-9; rps++) {
+      const w = moveWindow(rx, plan, motion, rps * TAU_)
+      if (good(w)) {
+        out.push({ param: 'limit', value: rps * TAU_, window: w })
+        break
+      }
+    }
+  }
+  return out
 }
 
 export interface MoveOutcome extends ShotOutcome {

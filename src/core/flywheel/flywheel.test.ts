@@ -27,6 +27,9 @@ import {
   speedForRange,
   wheelForGoal,
   wheelLimit,
+  moveWindow,
+  moveFixes,
+  NARROW_WINDOW,
   TRAJECTORY_ANGLES,
   trajectoryOptions,
   theoryGains,
@@ -325,7 +328,7 @@ describe('彈道：同一個距離的候選軌跡', () => {
     expect(far.some((o) => !o.reachable)).toBe(true)
     const close = { ...DEFAULT_PLAN, goalDistance: 0.3 }
     expect(trajectoryOptions(DEFAULT_FLYWHEEL, close, lim, TRAJECTORY_ANGLES)).toEqual([])
-    // 每 5° 都打不進時改每 1° 找：太近只有很陡的仰角掉得進去
+    // 每 5° 都打不進時改每 0.1° 找：太近只有很陡的仰角掉得進去
     const steep = trajectoryOptions(DEFAULT_FLYWHEEL, close, lim)
     for (const o of steep) expect(o.angle).toBeGreaterThan((75 * Math.PI) / 180)
     expect(trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 0.05 }, lim)).toEqual([])
@@ -376,7 +379,7 @@ describe('邊移動邊射', () => {
       expect(o.yaw).toBeLessThan(0)
     }
   })
-  it('開很快、能打進的仰角範圍很窄時，改每 1° 找，還是有好幾條可以選', () => {
+  it('開很快、能打進的仰角範圍很窄時，改每 0.1° 找，還是有好幾條可以選', () => {
     const plan = { ...DEFAULT_PLAN, ...HUB_2026, goalDistance: 3.5 }
     const m = { toward: 3.5, side: 3.5 }
     // 每 5° 只找得到幾條
@@ -385,9 +388,9 @@ describe('邊移動邊射', () => {
     expect(opts.length).toBe(6)
     for (let i = 1; i < opts.length; i++) expect(opts[i].angle).toBeGreaterThan(opts[i - 1].angle)
     for (const o of opts) expect(launchRange(o.fieldExit, o.fieldAngle, plan.height, plan.goalHeight)).toBeCloseTo(plan.goalDistance, 6)
-    // 頭尾是能打進的最低、最高仰角：再低 1°、再高 1° 都打不進
+    // 頭尾是能打進的最低、最高仰角：再低 0.1°、再高 0.1° 都打不進
     const rx = exitRadius(DEFAULT_FLYWHEEL)
-    const deg = Math.PI / 180
+    const deg = Math.PI / 1800
     expect(solveMovingShot(rx, plan, opts[0].angle - deg, m)).toBeNull()
     expect(solveMovingShot(rx, plan, opts[5].angle + deg, m)).toBeNull()
     // 站著射每 5° 就夠多，不會改
@@ -425,6 +428,46 @@ describe('邊移動邊射', () => {
     expect(aims[3].capped).toBe(true)
     expect(aims[3].target).toBe(cap)
     for (const a of aims) expect(a.target).toBeLessThanOrEqual(cap)
+  })
+  it('範圍不到 1° 也找得到（3 m、往目標 5、側向 5 m/s 只有 45.3°～45.8°）', () => {
+    const plan = { ...DEFAULT_PLAN, ...HUB_2026, goalDistance: 3 }
+    const m = { toward: 5, side: 5 }
+    const opts = trajectoryOptions(DEFAULT_FLYWHEEL, plan, wheelLimit(ff.freeSpeed, 0), undefined, m)
+    expect(opts.length).toBeGreaterThan(2)
+    for (const o of opts) {
+      expect((o.angle * 180) / Math.PI).toBeGreaterThan(45)
+      expect((o.angle * 180) / Math.PI).toBeLessThan(46)
+    }
+  })
+  it('修正意見：範圍太窄時，一次改一個參數，找最近、範圍有 3° 以上的值', () => {
+    const plan = { ...DEFAULT_PLAN, ...HUB_2026, goalDistance: 3 }
+    const m = { toward: 5, side: 5 }
+    const lim = wheelLimit(ff.freeSpeed, 0)
+    const rx = exitRadius(DEFAULT_FLYWHEEL)
+    expect(moveWindow(rx, plan, m, lim, Math.PI / 1800)!.width).toBeLessThan(NARROW_WINDOW)
+    const fixes = moveFixes(DEFAULT_FLYWHEEL, plan, m, lim, lim)
+    const by = (p: string) => fixes.find((x) => x.param === p)!
+    // 開慢一點：往目標方向的速度變小，範圍有 3° 以上；再快 0.1 m/s 就不夠
+    const t = by('toward')
+    expect(t.value).toBeLessThan(5)
+    expect(t.window.width).toBeGreaterThanOrEqual(NARROW_WINDOW - 1e-9)
+    expect(moveWindow(rx, plan, { ...m, toward: t.value + 0.1 }, lim)!.width).toBeLessThan(NARROW_WINDOW)
+    expect(by('side').value).toBeLessThan(5)
+    // 離遠一點
+    const d = by('distance')
+    expect(d.value).toBeGreaterThan(3)
+    expect(moveWindow(rx, { ...plan, goalDistance: d.value }, m, lim)!.width).toBeGreaterThanOrEqual(NARROW_WINDOW - 1e-9)
+    // 轉速上限已經是馬達的上限，不會叫你提高
+    expect(fixes.some((x) => x.param === 'limit')).toBe(false)
+  })
+  it('修正意見：轉速上限卡住時，建議提高到剛好夠的 rps', () => {
+    const plan = { ...DEFAULT_PLAN, ...HUB_2026, goalDistance: 3.5 }
+    const m = { toward: 0, side: 1.5 }
+    const motorMax = wheelLimit(ff.freeSpeed, 0)
+    const fix = moveFixes(DEFAULT_FLYWHEEL, plan, m, 20 * TAU, motorMax).find((x) => x.param === 'limit')!
+    expect(fix.value).toBeGreaterThan(20 * TAU)
+    const rx = exitRadius(DEFAULT_FLYWHEEL)
+    expect(moveWindow(rx, plan, m, fix.value - TAU)?.width ?? 0).toBeLessThan(NARROW_WINDOW)
   })
   it('第一發時機器人在目標正前方，之後照速度移動', () => {
     const p0 = movePose(DEFAULT_PLAN, { toward: 1, side: 2 }, DEFAULT_PLAN.firstShot)

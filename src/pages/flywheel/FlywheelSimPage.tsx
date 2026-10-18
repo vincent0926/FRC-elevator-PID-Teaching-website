@@ -234,7 +234,7 @@ function ShotSim({
             <NumberField label="每發間隔" value={plan.interval} onChange={(v) => (mv ? setMv({ interval: v }) : setP({ interval: v }))} min={0.05} max={2} step={0.05} unit="s" />
             <NumberField label="第一發" value={plan.firstShot} onChange={(v) => setP({ firstShot: v })} min={0.2} max={5} step={0.1} unit="s" hint="從靜止開始算" />
             <BallFields plan={plan} setP={setP} />
-            <NumberField label="出射仰角" value={plan.angle} display={180 / Math.PI} digits={0} onChange={(v) => setP({ angle: v })} min={5} max={85} step={1} unit="°" />
+            <NumberField label="出射仰角" value={plan.angle} display={180 / Math.PI} digits={1} onChange={(v) => setP({ angle: v })} min={5} max={85} step={1} unit="°" />
             <NumberField label="出射高度" value={plan.height} onChange={(v) => setP({ height: v })} min={0} max={2} step={0.05} unit="m" hint="離地多高" />
           </div>
           <h3 style={{ marginTop: 14 }}>目標</h3>
