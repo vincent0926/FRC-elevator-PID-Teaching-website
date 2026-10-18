@@ -12,6 +12,7 @@ import {
   flywheelMetrics,
   shotOutcomes,
   simulateFlywheel,
+  wheelForGoal,
   theoryGains,
   type FlywheelGains,
   type FlywheelKnobs,
@@ -19,7 +20,7 @@ import {
   type ShotPlan,
 } from '../../core/flywheel/flywheel'
 import { PlaybackBar, usePlayback } from '../simulate/MiniShaft'
-import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange } from './flywheelTune'
+import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText } from './flywheelTune'
 import { FlywheelView } from './FlywheelView'
 import { SHAPES, useFlywheelMechanism, usePersisted, useShotPlan } from './flywheelStore'
 
@@ -52,6 +53,8 @@ export function FlywheelSimPage() {
   const metrics = useMemo(() => flywheelMetrics(result, plan, spec), [result, plan, spec])
   const fails = flywheelFailures(metrics, plan, spec)
   const outcomes = useMemo(() => shotOutcomes(result, mech, plan), [result, mech, plan])
+  const hits = outcomes.filter((o) => o.hit).length
+  const goalW = wheelForGoal(mech.wheelRadius, plan)
   const pb = usePlayback(result)
   const cursorX = pb.idx !== null ? result.t[pb.idx] : null
   const tol = (spec.tolPct / 100) * plan.target
@@ -122,6 +125,26 @@ export function FlywheelSimPage() {
             <NumberField label="出射仰角" value={plan.angle} display={180 / Math.PI} digits={0} onChange={(v) => setP({ angle: v })} min={5} max={85} step={1} unit="°" />
             <NumberField label="出射高度" value={plan.height} onChange={(v) => setP({ height: v })} min={0} max={2} step={0.05} unit="m" hint="離地多高" />
           </div>
+          <h3 style={{ marginTop: 14 }}>目標</h3>
+          <div className="fields three">
+            <NumberField label="目標距離" value={plan.goalDistance} onChange={(v) => setP({ goalDistance: v })} min={0.2} max={20} step={0.1} unit="m" hint="離出射點的水平距離" />
+            <NumberField label="目標高度" value={plan.goalHeight} onChange={(v) => setP({ goalHeight: v })} min={0} max={5} step={0.05} unit="m" hint="0 = 地面" />
+            <NumberField label="開口寬度" value={plan.goalWidth} onChange={(v) => setP({ goalWidth: v })} min={0.05} max={3} step={0.05} unit="m" />
+          </div>
+          <p className="small" style={{ margin: '8px 0 0' }}>
+            {goalW === null ? (
+              <span className="fail">這個仰角射不進：目標太近或太高。改仰角或目標。</span>
+            ) : (
+              <>
+                要進目標大約要 <b>{f(goalW / TAU, 1)} rps</b>（現在目標轉速 {f(plan.target / TAU, 1)} rps）。
+                {Math.abs(goalW - plan.target) > 0.05 * TAU && (
+                  <button className="linkbtn small" type="button" onClick={() => setP({ target: Math.round((goalW / TAU) * 10) * (TAU / 10) })}>
+                    設成目標轉速
+                  </button>
+                )}
+              </>
+            )}
+          </p>
         </div>
 
         <div className="panel">
@@ -291,7 +314,7 @@ export function FlywheelSimPage() {
                 <th className="num">輪子轉速</th>
                 <th className="num">出口球速</th>
                 <th className="num">落點</th>
-                <th className="num">比目標</th>
+                <th>進了沒</th>
               </tr>
             </thead>
             <tbody>
@@ -300,17 +323,15 @@ export function FlywheelSimPage() {
                   <td>第 {i + 1} 發</td>
                   <td className="num">{f(o.wheel / TAU, 1)} rps</td>
                   <td className="num">{f(o.exit, 2)} m/s</td>
-                  <td className="num">{f(o.range, 2)} m</td>
-                  <td className="num">
-                    {o.miss >= 0 ? '遠' : '近'} {f(Math.abs(o.miss) * 100, 0)} cm
-                  </td>
+                  <td className="num">{Number.isFinite(o.range) ? `${f(o.range, 2)} m` : '—'}</td>
+                  <td className={o.hit ? 'pass' : 'fail'}>{missText(o, plan.goalHeight)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <p className="small muted" style={{ margin: '6px 0 0' }}>
-          「比目標」是跟用目標轉速射的落點比。轉速差一點，落點就差一截：射程大約跟球速的平方成正比。
+          落點是球往下掉經過目標高度（{f(plan.goalHeight, 2)} m）時離出射點多遠，離目標距離在開口一半（±{f((plan.goalWidth / 2) * 100, 0)} cm）以內算進。轉速差一點，落點就差一截。進了 {hits} / {outcomes.length} 發。
         </p>
         <p className="small" style={{ margin: '10px 0 0' }}>
           整體：{fails.length === 0 ? <b className="pass">全部達標</b> : <b className="fail">{fails.length} 項沒過</b>}

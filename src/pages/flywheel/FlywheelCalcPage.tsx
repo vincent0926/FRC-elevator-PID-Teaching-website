@@ -8,10 +8,11 @@ import {
   DEFAULT_KNOBS,
   dipFraction,
   exitSpeed,
+  apexHeight,
   EXIT_RATIO,
   fastestSpinUp,
   launchRange,
-  speedForRange,
+  wheelForGoal,
   START_KP,
   type FlywheelKnobs,
   type FlywheelMechanism,
@@ -39,11 +40,11 @@ export function FlywheelCalcPage() {
   const setP = (p: Partial<ShotPlan>) => setPlan({ ...plan, ...p })
 
   const v = exitSpeed(plan.target, mech.wheelRadius)
-  const range = launchRange(v, plan.angle, plan.height)
-  // 反推：想射多遠 → 要幾 rps
-  const [want, setWant] = useState(() => Math.round(range * 10) / 10)
-  const needV = speedForRange(want, plan.angle, plan.height)
-  const needW = needV === null ? null : needV / (EXIT_RATIO * mech.wheelRadius)
+  const range = launchRange(v, plan.angle, plan.height, plan.goalHeight)
+  const miss = range - plan.goalDistance
+  const hit = Math.abs(miss) <= plan.goalWidth / 2
+  // 反推：要進目標 → 要幾 rps
+  const needW = wheelForGoal(mech.wheelRadius, plan)
   const spinUp = useMemo(() => fastestSpinUp(mech, plan.target, knobs.statorLimit), [mech, plan.target, knobs.statorLimit])
   const rows: { name: string; value: string; unit: string; src: string; note: string }[] = [
     { name: 'kS', value: '要量', unit: 'V', src: '量', note: '公式算不出摩擦。慢慢加電壓，飛輪剛好開始轉的電壓就是 kS' },
@@ -103,32 +104,55 @@ export function FlywheelCalcPage() {
           </div>
 
           <div className="panel">
-            <h2>轉速 → 球速 → 射程</h2>
+            <h2>轉速 → 球速 → 進不進目標</h2>
             <div className="fields">
               <NumberField label="目標轉速" value={plan.target} display={1 / TAU} digits={1} onChange={(x) => setP({ target: x })} min={1} max={150} step={1} unit="rps" />
               <NumberField label="球的質量" value={plan.ballMass} onChange={(x) => setP({ ballMass: x })} min={0.01} max={1} step={0.005} unit="kg" />
               <NumberField label="出射仰角" value={plan.angle} display={1 / D2R} digits={0} onChange={(x) => setP({ angle: x })} min={5} max={85} step={1} unit="°" />
               <NumberField label="出射高度" value={plan.height} onChange={(x) => setP({ height: x })} min={0} max={2} step={0.05} unit="m" hint="離地多高" />
             </div>
+            <div className="fields three" style={{ marginTop: 12 }}>
+              <NumberField label="目標距離" value={plan.goalDistance} onChange={(x) => setP({ goalDistance: x })} min={0.2} max={20} step={0.1} unit="m" hint="離出射點的水平距離" />
+              <NumberField label="目標高度" value={plan.goalHeight} onChange={(x) => setP({ goalHeight: x })} min={0} max={5} step={0.05} unit="m" hint="0 = 地面" />
+              <NumberField label="開口寬度" value={plan.goalWidth} onChange={(x) => setP({ goalWidth: x })} min={0.05} max={3} step={0.05} unit="m" />
+            </div>
             <dl className="fw-derived">
               <dt>輪緣速度</dt>
               <dd>{f(plan.target * mech.wheelRadius, 2)} m/s</dd>
               <dt>出口球速</dt>
               <dd>{f(v, 2)} m/s（輪緣的 {EXIT_RATIO}）</dd>
+              <dt>最高點</dt>
+              <dd>離地 {f(apexHeight(v, plan.angle, plan.height), 2)} m</dd>
               <dt>落點</dt>
-              <dd>{f(range, 2)} m</dd>
+              <dd>
+                {Number.isFinite(range) ? (
+                  <>
+                    {f(range, 2)} m（往下掉經過 {f(plan.goalHeight, 2)} m 高的地方）
+                    <span className={hit ? 'pass' : 'fail'}>
+                      {' '}
+                      {hit ? '進了' : '沒進'}，{miss >= 0 ? '遠' : '近'} {f(Math.abs(miss) * 100, 0)} cm
+                    </span>
+                  </>
+                ) : (
+                  <span className="fail">打不到 {f(plan.goalHeight, 2)} m 高</span>
+                )}
+              </dd>
               <dt>一發大約掉</dt>
               <dd>
                 {f(dipFraction(mech, plan.ballMass) * 100, 1)}%（{f((dipFraction(mech, plan.ballMass) * plan.target) / TAU, 1)} rps）
               </dd>
             </dl>
-            <div className="fields" style={{ marginTop: 12 }}>
-              <NumberField label="想射多遠" value={want} onChange={setWant} min={0.1} max={30} step={0.1} unit="m" />
-              <div className="fw-need">
-                要的轉速
-                <b>{needW === null ? '這個仰角射不到' : `${f(needW / TAU, 1)} rps`}</b>
-                {needW !== null && needW > ff.freeSpeed * 0.9 && <span className="small fail">超過最高轉速的 90%，馬達轉不到</span>}
-              </div>
+            <div className="fw-need" style={{ marginTop: 12 }}>
+              要進目標的轉速
+              <b>{needW === null ? '這個仰角射不進（目標太近或太高）' : `${f(needW / TAU, 1)} rps`}</b>
+              {needW !== null && needW > ff.freeSpeed * 0.9 && <span className="small fail">超過最高轉速的 90%，馬達轉不到：改齒比或仰角</span>}
+              {needW !== null && Math.abs(needW - plan.target) > 0.05 * TAU && (
+                <span>
+                  <button className="btn small" type="button" onClick={() => setP({ target: Math.round((needW / TAU) * 10) * (TAU / 10) })}>
+                    設成目標轉速
+                  </button>
+                </span>
+              )}
             </div>
             <p className="small muted" style={{ marginBottom: 0 }}>
               球速當成輪緣速度的一半（單邊飛輪）、不計空氣阻力和球的旋轉，都是近似。實際的比例要上機射幾發量落點。

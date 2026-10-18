@@ -504,9 +504,7 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .fw-view { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px 10px }
 .fw-view svg { display: block; height: auto }
 .fv-ideal { fill: none; stroke: var(--steel); stroke-width: 1.5; stroke-dasharray: 5 4 }
-.fv-ideal-tick { stroke: var(--steel); stroke-width: 2 }
 .fv-path { fill: none; stroke: var(--blue); stroke-width: 2; opacity: .6 }
-.fv-land { fill: var(--blue) }
 .fv-ball { fill: var(--yellow); stroke: var(--ink-2); stroke-width: 1 }
 .fv-wheel { fill: var(--panel); stroke: var(--ink); stroke-width: 2.5 }
 .fv-spoke { stroke: var(--ink-3); stroke-width: 2 }
@@ -522,3 +520,7 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .fw-mech { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
 .fw-need { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2) }
 .fw-need b { font-size: 18px; color: var(--ink) }
+.fv-goal { stroke: var(--violet); stroke-width: 4; stroke-linecap: round }
+.fv-goal-post { stroke: var(--violet); stroke-width: 2; opacity: .6 }
+.fv-hit { fill: var(--green); stroke: var(--panel); stroke-width: 1 }
+.fv-miss { fill: var(--red); stroke: var(--panel); stroke-width: 1 }
