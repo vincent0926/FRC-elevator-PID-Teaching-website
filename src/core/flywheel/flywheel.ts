@@ -526,6 +526,18 @@ export interface TrajectoryOption {
   reachable: boolean
 }
 
+/** 轉速上限預設是馬達空載轉速的 90%（12 V、不含摩擦，再高電壓就不夠追了） */
+export const DEFAULT_LIMIT_FRACTION = 0.9
+
+/**
+ * 轉速上限 rad/s：使用者填的上限（rps，0 = 沒填）跟空載轉速的 90% 取小的。
+ * 填得比 90% 還高也沒用，馬達本身就轉不到。
+ */
+export function wheelLimit(freeSpeed: number, userRps: number): number {
+  const motor = freeSpeed * DEFAULT_LIMIT_FRACTION
+  return userRps > 0 ? Math.min(motor, userRps * 2 * Math.PI) : motor
+}
+
 /** 彈道 1F 列出來給人選的仰角：20° 到 75°，每 5° 一條 */
 export const TRAJECTORY_ANGLES = Array.from({ length: 12 }, (_, i) => ((20 + i * 5) * Math.PI) / 180)
 /** 每 5° 找到的太少（邊移動邊射、距離很近時，能打進的仰角範圍會很窄）時，改用 10°～85° 每 1° 找 */
@@ -539,21 +551,26 @@ const FINE_PICKS = 6
  * 同一個距離，不同仰角各要多少轉速才會打到目標中心（往下掉進去）。打不進的仰角不列。
  * 容許誤差：開口近邊、遠邊各要多少轉速，跟中心比，取比較小的那邊。
  * 給 motion（邊移動邊射）時，轉速和底盤偏角用 solveMovingShot 算。
- * 沒指定 angles 時用預設仰角（每 5°），找到少於 5 條時，改成每 1° 找，從能打進的範圍平均挑 6 條（含最低、最高的仰角）。
+ * maxWheel 是轉速上限 rad/s（見 wheelLimit），超過的標成 reachable = false。
+ * 沒指定 angles 時用預設仰角（每 5°）；在上限內的少於 5 條時，改成每 1° 找，從能打進、又在上限內的仰角平均挑 6 條（含最低、最高的仰角）。
+ * 每 1° 找也沒有在上限內的，就從能打進的平均挑（都標成超過上限），讓人看得到差多少。
  */
-export function trajectoryOptions(mech: FlywheelMechanism, plan: ShotPlan, freeSpeed: number, angles?: number[], motion: RobotMotion = STILL): TrajectoryOption[] {
+export function trajectoryOptions(mech: FlywheelMechanism, plan: ShotPlan, maxWheel: number, angles?: number[], motion: RobotMotion = STILL): TrajectoryOption[] {
   // 有指定仰角就只算那些
-  if (angles) return optionsAt(mech, plan, freeSpeed, angles, motion)
-  const out = optionsAt(mech, plan, freeSpeed, TRAJECTORY_ANGLES, motion)
-  if (out.length >= MIN_OPTIONS) return out
-  const fine = optionsAt(mech, plan, freeSpeed, FINE_TRAJECTORY_ANGLES, motion)
-  if (fine.length <= out.length) return out
+  if (angles) return optionsAt(mech, plan, maxWheel, angles, motion)
+  const out = optionsAt(mech, plan, maxWheel, TRAJECTORY_ANGLES, motion)
+  const ok = (list: TrajectoryOption[]) => list.filter((o) => o.reachable)
+  if (ok(out).length >= MIN_OPTIONS) return out
+  const all = optionsAt(mech, plan, maxWheel, FINE_TRAJECTORY_ANGLES, motion)
+  const fine = ok(all).length ? ok(all) : all
+  // 每 1° 找也沒有比較多，維持每 5°
+  if (fine.length <= (fine === all ? out.length : ok(out).length)) return out
   if (fine.length <= FINE_PICKS) return fine
   const idx = new Set(Array.from({ length: FINE_PICKS }, (_, i) => Math.round((i * (fine.length - 1)) / (FINE_PICKS - 1))))
   return [...idx].map((i) => fine[i])
 }
 
-function optionsAt(mech: FlywheelMechanism, plan: ShotPlan, freeSpeed: number, angles: number[], motion: RobotMotion): TrajectoryOption[] {
+function optionsAt(mech: FlywheelMechanism, plan: ShotPlan, maxWheel: number, angles: number[], motion: RobotMotion): TrajectoryOption[] {
   const rx = exitRadius(mech)
   const moving = motion.toward !== 0 || motion.side !== 0
   const solve = (angle: number, d: number) => (moving ? solveMovingShot(rx, plan, angle, motion, d) : stillShot(rx, { ...plan, angle, goalDistance: d }))
@@ -572,7 +589,7 @@ function optionsAt(mech: FlywheelMechanism, plan: ShotPlan, freeSpeed: number, a
       tolerance,
       entry: Math.atan2(-vy, s.fieldExit * Math.cos(s.fieldAngle)),
       apex: apexHeight(s.fieldExit, s.fieldAngle, plan.height),
-      reachable: s.wheel <= freeSpeed * 0.9,
+      reachable: s.wheel <= maxWheel,
     })
   }
   return out
@@ -665,6 +682,8 @@ export interface MoveSetup {
   motion: RobotMotion
   /** 有補償：每一發照當時的距離和速度算轉速、底盤偏角。沒補償：照靜止的轉速表（只看距離），底盤正對目標 */
   compensate: boolean
+  /** 轉速上限 rad/s：要的轉速超過就只給到上限（程式裡也會這樣夾住），那一發會打近 */
+  maxWheel?: number
 }
 
 /** 每一發出射時機器人在哪、怎麼動（目標在原點；第一發時機器人在目標正前方 plan.goalDistance） */
@@ -696,6 +715,8 @@ export interface MoveAim {
   yaw: number
   /** 算不出來（太近、太遠、做不到）：沿用前一發的轉速、底盤正對目標 */
   solved: boolean
+  /** 要的轉速超過上限，只給到上限 */
+  capped: boolean
 }
 
 /** 每一發要設的轉速和底盤偏角 */
@@ -707,7 +728,8 @@ export function moveAims(mech: FlywheelMechanism, plan: ShotPlan, setup: MoveSet
     const p = { ...plan, goalDistance: pose.distance }
     const sol = setup.compensate ? solveMovingShot(rx, p, plan.angle, pose.motion) : stillShot(rx, p)
     if (sol) last = sol.wheel
-    return { pose, target: last, yaw: sol ? sol.yaw : 0, solved: sol !== null }
+    const capped = setup.maxWheel !== undefined && last > setup.maxWheel
+    return { pose, target: capped ? setup.maxWheel! : last, yaw: sol ? sol.yaw : 0, solved: sol !== null, capped }
   })
 }
 

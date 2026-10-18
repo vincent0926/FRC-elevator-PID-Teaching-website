@@ -3,18 +3,20 @@ import { NumberField } from '../../components/NumberField'
 import {
   ballAt,
   computeFlywheelFeedforward,
+  DEFAULT_LIMIT_FRACTION,
   dipFraction,
   flightTime,
   GRAVITY,
   trajectoryOptions,
   wheelForGoal,
+  wheelLimit,
   exitRadius,
   type FlywheelMechanism,
   type ShotPlan,
   type TrajectoryOption,
 } from '../../core/flywheel/flywheel'
 import { BallFields, HubPreset, MechFields } from './FlywheelForms'
-import type { MoveSettings } from './flywheelStore'
+import { useRpsLimit, type MoveSettings } from './flywheelStore'
 import { yawText } from './flywheelTune'
 
 /**
@@ -50,7 +52,10 @@ export function FlywheelAim({
   const ff = useMemo(() => computeFlywheelFeedforward(mech), [mech])
   const toward = move?.settings.toward ?? 0
   const side = move?.settings.side ?? 0
-  const opts = useMemo(() => trajectoryOptions(mech, plan, ff.freeSpeed, undefined, { toward, side }), [mech, plan, ff.freeSpeed, toward, side])
+  const [limit, setLimit] = useRpsLimit()
+  const maxWheel = wheelLimit(ff.freeSpeed, limit.rps)
+  const opts = useMemo(() => trajectoryOptions(mech, plan, maxWheel, undefined, { toward, side }), [mech, plan, maxWheel, toward, side])
+  const noneOk = opts.length > 0 && opts.every((o) => !o.reachable)
   // 每 5° 找到太少、改成每 1° 找的（有不是 5 的倍數的仰角）
   const fine = opts.some((o) => deg(o.angle) % 5 !== 0)
   const setMove = (p: Partial<MoveSettings>) => move?.set({ ...move.settings, ...p })
@@ -74,6 +79,18 @@ export function FlywheelAim({
             <span className="fa-step">1</span>基本參數：機構
           </h2>
           <MechFields mech={mech} setM={setM} />
+          <div className="fields" style={{ marginTop: 12 }}>
+            <NumberField
+              label="轉速上限"
+              value={limit.rps}
+              onChange={(x) => setLimit({ rps: Math.max(0, x) })}
+              min={0}
+              max={300}
+              step={1}
+              unit="rps"
+              hint={limitHint(limit.rps, ff.freeSpeed)}
+            />
+          </div>
         </div>
         <div className="panel">
           <h2>
@@ -128,7 +145,12 @@ export function FlywheelAim({
             </p>
             {fine && (
               <p className="small muted">
-                {move ? '機器人開得快，' : ''}能打進的仰角只剩 {deg(opts[0].angle)}°～{deg(opts[opts.length - 1].angle)}°，每 5° 找不到幾條，所以改成每 1° 找，從這個範圍平均挑 {opts.length} 條給你選。範圍越窄，仰角差一點就打不進。
+                {move ? '機器人開得快，' : ''}能打進{noneOk ? '' : '、轉速又在上限內'}的仰角只剩 {deg(opts[0].angle)}°～{deg(opts[opts.length - 1].angle)}°，每 5° 找不到幾條，所以改成每 1° 找，從這個範圍平均挑 {opts.length} 條給你選。範圍越窄，仰角差一點就打不進。
+              </p>
+            )}
+            {noneOk && (
+              <p className="fail">
+                每一條都要超過轉速上限 {f(maxWheel / TAU, 0)} rps：{move ? '開慢一點、' : ''}靠近一點，或提高上限（換齒比、換馬達）。
               </p>
             )}
             <AimView plan={plan} opts={opts} sel={sel} onPick={(o) => setPicked(deg(o.angle))} />
@@ -143,7 +165,7 @@ export function FlywheelAim({
                   onClick={() => setPicked(deg(o.angle))}
                 >
                   <b>{deg(o.angle)}°</b>
-                  <span>{o.reachable ? `${f(o.wheel / TAU, 1)} rps` : '轉不到'}</span>
+                  <span>{o.reachable ? `${f(o.wheel / TAU, 1)} rps` : `${f(o.wheel / TAU, 0)} rps 超過上限`}</span>
                   <span className="small muted">{o.tolerance === null ? '±—' : `±${f(o.tolerance * 100, 1)}%`}</span>
                 </button>
               ))}
@@ -201,13 +223,21 @@ export function FlywheelAim({
               <p className="small">點一條軌跡看它要的轉速和仰角。</p>
             )}
             <p className="small muted" style={{ marginBottom: 0 }}>
-              不計空氣阻力、假設球不打滑；{move ? '機器人速度用出射那一刻的，沒算程式算完到球射出去的延遲；' : ''}轉速是打到目標中心的值，實際要上機射幾發再微調。「轉不到」是超過最高轉速的 90%；「±—」是轉速低一點球就沒辦法從上面掉進開口，容許誤差算不出來。
+              不計空氣阻力、假設球不打滑；{move ? '機器人速度用出射那一刻的，沒算程式算完到球射出去的延遲；' : ''}轉速是打到目標中心的值，實際要上機射幾發再微調。「超過上限」是要的轉速比轉速上限（{f(maxWheel / TAU, 0)} rps）還高，不能選；「±—」是轉速低一點球就沒辦法從上面掉進開口，容許誤差算不出來。
             </p>
           </>
         )}
       </div>
     </div>
   )
+}
+
+/** 轉速上限欄位下面的說明 */
+function limitHint(rps: number, freeSpeed: number): string {
+  const motor = (freeSpeed * DEFAULT_LIMIT_FRACTION) / TAU
+  if (rps <= 0) return `0 = 用馬達空載轉速的 90%（約 ${f(motor, 0)} rps）`
+  if (rps > motor) return `比馬達做得到的高，用空載轉速的 90%（約 ${f(motor, 0)} rps）`
+  return '選軌跡只挑這個轉速以內的'
 }
 
 /** 跟站著不動射比：同一個仰角要幾 rps */
