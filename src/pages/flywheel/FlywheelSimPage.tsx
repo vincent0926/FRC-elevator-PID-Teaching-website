@@ -25,6 +25,7 @@ import { PlaybackBar, usePlayback } from '../simulate/MiniShaft'
 import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText } from './flywheelTune'
 import { FlywheelView } from './FlywheelView'
 import { FlywheelAim } from './FlywheelAim'
+import { BallFields, HubPreset, MechFields } from './FlywheelForms'
 import { SHAPES, useFlywheelMechanism, usePersisted, useShotPlan } from './flywheelStore'
 
 /**
@@ -74,14 +75,14 @@ export function FlywheelSimPage() {
           }}
         />
       ) : (
-        <ShotSim mech={mech} plan={plan} setPlan={setPlan} />
+        <ShotSim mech={mech} setMech={setMech} plan={plan} setPlan={setPlan} />
       )}
     </section>
   )
 }
 
 /** 模式 2：連射模擬（原本的 3F） */
-function ShotSim({ mech, plan, setPlan }: { mech: FlywheelMechanism; plan: ShotPlan; setPlan: (p: ShotPlan) => void }) {
+function ShotSim({ mech, setMech, plan, setPlan }: { mech: FlywheelMechanism; setMech: (m: FlywheelMechanism) => void; plan: ShotPlan; setPlan: (p: ShotPlan) => void }) {
   const { go } = useStore()
   const [knobs, setKnobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
   const [spec, setSpec] = usePersisted<FlywheelSpec>('flywheel:spec', DEFAULT_FLYWHEEL_SPEC)
@@ -156,6 +157,10 @@ function ShotSim({ mech, plan, setPlan }: { mech: FlywheelMechanism; plan: ShotP
         <button className="linkbtn small" type="button" onClick={() => go('calc')}>
           到 1F 改機構
         </button>
+        <details className="fw-mech-edit">
+          <summary>在這裡改機構</summary>
+          <MechFields mech={mech} setM={(p) => setMech({ ...mech, ...p })} />
+        </details>
       </div>
 
       <div className="panel" style={{ marginTop: 20 }}>
@@ -174,7 +179,7 @@ function ShotSim({ mech, plan, setPlan }: { mech: FlywheelMechanism; plan: ShotP
             <NumberField label="發數" value={plan.shots} onChange={(v) => setP({ shots: Math.round(v) })} min={1} max={100} step={1} unit="發" />
             <NumberField label="每發間隔" value={plan.interval} onChange={(v) => setP({ interval: v })} min={0.05} max={2} step={0.05} unit="s" />
             <NumberField label="第一發" value={plan.firstShot} onChange={(v) => setP({ firstShot: v })} min={0.2} max={5} step={0.1} unit="s" hint="從靜止開始算" />
-            <NumberField label="球的質量" value={plan.ballMass} onChange={(v) => setP({ ballMass: v })} min={0.01} max={1} step={0.005} unit="kg" />
+            <BallFields plan={plan} setP={setP} />
             <NumberField label="出射仰角" value={plan.angle} display={180 / Math.PI} digits={0} onChange={(v) => setP({ angle: v })} min={5} max={85} step={1} unit="°" />
             <NumberField label="出射高度" value={plan.height} onChange={(v) => setP({ height: v })} min={0} max={2} step={0.05} unit="m" hint="離地多高" />
           </div>
@@ -184,6 +189,7 @@ function ShotSim({ mech, plan, setPlan }: { mech: FlywheelMechanism; plan: ShotP
             <NumberField label="目標高度" value={plan.goalHeight} onChange={(v) => setP({ goalHeight: v })} min={0} max={5} step={0.05} unit="m" hint="0 = 地面" />
             <NumberField label="開口寬度" value={plan.goalWidth} onChange={(v) => setP({ goalWidth: v })} min={0.05} max={3} step={0.05} unit="m" />
           </div>
+          <HubPreset setP={setP} />
           <p className="small" style={{ margin: '8px 0 0' }}>
             {goalW === null ? (
               <span className="fail">這個仰角射不進：目標太近或太高。改仰角或目標。</span>

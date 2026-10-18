@@ -47,7 +47,8 @@ export interface Calibration {
 
 interface Store {
   track: Track | null
-  setTrack: (t: Track | null) => void
+  /** first：選完要停的樓層（預設電梯、手臂是總覽，射球飛輪是 1F） */
+  setTrack: (t: Track | null, first?: PageId) => void
   mechanism: ElevatorMechanism
   setMechanism: (m: ElevatorMechanism) => void
   voltsPerCm: number
@@ -194,12 +195,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return t === 'elevator' || t === 'arm' || t === 'flywheel' ? t : null
   })
   // 手動選機構（或換機構）一律回到總覽：換了機構，原本停的樓層可能還沒做（例如手臂 4F）
-  const setTrack = useCallback((t: Track | null) => {
+  const setTrack = useCallback((t: Track | null, start?: PageId) => {
     setTrackState(t)
     saveSession('track', t)
     if (t) {
-      // 射球飛輪沒有總覽，從 1F 開始
-      const first: PageId = t === 'flywheel' ? 'calc' : 'home'
+      // 射球飛輪沒有總覽，從 1F 開始（客製化直接到 3F）
+      const first: PageId = start ?? (t === 'flywheel' ? 'calc' : 'home')
       if (location.hash !== '#' + first) location.hash = first
       setPage(first)
     }

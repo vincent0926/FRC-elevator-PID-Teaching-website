@@ -385,6 +385,12 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .ch-pivot { fill: var(--panel); stroke: var(--ink); stroke-width: 2 }
 .track-btn { background: none; border: 1px solid var(--line); border-radius: 4px; color: inherit; padding: 2px 8px; font-size: 12px; cursor: pointer }
 @media (max-width: 860px) { .chooser-cards { grid-template-columns: minmax(0, 1fr) } }
+.ch-modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(12, 16, 21, .55) }
+.ch-dialog { width: 100%; max-width: 640px; max-height: calc(100vh - 32px); overflow-y: auto; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--lift-shadow) }
+.ch-dialog h2 { margin: 0 0 12px }
+.ch-dialog > .btn { margin-top: 12px }
+.ch-styles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 560px) { .ch-styles { grid-template-columns: minmax(0, 1fr) } }
 .track-mobile { display: none }
 /* 回課程網站：側欄一行、主內容上方一行（手機看不到側欄時也找得到） */
 .course-link { display: block; margin: 0 20px 12px; font-size: 12.5px; color: #93A0AE; text-decoration: none }
@@ -536,6 +542,9 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .fa-result { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-2) }
 .fa-big { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 14px; color: var(--ink-2); margin-bottom: 8px }
 .fa-big b { font-size: 24px; color: var(--ink); margin-left: 4px }
+.fw-mech-edit { flex-basis: 100% }
+.fw-mech-edit > summary { cursor: pointer; font-size: 13px; color: var(--blue) }
+.fw-mech-edit[open] > summary { margin-bottom: 10px }
 .fw-preset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px }
 .fw-need { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2) }
 .fw-need b { font-size: 18px; color: var(--ink) }

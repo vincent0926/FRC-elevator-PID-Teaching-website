@@ -1,6 +1,11 @@
+import { useEffect, useRef, useState } from 'react'
+import { saveJson } from '../storage/local'
 import { useStore, type Track } from './store'
 
-/** 進站先選機構：電梯、單關節手臂或射球飛輪。選完才進到各樓層（射球飛輪只有 1F、3F）。 */
+/**
+ * 進站先選機構：電梯、單關節手臂或射球飛輪。選完才進到各樓層（射球飛輪只有 1F、3F）。
+ * 射球飛輪每次都再問一次要「彈道」（1F 參數 → 3F 算轉速和仰角）還是「客製化」（直接到 3F 連射模擬，自己設）。
+ */
 
 const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = [
   {
@@ -19,7 +24,7 @@ const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = 
     id: 'flywheel',
     title: '射球飛輪',
     what: '控制轉速的射球機構：先轉到目標轉速，球打出去會掉速。',
-    points: ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '1F 計算（球速、射程）、3F 模擬（側視動畫、到速、掉速、落點）'],
+    points: ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '彈道：1F 參數 → 3F 選軌跡得到 RPS 和仰角', '客製化：直接連射模擬，參數自己設'],
   },
 ]
 
@@ -70,8 +75,71 @@ function FlywheelIcon() {
 
 const ICONS = { elevator: ElevatorIcon, arm: ArmIcon, flywheel: FlywheelIcon }
 
+/** 射球飛輪的兩種進法；mode 是 3F 的模式（存在 flywheel:mode，跟 FlywheelSimPage 同一份） */
+const FLYWHEEL_STYLES = [
+  {
+    id: 'ballistic',
+    title: '彈道',
+    what: '照步驟來：先在 1F 填機構、算 Slot0 參數，再到 3F 給距離，看每個仰角要幾 RPS，選一條軌跡。',
+    start: 'calc',
+    mode: 'aim',
+  },
+  {
+    id: 'custom',
+    title: '客製化',
+    what: '直接到 3F 連射模擬：機構、仰角、RPS、發數、間隔、kP 全部自己設，看轉速撐不撐得住、球進不進。',
+    start: 'sim',
+    mode: 'sim',
+  },
+] as const
+
+function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
+  const { setTrack } = useStore()
+  const first = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    first.current?.focus()
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [onClose])
+  return (
+    <div className="ch-modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="ch-dialog" role="dialog" aria-modal="true" aria-labelledby="ch-fw-title">
+        <h2 id="ch-fw-title">射球飛輪：你想怎麼用？</h2>
+        <div className="ch-styles">
+          {FLYWHEEL_STYLES.map((st, i) => (
+            <button
+              key={st.id}
+              ref={i === 0 ? first : undefined}
+              type="button"
+              className="chooser-card ch-style"
+              onClick={() => {
+                saveJson('flywheel:mode', { mode: st.mode })
+                setTrack('flywheel', st.start)
+              }}
+            >
+              <b>{st.title}</b>
+              <span className="small">{st.what}</span>
+              <span className="btn primary small" aria-hidden="true">
+                用{st.title}
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="small muted" style={{ margin: '10px 0 0' }}>
+          兩種用同一份機構和射球資料；進去之後 3F 上方也可以切換。
+        </p>
+        <button type="button" className="btn small" onClick={onClose}>
+          回去選機構
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function Chooser() {
   const { setTrack } = useStore()
+  const [fwOpen, setFwOpen] = useState(false)
   return (
     <div className="chooser">
       <div className="chooser-in">
@@ -84,7 +152,7 @@ export function Chooser() {
           {CHOICES.map((c) => {
             const Icon = ICONS[c.id]
             return (
-            <button key={c.id} type="button" className="chooser-card" onClick={() => setTrack(c.id)}>
+            <button key={c.id} type="button" className="chooser-card" onClick={() => (c.id === 'flywheel' ? setFwOpen(true) : setTrack(c.id))}>
               <Icon />
               <b>{c.title}</b>
               <span className="small">{c.what}</span>
@@ -100,6 +168,7 @@ export function Chooser() {
             )
           })}
         </div>
+        {fwOpen && <FlywheelStyleDialog onClose={() => setFwOpen(false)} />}
         <p className="small muted">每次打開網站都會先問；同一個分頁重新整理不用重選。進去之後，左邊導覽的「換機構」可以隨時切換，每個機構的資料分開存。</p>
       </div>
     </div>
