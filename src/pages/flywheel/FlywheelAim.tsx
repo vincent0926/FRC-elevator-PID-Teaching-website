@@ -51,6 +51,8 @@ export function FlywheelAim({
   const toward = move?.settings.toward ?? 0
   const side = move?.settings.side ?? 0
   const opts = useMemo(() => trajectoryOptions(mech, plan, ff.freeSpeed, undefined, { toward, side }), [mech, plan, ff.freeSpeed, toward, side])
+  // 每 5° 找到太少、改成每 1° 找的（有不是 5 的倍數的仰角）
+  const fine = opts.some((o) => deg(o.angle) % 5 !== 0)
   const setMove = (p: Partial<MoveSettings>) => move?.set({ ...move.settings, ...p })
   // 選軌跡是第幾步（邊移動邊射多一步）
   const pickStep = move ? 4 : 3
@@ -118,12 +120,17 @@ export function FlywheelAim({
           <span className="fa-step">{pickStep}</span>選一條軌跡
         </h2>
         {opts.length === 0 ? (
-          <p className="fail">這個距離和高度，20°～75° 都射不進（目標太近或太高）。改距離或出射高度。</p>
+          <p className="fail">{move ? '這個距離、高度和機器人速度，10°～85° 都射不進（目標太近、太高，或機器人開太快）。改距離、出射高度或機器人速度。' : '這個距離和高度，10°～85° 都射不進（目標太近或太高）。改距離或出射高度。'}</p>
         ) : (
           <>
             <p className="small muted" style={{ marginTop: 0 }}>
               同一個距離，仰角不同要的轉速也不同。每條線是一個仰角剛好打到目標中心的路線{move ? '（畫的是球對地的路線，已經加上機器人速度；標的度數是發射機構的仰角）' : ''}，點一條（或下面的按鈕）看它要幾 rps。
             </p>
+            {fine && (
+              <p className="small muted">
+                {move ? '機器人開得快，' : ''}能打進的仰角只剩 {deg(opts[0].angle)}°～{deg(opts[opts.length - 1].angle)}°，每 5° 找不到幾條，所以改成每 1° 找，從這個範圍平均挑 {opts.length} 條給你選。範圍越窄，仰角差一點就打不進。
+              </p>
+            )}
             <AimView plan={plan} opts={opts} sel={sel} onPick={(o) => setPicked(deg(o.angle))} />
             <div className="fa-opts" role="group" aria-label="選軌跡">
               {opts.map((o) => (

@@ -528,13 +528,32 @@ export interface TrajectoryOption {
 
 /** 彈道 1F 列出來給人選的仰角：20° 到 75°，每 5° 一條 */
 export const TRAJECTORY_ANGLES = Array.from({ length: 12 }, (_, i) => ((20 + i * 5) * Math.PI) / 180)
+/** 每 5° 找到的太少（邊移動邊射、距離很近時，能打進的仰角範圍會很窄）時，改用 10°～85° 每 1° 找 */
+export const FINE_TRAJECTORY_ANGLES = Array.from({ length: 76 }, (_, i) => ((10 + i) * Math.PI) / 180)
+/** 每 5° 找到少於這麼多條，就改用每 1° 找 */
+const MIN_OPTIONS = 5
+/** 每 1° 找的時候，平均挑這麼多條（含頭尾） */
+const FINE_PICKS = 6
 
 /**
  * 同一個距離，不同仰角各要多少轉速才會打到目標中心（往下掉進去）。打不進的仰角不列。
  * 容許誤差：開口近邊、遠邊各要多少轉速，跟中心比，取比較小的那邊。
  * 給 motion（邊移動邊射）時，轉速和底盤偏角用 solveMovingShot 算。
+ * 沒指定 angles 時用預設仰角（每 5°），找到少於 5 條時，改成每 1° 找，從能打進的範圍平均挑 6 條（含最低、最高的仰角）。
  */
-export function trajectoryOptions(mech: FlywheelMechanism, plan: ShotPlan, freeSpeed: number, angles = TRAJECTORY_ANGLES, motion: RobotMotion = STILL): TrajectoryOption[] {
+export function trajectoryOptions(mech: FlywheelMechanism, plan: ShotPlan, freeSpeed: number, angles?: number[], motion: RobotMotion = STILL): TrajectoryOption[] {
+  // 有指定仰角就只算那些
+  if (angles) return optionsAt(mech, plan, freeSpeed, angles, motion)
+  const out = optionsAt(mech, plan, freeSpeed, TRAJECTORY_ANGLES, motion)
+  if (out.length >= MIN_OPTIONS) return out
+  const fine = optionsAt(mech, plan, freeSpeed, FINE_TRAJECTORY_ANGLES, motion)
+  if (fine.length <= out.length) return out
+  if (fine.length <= FINE_PICKS) return fine
+  const idx = new Set(Array.from({ length: FINE_PICKS }, (_, i) => Math.round((i * (fine.length - 1)) / (FINE_PICKS - 1))))
+  return [...idx].map((i) => fine[i])
+}
+
+function optionsAt(mech: FlywheelMechanism, plan: ShotPlan, freeSpeed: number, angles: number[], motion: RobotMotion): TrajectoryOption[] {
   const rx = exitRadius(mech)
   const moving = motion.toward !== 0 || motion.side !== 0
   const solve = (angle: number, d: number) => (moving ? solveMovingShot(rx, plan, angle, motion, d) : stillShot(rx, { ...plan, angle, goalDistance: d }))

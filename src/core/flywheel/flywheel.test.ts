@@ -26,6 +26,7 @@ import {
   simulateFlywheel,
   speedForRange,
   wheelForGoal,
+  TRAJECTORY_ANGLES,
   trajectoryOptions,
   theoryGains,
   moveAims,
@@ -320,7 +321,12 @@ describe('彈道：同一個距離的候選軌跡', () => {
   it('打不進的仰角不列；轉速超過 90% 最高轉速標成轉不到', () => {
     const far = trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 12 }, ffd.freeSpeed)
     expect(far.some((o) => !o.reachable)).toBe(true)
-    expect(trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 0.3 }, ffd.freeSpeed)).toEqual([])
+    const close = { ...DEFAULT_PLAN, goalDistance: 0.3 }
+    expect(trajectoryOptions(DEFAULT_FLYWHEEL, close, ffd.freeSpeed, TRAJECTORY_ANGLES)).toEqual([])
+    // 每 5° 都打不進時改每 1° 找：太近只有很陡的仰角掉得進去
+    const steep = trajectoryOptions(DEFAULT_FLYWHEEL, close, ffd.freeSpeed)
+    for (const o of steep) expect(o.angle).toBeGreaterThan((75 * Math.PI) / 180)
+    expect(trajectoryOptions(DEFAULT_FLYWHEEL, { ...DEFAULT_PLAN, goalDistance: 0.05 }, ffd.freeSpeed)).toEqual([])
   })
 })
 
@@ -367,6 +373,23 @@ describe('邊移動邊射', () => {
       expect(launchRange(o.fieldExit, o.fieldAngle, DEFAULT_PLAN.height, DEFAULT_PLAN.goalHeight)).toBeCloseTo(DEFAULT_PLAN.goalDistance, 6)
       expect(o.yaw).toBeLessThan(0)
     }
+  })
+  it('開很快、能打進的仰角範圍很窄時，改每 1° 找，還是有好幾條可以選', () => {
+    const plan = { ...DEFAULT_PLAN, ...HUB_2026, goalDistance: 3.5 }
+    const m = { toward: 3.5, side: 3.5 }
+    // 每 5° 只找得到幾條
+    expect(trajectoryOptions(DEFAULT_FLYWHEEL, plan, ff.freeSpeed, TRAJECTORY_ANGLES, m).length).toBeLessThan(5)
+    const opts = trajectoryOptions(DEFAULT_FLYWHEEL, plan, ff.freeSpeed, undefined, m)
+    expect(opts.length).toBe(6)
+    for (let i = 1; i < opts.length; i++) expect(opts[i].angle).toBeGreaterThan(opts[i - 1].angle)
+    for (const o of opts) expect(launchRange(o.fieldExit, o.fieldAngle, plan.height, plan.goalHeight)).toBeCloseTo(plan.goalDistance, 6)
+    // 頭尾是能打進的最低、最高仰角：再低 1°、再高 1° 都打不進
+    const rx = exitRadius(DEFAULT_FLYWHEEL)
+    const deg = Math.PI / 180
+    expect(solveMovingShot(rx, plan, opts[0].angle - deg, m)).toBeNull()
+    expect(solveMovingShot(rx, plan, opts[5].angle + deg, m)).toBeNull()
+    // 站著射每 5° 就夠多，不會改
+    expect(trajectoryOptions(DEFAULT_FLYWHEEL, plan, ff.freeSpeed).map((o) => o.angle)).toEqual(trajectoryOptions(DEFAULT_FLYWHEEL, plan, ff.freeSpeed, TRAJECTORY_ANGLES).map((o) => o.angle))
   })
   it('第一發時機器人在目標正前方，之後照速度移動', () => {
     const p0 = movePose(DEFAULT_PLAN, { toward: 1, side: 2 }, DEFAULT_PLAN.firstShot)
