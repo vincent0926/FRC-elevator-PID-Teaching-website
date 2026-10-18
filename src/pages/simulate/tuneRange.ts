@@ -99,3 +99,18 @@ export function snap(v: number, step: number): number {
   const d = Math.max(0, -Math.floor(Math.log10(step)) + 1)
   return Number((Math.round(v / step) * step).toFixed(d))
 }
+
+/** 滑桿顯示的單位：SI（m、rad）或 Phoenix 6 轉數制（rot、rps） */
+export type TuneUnitMode = 'si' | 'rot'
+
+/**
+ * Phoenix 6 轉數制的顯示倍率與單位。perRot 是機構轉 1 圈的 SI 量：電梯是鼓輪 1 圈的公尺數（2πr），
+ * 手臂是 2π rad。增益乘上 perRot（V/(m/s) → V/rps），速度、加速度除以 perRot（m/s → rps）。
+ * 跟 codegen 的 convert／convertArm 用同一個換算，畫面上的數字就是 Slot0Configs、MotionMagicConfigs 要填的值。
+ */
+export function rotationView(perRot: number): { display: Record<TuneKey, number>; units: Record<TuneKey, string> } {
+  return {
+    display: { kS: 1, kG: 1, kV: perRot, kA: perRot, kP: perRot, kI: perRot, kD: perRot, cruiseVelocity: 1 / perRot, acceleration: 1 / perRot },
+    units: { kS: 'V', kG: 'V', kV: 'V/rps', kA: 'V/(rps/s)', kP: 'V/rot', kI: 'V/(rot·s)', kD: 'V/rps', cruiseVelocity: 'rps', acceleration: 'rps/s' },
+  }
+}

@@ -14,6 +14,7 @@ import { ApproxNote, PLANT_ASSUMPTIONS, SIM_SCOPE } from '../../components/Appro
 import { ControllerSettings } from './ControllerSettings'
 import { CustomEditor } from './CustomEditor'
 import { TuneSliders } from '../../components/TuneSliders'
+import { metersPerRotation } from '../../core/units'
 import { alignedFromSim } from '../../core/log/sampleLog'
 import type { TuneKey } from './tuneRange'
 import { AntiWindupEditor } from './AntiWindupEditor'
@@ -412,6 +413,7 @@ export function SimPage() {
               onEdit={tweak}
               onResetAll={resetToTheory}
               units={ELEVATOR_UNITS}
+              rotation={{ perRot: metersPerRotation(mechanism.drumRadius), note: `鼓輪轉 1 圈 = ${metersPerRotation(mechanism.drumRadius).toFixed(4)} m` }}
               disabled={ps.slotByDirection ? { kS: '開了往下 Slot 1，kS 在下面的參數區分往上、往下設', kG: '開了往下 Slot 1，kG 在下面的參數區分往上、往下設' } : undefined}
             />
           )}
