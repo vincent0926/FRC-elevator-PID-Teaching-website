@@ -11,6 +11,8 @@ import {
   apexHeight,
   EXIT_RATIO,
   fastestSpinUp,
+  GAME_PIECES_2026,
+  HUB_2026,
   launchRange,
   wheelForGoal,
   START_KP,
@@ -38,6 +40,12 @@ export function FlywheelCalcPage() {
   const done = FLYWHEEL_LESSONS.filter((l) => lessonsDone[l.id]).length
   const setM = (p: Partial<FlywheelMechanism>) => setMech({ ...mech, ...p })
   const setP = (p: Partial<ShotPlan>) => setPlan({ ...plan, ...p })
+  // 質量剛好是某個得分物件就顯示它，自己改過質量就變回「自己填」
+  const piece = GAME_PIECES_2026.find((p) => Math.abs(p.mass - plan.ballMass) < 1e-6)?.id ?? ''
+  const pickPiece = (id: string) => {
+    const p = GAME_PIECES_2026.find((x) => x.id === id)
+    if (p) setP({ ballMass: p.mass })
+  }
 
   const v = exitSpeed(plan.target, mech.wheelRadius)
   const range = launchRange(v, plan.angle, plan.height, plan.goalHeight)
@@ -108,6 +116,21 @@ export function FlywheelCalcPage() {
             <div className="fields">
               <NumberField label="目標轉速" value={plan.target} display={1 / TAU} digits={1} onChange={(x) => setP({ target: x })} min={1} max={150} step={1} unit="rps" />
               <NumberField label="球的質量" value={plan.ballMass} onChange={(x) => setP({ ballMass: x })} min={0.01} max={1} step={0.005} unit="kg" />
+              <label className="f">
+                得分物件
+                <span className="inp">
+                  <select value={piece} onChange={(e) => pickPiece(e.target.value)} aria-label="得分物件">
+                    <option value="">自己填質量</option>
+                    <optgroup label="FRC 2026 REBUILT">
+                      {GAME_PIECES_2026.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}（{f(p.mass * 1000, 0)} g）
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </span>
+              </label>
               <NumberField label="出射仰角" value={plan.angle} display={1 / D2R} digits={0} onChange={(x) => setP({ angle: x })} min={5} max={85} step={1} unit="°" />
               <NumberField label="出射高度" value={plan.height} onChange={(x) => setP({ height: x })} min={0} max={2} step={0.05} unit="m" hint="離地多高" />
             </div>
@@ -115,6 +138,14 @@ export function FlywheelCalcPage() {
               <NumberField label="目標距離" value={plan.goalDistance} onChange={(x) => setP({ goalDistance: x })} min={0.2} max={20} step={0.1} unit="m" hint="離出射點的水平距離" />
               <NumberField label="目標高度" value={plan.goalHeight} onChange={(x) => setP({ goalHeight: x })} min={0} max={5} step={0.05} unit="m" hint="0 = 地面" />
               <NumberField label="開口寬度" value={plan.goalWidth} onChange={(x) => setP({ goalWidth: x })} min={0.05} max={3} step={0.05} unit="m" />
+            </div>
+            <div className="fw-preset">
+              <button className="btn small" type="button" onClick={() => setP(HUB_2026)}>
+                套用 2026 HUB 高度
+              </button>
+              <span className="small muted">
+                REBUILT 的 HUB：開口前緣離地 72 in（{f(HUB_2026.goalHeight, 2)} m），六角形開口寬 41.7 in（{f(HUB_2026.goalWidth, 2)} m）。目標距離照你站的位置自己填。
+              </span>
             </div>
             <dl className="fw-derived">
               <dt>輪緣速度</dt>

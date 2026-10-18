@@ -121,6 +121,21 @@ export const DEFAULT_PLAN: ShotPlan = {
   goalWidth: 0.6,
 }
 
+/**
+ * FRC 2026 REBUILT 的 HUB（2026 Game Manual）：開口前緣離地 72 in、六角形開口寬 41.7 in。
+ * 只換目標高度和開口寬度，距離看你站哪裡射，不動。
+ */
+export const HUB_2026 = { goalHeight: 72 * 0.0254, goalWidth: 41.7 * 0.0254 }
+
+/** lb → kg，取到 g（輸入框才不會出現一長串小數） */
+const lbToKg = (lb: number) => Math.round(lb * 453.59237) / 1000
+/** FRC 2026 REBUILT 的得分物件 FUEL（2026 Game Manual）：直徑 5.91 in 的泡棉球，0.448～0.500 lb */
+export const GAME_PIECES_2026 = [
+  { id: 'fuel', label: 'FUEL 中間值', mass: lbToKg((0.448 + 0.5) / 2) },
+  { id: 'fuel-light', label: 'FUEL 最輕', mass: lbToKg(0.448) },
+  { id: 'fuel-heavy', label: 'FUEL 最重', mass: lbToKg(0.5) },
+]
+
 /** 球出去的速度 ≈ 輪緣速度的一半（單邊飛輪、另一邊是固定的導板） */
 export const EXIT_RATIO = 0.5
 /** 球和輪子接觸的時間 s */

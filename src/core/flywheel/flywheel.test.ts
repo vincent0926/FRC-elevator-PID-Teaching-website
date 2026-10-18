@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { motorModel } from '../motors'
 import {
+  GAME_PIECES_2026,
+  HUB_2026,
   computeFlywheelFeedforward,
   DEFAULT_FLYWHEEL,
   DEFAULT_FLYWHEEL_SPEC,
@@ -223,5 +225,22 @@ describe('目標高度', () => {
     const o = shotOutcomes(res, DEFAULT_FLYWHEEL, DEFAULT_PLAN)
     expect(o[0].range).toBeCloseTo(launchRange(o[0].exit, DEFAULT_PLAN.angle, DEFAULT_PLAN.height, 2), 9)
     expect(o[0].range).toBeLessThan(launchRange(o[0].exit, DEFAULT_PLAN.angle, DEFAULT_PLAN.height, 0))
+  })
+})
+
+describe('2026 HUB', () => {
+  it('72 in 高、41.7 in 開口換成 m，預設機構換上去還打得到', () => {
+    expect(HUB_2026.goalHeight).toBeCloseTo(1.829, 3)
+    expect(HUB_2026.goalWidth).toBeCloseTo(1.059, 3)
+    expect(wheelForGoal(DEFAULT_FLYWHEEL.wheelRadius, { ...DEFAULT_PLAN, ...HUB_2026 })).not.toBeNull()
+  })
+})
+
+describe('2026 得分物件', () => {
+  it('FUEL 0.448～0.500 lb 換成 kg', () => {
+    const m = Object.fromEntries(GAME_PIECES_2026.map((p) => [p.id, p.mass]))
+    expect(m['fuel-light']).toBe(0.203)
+    expect(m['fuel-heavy']).toBe(0.227)
+    expect(m.fuel).toBe(0.215)
   })
 })
