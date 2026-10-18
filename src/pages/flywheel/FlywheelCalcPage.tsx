@@ -2,19 +2,15 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../../app/store'
 import { NumberField } from '../../components/NumberField'
 import { Quiz } from '../../components/Quiz'
-import { MOTOR_SPECS, type MotorId } from '../../core/motors'
 import {
   computeFlywheelFeedforward,
   DEFAULT_KNOBS,
   dipFraction,
   exitSpeed,
   exitRadius,
-  backSurfaceRatio,
   apexHeight,
   EXIT_RATIO,
   fastestSpinUp,
-  GAME_PIECES_2026,
-  HUB_2026,
   launchRange,
   wheelForGoal,
   START_KP,
@@ -22,8 +18,10 @@ import {
   type FlywheelMechanism,
   type ShotPlan,
 } from '../../core/flywheel/flywheel'
+import { saveJson } from '../../storage/local'
 import { FLYWHEEL_LESSONS } from './flywheelLessons'
-import { SHAPES, useFlywheelMechanism, usePersisted, useShotPlan } from './flywheelStore'
+import { BallFields, HubPreset, MechFields } from './FlywheelForms'
+import { useFlywheelMechanism, usePersisted, useShotPlan } from './flywheelStore'
 
 /** 射球飛輪 1F：機構資料 → kV、kA，轉速 → 球速 → 射程，加上三個教學關卡。內部 SI，畫面 rps。 */
 
@@ -42,12 +40,6 @@ export function FlywheelCalcPage() {
   const done = FLYWHEEL_LESSONS.filter((l) => lessonsDone[l.id]).length
   const setM = (p: Partial<FlywheelMechanism>) => setMech({ ...mech, ...p })
   const setP = (p: Partial<ShotPlan>) => setPlan({ ...plan, ...p })
-  // 質量剛好是某個得分物件就顯示它，自己改過質量就變回「自己填」
-  const piece = GAME_PIECES_2026.find((p) => Math.abs(p.mass - plan.ballMass) < 1e-6)?.id ?? ''
-  const pickPiece = (id: string) => {
-    const p = GAME_PIECES_2026.find((x) => x.id === id)
-    if (p) setP({ ballMass: p.mass })
-  }
 
   const v = exitSpeed(plan.target, exitRadius(mech))
   const range = launchRange(v, plan.angle, plan.height, plan.goalHeight)
@@ -81,79 +73,14 @@ export function FlywheelCalcPage() {
         <div className="stack">
           <div className="panel">
             <h2>機構</h2>
-            <div className="fields">
-              <label className="f">
-                馬達
-                <span className="inp">
-                  <select value={mech.motor} onChange={(e) => setM({ motor: e.target.value as MotorId })} aria-label="馬達">
-                    {Object.values(MOTOR_SPECS).map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                </span>
-              </label>
-              <NumberField label="馬達數量" value={mech.motorCount} onChange={(x) => setM({ motorCount: Math.round(x) })} min={1} max={4} step={1} unit="顆" />
-              <NumberField label="齒比" value={mech.gearRatio} onChange={(x) => setM({ gearRatio: x })} min={0.2} max={5} step={0.05} unit=": 1" hint="馬達轉幾圈飛輪轉 1 圈；加速傳動小於 1" />
-              <NumberField label="會轉的質量" value={mech.wheelMass} onChange={(x) => setM({ wheelMass: x })} min={0.05} max={10} step={0.1} unit="kg" hint="飛輪＋輪子＋軸" />
-              <NumberField label="輪子半徑" value={mech.wheelRadius} display={100} digits={2} onChange={(x) => setM({ wheelRadius: x })} min={1} max={15} step={0.1} unit="cm" hint="推球的那個輪子；上下都有輪子就填大的那邊" />
-              <label className="f">
-                重量分布
-                <span className="inp">
-                  <select value={mech.shape} onChange={(e) => setM({ shape: Number(e.target.value) })} aria-label="重量分布">
-                    {SHAPES.map((s) => (
-                      <option key={s.v} value={s.v}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                </span>
-              </label>
-              <label className="f">
-                球的另一邊
-                <span className="inp">
-                  <select value={mech.back} onChange={(e) => setM({ back: e.target.value === 'rollers' ? 'rollers' : 'hood' })} aria-label="球的另一邊">
-                    <option value="hood">固定導板（不會轉）</option>
-                    <option value="rollers">對面也有滾輪，一起夾著球</option>
-                  </select>
-                </span>
-              </label>
-            </div>
-            {mech.back === 'rollers' && (
-              <>
-                <div className="fields three" style={{ marginTop: 12 }}>
-                  <NumberField label="對面滾輪半徑" value={mech.backRadius} display={100} digits={2} onChange={(x) => setM({ backRadius: x })} min={0.5} max={15} step={0.1} unit="cm" />
-                  <NumberField label="對面滾輪質量" value={mech.backMass} onChange={(x) => setM({ backMass: x })} min={0} max={5} step={0.05} unit="kg" hint="幾根加起來（滾輪＋軸）" />
-                  <NumberField label="對面轉速比" value={mech.backRatio} onChange={(x) => setM({ backRatio: x })} min={0.1} max={5} step={0.05} unit="倍" hint="對面滾輪轉速 ÷ 大輪轉速；同一顆馬達 1:1 帶就填 1" />
-                </div>
-                <p className="small muted" style={{ margin: '8px 0 0' }}>
-                  對面輪緣速度是大輪的 {f(backSurfaceRatio(mech), 2)} 倍。球夾在中間，球速 ≈ 0.5 ×（大輪輪緣速度 + 對面輪緣速度）；對面滾輪也會被球拖慢，所以算進轉動慣量和每一發掉的轉速。對面有好幾根的話，半徑填碰到球最後一根的。
-                </p>
-              </>
-            )}
+            <MechFields mech={mech} setM={setM} />
           </div>
 
           <div className="panel">
             <h2>轉速 → 球速 → 進不進目標</h2>
             <div className="fields">
               <NumberField label="目標轉速" value={plan.target} display={1 / TAU} digits={1} onChange={(x) => setP({ target: x })} min={1} max={150} step={1} unit="rps" />
-              <NumberField label="球的質量" value={plan.ballMass} onChange={(x) => setP({ ballMass: x })} min={0.01} max={1} step={0.005} unit="kg" />
-              <label className="f">
-                得分物件
-                <span className="inp">
-                  <select value={piece} onChange={(e) => pickPiece(e.target.value)} aria-label="得分物件">
-                    <option value="">自己填質量</option>
-                    <optgroup label="FRC 2026 REBUILT">
-                      {GAME_PIECES_2026.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.label}（{f(p.mass * 1000, 0)} g）
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
-                </span>
-              </label>
+              <BallFields plan={plan} setP={setP} />
               <NumberField label="出射仰角" value={plan.angle} display={1 / D2R} digits={0} onChange={(x) => setP({ angle: x })} min={5} max={85} step={1} unit="°" />
               <NumberField label="出射高度" value={plan.height} onChange={(x) => setP({ height: x })} min={0} max={2} step={0.05} unit="m" hint="離地多高" />
             </div>
@@ -162,14 +89,7 @@ export function FlywheelCalcPage() {
               <NumberField label="目標高度" value={plan.goalHeight} onChange={(x) => setP({ goalHeight: x })} min={0} max={5} step={0.05} unit="m" hint="0 = 地面" />
               <NumberField label="開口寬度" value={plan.goalWidth} onChange={(x) => setP({ goalWidth: x })} min={0.05} max={3} step={0.05} unit="m" />
             </div>
-            <div className="fw-preset">
-              <button className="btn small" type="button" onClick={() => setP(HUB_2026)}>
-                套用 2026 HUB 高度
-              </button>
-              <span className="small muted">
-                REBUILT 的 HUB：開口前緣離地 72 in（{f(HUB_2026.goalHeight, 2)} m），六角形開口寬 41.7 in（{f(HUB_2026.goalWidth, 2)} m）。目標距離照你站的位置自己填。
-              </span>
-            </div>
+            <HubPreset setP={setP} />
             <dl className="fw-derived">
               <dt>輪緣速度</dt>
               <dd>{f(plan.target * mech.wheelRadius, 2)} m/s</dd>
@@ -282,8 +202,16 @@ export function FlywheelCalcPage() {
           </dl>
           {plan.target >= ff.freeSpeed * 0.9 && <div className="warn">目標轉速太接近最高轉速：電壓不夠，到 3F 也調不到。降低目標或改齒比。</div>}
           <div className="row" style={{ marginTop: 12 }}>
-            <button className="btn primary" type="button" onClick={() => go('sim')}>
-              到 3F 模擬
+            <button
+              className="btn primary"
+              type="button"
+              onClick={() => {
+                // 1F 已經有轉速和仰角，直接看連射
+                saveJson('flywheel:mode', { mode: 'sim' })
+                go('sim')
+              }}
+            >
+              到 3F 連射模擬
             </button>
           </div>
           <p className="small muted" style={{ margin: '8px 0 0' }}>

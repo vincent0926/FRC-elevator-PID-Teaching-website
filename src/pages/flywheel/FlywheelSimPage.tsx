@@ -16,6 +16,7 @@ import {
   exitRadius,
   theoryGains,
   type FlywheelGains,
+  type FlywheelMechanism,
   type FlywheelKnobs,
   type FlywheelSpec,
   type ShotPlan,
@@ -23,17 +24,65 @@ import {
 import { PlaybackBar, usePlayback } from '../simulate/MiniShaft'
 import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText } from './flywheelTune'
 import { FlywheelView } from './FlywheelView'
+import { FlywheelAim } from './FlywheelAim'
 import { SHAPES, useFlywheelMechanism, usePersisted, useShotPlan } from './flywheelStore'
 
-/** 3F 射球飛輪模擬：轉到目標轉速、連射幾發，看掉速和恢復。內部 SI（rad/s），畫面一律 rps。 */
+/**
+ * 3F 射球飛輪，兩種模式：
+ * 1. 算轉速和仰角（FlywheelAim）：給基本參數和距離，列出每個仰角要的轉速，自己選一條軌跡
+ * 2. 連射模擬：轉到目標轉速、連射幾發，看掉速和恢復。內部 SI（rad/s），畫面一律 rps。
+ */
 
 const TAU = 2 * Math.PI
 const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
+type Mode = 'aim' | 'sim'
+
 export function FlywheelSimPage() {
-  const { go } = useStore()
-  const [mech] = useFlywheelMechanism()
+  const [{ mode }, setMode] = usePersisted<{ mode: Mode }>('flywheel:mode', { mode: 'aim' }, (m) => m.mode === 'aim' || m.mode === 'sim')
+  const [mech, setMech] = useFlywheelMechanism()
   const [plan, setPlan] = useShotPlan()
+  return (
+    <section aria-labelledby="t-fw-sim">
+      <div className="head">
+        <div>
+          <h1 id="t-fw-sim">射球飛輪・模擬</h1>
+          <p className="lead">
+            {mode === 'aim'
+              ? '先填機構和球，再填離目標多遠，看每個仰角要幾 rps，選一條軌跡。'
+              : '從靜止轉到目標轉速，連射幾發，看每一發掉多少、多快回來，球落在哪裡。數字都是 Phoenix 6 的 rps，可以直接填進程式。'}
+          </p>
+        </div>
+      </div>
+      <div className="seg fa-mode" role="group" aria-label="模式">
+        <button type="button" aria-pressed={mode === 'aim'} onClick={() => setMode({ mode: 'aim' })}>
+          ① 算轉速和仰角
+        </button>
+        <button type="button" aria-pressed={mode === 'sim'} onClick={() => setMode({ mode: 'sim' })}>
+          ② 連射模擬
+        </button>
+      </div>
+      {mode === 'aim' ? (
+        <FlywheelAim
+          mech={mech}
+          setMech={setMech}
+          plan={plan}
+          setPlan={setPlan}
+          onSimulate={() => {
+            setMode({ mode: 'sim' })
+            window.scrollTo({ top: 0 })
+          }}
+        />
+      ) : (
+        <ShotSim mech={mech} plan={plan} setPlan={setPlan} />
+      )}
+    </section>
+  )
+}
+
+/** 模式 2：連射模擬（原本的 3F） */
+function ShotSim({ mech, plan, setPlan }: { mech: FlywheelMechanism; plan: ShotPlan; setPlan: (p: ShotPlan) => void }) {
+  const { go } = useStore()
   const [knobs, setKnobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
   const [spec, setSpec] = usePersisted<FlywheelSpec>('flywheel:spec', DEFAULT_FLYWHEEL_SPEC)
   const ff = useMemo(() => computeFlywheelFeedforward(mech), [mech])
@@ -97,14 +146,7 @@ export function FlywheelSimPage() {
   if (metrics.saturation > 0.05 && !hints.length) hints.push('輸出常常貼到 12 V：回授要的比電池給得多，再加 kP 也沒用。')
 
   return (
-    <section aria-labelledby="t-fw-sim">
-      <div className="head">
-        <div>
-          <h1 id="t-fw-sim">射球飛輪・模擬</h1>
-          <p className="lead">從靜止轉到目標轉速，連射幾發，看每一發掉多少、多快回來，球落在哪裡。數字都是 Phoenix 6 的 rps，可以直接填進程式。</p>
-        </div>
-      </div>
-
+    <>
       <div className="panel fw-mech">
         <b>機構</b>
         <span className="small">
@@ -376,6 +418,6 @@ export function FlywheelSimPage() {
         <p className="small muted">現在滑桿上的數字。兩顆以上馬達時，其他顆用 Follower 跟著。</p>
         <pre className="code">{flywheelJava(gains, mech, knobs, plan)}</pre>
       </div>
-    </section>
+    </>
   )
 }
