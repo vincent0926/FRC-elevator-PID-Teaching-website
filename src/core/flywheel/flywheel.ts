@@ -111,7 +111,7 @@ export const DEFAULT_PLAN: ShotPlan = {
   target: 50 * 2 * Math.PI,
   accel: 0,
   firstShot: 1.5,
-  shots: 3,
+  shots: 50,
   interval: 0.3,
   ballMass: 0.235,
   angle: (50 * Math.PI) / 180,

@@ -31,7 +31,21 @@ export function usePersisted<T extends object>(key: string, fallback: T, check: 
 }
 
 export const useFlywheelMechanism = () => usePersisted<FlywheelMechanism>('flywheel:mechanism', DEFAULT_FLYWHEEL, (m) => m.motor in MOTOR_SPECS)
-export const useShotPlan = () => usePersisted<ShotPlan>('flywheel:plan', DEFAULT_PLAN)
+/** 舊版存的發數比新預設少（v0.21 以前預設 3 發），改成新預設；只做一次，之後照使用者設定 */
+const PLAN_VERSION = 2
+function migratePlan() {
+  if (loadJson<number>('flywheel:planVersion', 0) >= PLAN_VERSION) return
+  const saved = loadJson<unknown>('flywheel:plan', null)
+  if (saved && typeof saved === 'object' && typeof (saved as ShotPlan).shots === 'number' && (saved as ShotPlan).shots < DEFAULT_PLAN.shots)
+    saveJson('flywheel:plan', { ...saved, shots: DEFAULT_PLAN.shots })
+  saveJson('flywheel:planVersion', PLAN_VERSION)
+}
+
+export function useShotPlan() {
+  // 要在 usePersisted 讀存檔之前改好
+  useState(migratePlan)
+  return usePersisted<ShotPlan>('flywheel:plan', DEFAULT_PLAN)
+}
 
 export const SHAPES = [
   { v: 0.5, label: '實心圓盤（0.5）' },

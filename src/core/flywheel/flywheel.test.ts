@@ -153,7 +153,7 @@ describe('球速與射程', () => {
     const plan = { ...DEFAULT_PLAN, interval: 0.15 }
     const weak = shotOutcomes(run(theory, DEFAULT_KNOBS, plan).res, DEFAULT_FLYWHEEL, plan)
     const strong = shotOutcomes(run({ ...theory, kS: DEFAULT_KNOBS.friction, kP: 1 / TAU }, DEFAULT_KNOBS, plan).res, DEFAULT_FLYWHEEL, plan)
-    expect(weak).toHaveLength(3)
+    expect(weak).toHaveLength(DEFAULT_PLAN.shots)
     expect(weak[1].range).toBeLessThan(strong[1].range)
     expect(weak[1].miss).toBeLessThan(strong[1].miss)
     expect(strong[0].release).toBeCloseTo(plan.firstShot + 0.03, 9)

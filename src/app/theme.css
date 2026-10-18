@@ -524,3 +524,6 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .fv-goal-post { stroke: var(--violet); stroke-width: 2; opacity: .6 }
 .fv-hit { fill: var(--green); stroke: var(--panel); stroke-width: 1 }
 .fv-miss { fill: var(--red); stroke: var(--panel); stroke-width: 1 }
+.fw-detail { margin-top: 14px }
+.fw-detail > summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 4px 0 }
+.fw-detail .tbl { margin-top: 6px }
