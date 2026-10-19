@@ -20,6 +20,7 @@ import {
   type ShotPlan,
   type TrajectoryOption,
 } from '../../core/flywheel/flywheel'
+import { MOVE_SHOT_USAGE, moveShotJava } from '../../core/codegen/flywheel'
 import { BallFields, HubPreset, MechFields } from './FlywheelForms'
 import { useRpsLimit, type MoveSettings } from './flywheelStore'
 import { yawText } from './flywheelTune'
@@ -248,6 +249,55 @@ export function FlywheelAim({
           </>
         )}
       </div>
+
+      {move && <MoveCode mech={mech} plan={plan} sel={sel} maxWheel={maxWheel} />}
+    </div>
+  )
+}
+
+/** 邊移動邊射：機器人程式怎麼寫（決策 129） */
+function MoveCode({ mech, plan, sel, maxWheel }: { mech: FlywheelMechanism; plan: ShotPlan; sel: TrajectoryOption | null; maxWheel: number }) {
+  return (
+    <div className="panel" id="move-code">
+      <h2>
+        <span className="fa-step">5</span>程式怎麼寫？
+      </h2>
+      <p className="small" style={{ marginTop: 0 }}>
+        上面是「某一刻」的答案。比賽時機器人一直在動，距離和速度每一刻都不一樣，所以程式要<b>每個週期（20 ms）重算一次</b>，做法跟這一頁一樣：
+      </p>
+      <ol className="small">
+        <li>
+          <b>讀位置和速度</b>：從底盤的里程計（odometry）拿機器人在場上的位置，和對場地的速度。
+        </li>
+        <li>
+          <b>拆成兩個方向</b>：算機器人到目標的距離和方向，把速度拆成「往目標方向的速度」和「側向速度」（就是第 3 步填的兩個數字）。
+        </li>
+        <li>
+          <b>算轉速和底盤偏角</b>：仰角固定，用二分法找剛好打到目標中心的球速，換成飛輪 rps；側向速度會把球帶歪，底盤往反方向偏一點。
+        </li>
+        <li>
+          <b>對準了才送球</b>：飛輪轉速到了、車頭轉到「正對目標 + 偏角」了，才把球送進飛輪。駕駛照常開，車頭方向交給程式。
+        </li>
+      </ol>
+      {sel ? (
+        <>
+          <p className="small muted">
+            第一段是算轉速和偏角的類別，數字已經照你選的 {deg(sel.angle)}° 軌跡和上面的機構、目標填好（純 Java，不用 WPILib，可以直接寫單元測試）。第二段放在射球 Command 的 execute() 裡，底盤、飛輪、送球的方法要換成你們自己的。
+          </p>
+          <h3 className="small">ShootOnTheMove.java</h3>
+          <pre className="code">{moveShotJava(mech, { ...plan, angle: sel.angle }, maxWheel, sel.tolerance)}</pre>
+          <h3 className="small">射球 Command 的 execute()</h3>
+          <pre className="code">{MOVE_SHOT_USAGE}</pre>
+        </>
+      ) : (
+        <p className="small">先在上面選一條軌跡，這裡會照那條軌跡的仰角把程式的數字填好。</p>
+      )}
+      <ul className="small muted" style={{ marginBottom: 0 }}>
+        <li>這只是算法和範例，不是完整的子系統：目標座標（紅藍方不同）、CAN ID、飛輪設定（見 3F「程式設定」）、車頭方向的 PID 都要照你們的機器人寫。</li>
+        <li>距離用的是機器人中心；發射機構離中心很遠的話，要先把位置換成出射點。</li>
+        <li>網站沒算程式算完到球射出去的延遲。機器人開很快時，可以先用「速度 × 延遲」把位置往前推再算，延遲要自己量。</li>
+        <li>不計空氣阻力：上機先站著射，再慢慢開快，球一直偏近就把 MPS_PER_RPS 調小（轉速會變高），偏遠就調大。</li>
+      </ul>
     </div>
   )
 }
