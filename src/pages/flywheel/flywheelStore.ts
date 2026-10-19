@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { MOTOR_SPECS } from '../../core/motors'
 import { DEFAULT_FLYWHEEL, DEFAULT_PLAN, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
 import { loadJson, loadSession, saveJson, saveSession } from '../../storage/local'
+import { t } from '../../core/lang'
 
 /**
  * 射球飛輪 1F、3F 共用的資料：存在 localStorage，換頁時重新讀，所以 1F 改機構 3F 會跟著變。
@@ -83,7 +84,7 @@ export const useRpsLimit = () => usePersisted<{ rps: number }>('flywheel:rpsLimi
 export const useMoveSettings = () => usePersisted<MoveSettings>('flywheel:move', DEFAULT_MOVE, (m) => m.shots >= 1 && m.interval > 0)
 
 export const SHAPES = [
-  { v: 0.5, label: '實心圓盤（0.5）' },
-  { v: 0.75, label: '外圈比較重（0.75）' },
-  { v: 1, label: '薄環，重量都在外圈（1.0）' },
+  { v: 0.5, label: t('實心圓盤（0.5）', 'Solid disk (0.5)') },
+  { v: 0.75, label: t('外圈比較重（0.75）', 'Heavier toward the rim (0.75)') },
+  { v: 1, label: t('薄環，重量都在外圈（1.0）', 'Thin ring, all weight on the rim (1.0)') },
 ]

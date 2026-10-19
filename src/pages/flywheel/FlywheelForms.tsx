@@ -2,6 +2,7 @@ import { NumberField } from '../../components/NumberField'
 import { MOTOR_SPECS, type MotorId } from '../../core/motors'
 import { backSurfaceRatio, GAME_PIECES_2026, HUB_2026, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
 import { SHAPES } from './flywheelStore'
+import { t } from '../../core/lang'
 
 /** 射球飛輪 1F 和 3F「算轉速和仰角」共用的表單：機構、球、2026 HUB */
 
@@ -12,9 +13,9 @@ export function MechFields({ mech, setM }: { mech: FlywheelMechanism; setM: (p: 
     <>
       <div className="fields">
         <label className="f">
-          馬達
+          {t('馬達', 'Motor')}
           <span className="inp">
-            <select value={mech.motor} onChange={(e) => setM({ motor: e.target.value as MotorId })} aria-label="馬達">
+            <select value={mech.motor} onChange={(e) => setM({ motor: e.target.value as MotorId })} aria-label={t('馬達', 'Motor')}>
               {Object.values(MOTOR_SPECS).map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label}
@@ -23,14 +24,14 @@ export function MechFields({ mech, setM }: { mech: FlywheelMechanism; setM: (p: 
             </select>
           </span>
         </label>
-        <NumberField label="馬達數量" value={mech.motorCount} onChange={(x) => setM({ motorCount: Math.round(x) })} min={1} max={4} step={1} unit="顆" />
-        <NumberField label="齒比" value={mech.gearRatio} onChange={(x) => setM({ gearRatio: x })} min={0.2} max={5} step={0.05} unit=": 1" hint="馬達轉幾圈飛輪轉 1 圈；加速傳動小於 1" />
-        <NumberField label="會轉的質量" value={mech.wheelMass} onChange={(x) => setM({ wheelMass: x })} min={0.05} max={10} step={0.1} unit="kg" hint="飛輪＋輪子＋軸" />
-        <NumberField label="輪子半徑" value={mech.wheelRadius} display={100} digits={2} onChange={(x) => setM({ wheelRadius: x })} min={1} max={15} step={0.1} unit="cm" hint="推球的那個輪子；上下都有輪子就填大的那邊" />
+        <NumberField label={t('馬達數量', 'Motor count')} value={mech.motorCount} onChange={(x) => setM({ motorCount: Math.round(x) })} min={1} max={4} step={1} unit={t('顆', 'motors')} />
+        <NumberField label={t('齒比', 'Gear ratio')} value={mech.gearRatio} onChange={(x) => setM({ gearRatio: x })} min={0.2} max={5} step={0.05} unit=": 1" hint={t('馬達轉幾圈飛輪轉 1 圈；加速傳動小於 1', 'Motor turns per flywheel turn; below 1 for an overdrive')} />
+        <NumberField label={t('會轉的質量', 'Spinning mass')} value={mech.wheelMass} onChange={(x) => setM({ wheelMass: x })} min={0.05} max={10} step={0.1} unit="kg" hint={t('飛輪＋輪子＋軸', 'Flywheel + wheels + shaft')} />
+        <NumberField label={t('輪子半徑', 'Wheel radius')} value={mech.wheelRadius} display={100} digits={2} onChange={(x) => setM({ wheelRadius: x })} min={1} max={15} step={0.1} unit="cm" hint={t('推球的那個輪子；上下都有輪子就填大的那邊', 'The wheel that pushes the ball; with wheels on both sides, use the bigger one')} />
         <label className="f">
-          重量分布
+          {t('重量分布', 'Mass distribution')}
           <span className="inp">
-            <select value={mech.shape} onChange={(e) => setM({ shape: Number(e.target.value) })} aria-label="重量分布">
+            <select value={mech.shape} onChange={(e) => setM({ shape: Number(e.target.value) })} aria-label={t('重量分布', 'Mass distribution')}>
               {SHAPES.map((s) => (
                 <option key={s.v} value={s.v}>
                   {s.label}
@@ -40,11 +41,11 @@ export function MechFields({ mech, setM }: { mech: FlywheelMechanism; setM: (p: 
           </span>
         </label>
         <label className="f">
-          球的另一邊
+          {t('球的另一邊', 'Other side of the ball')}
           <span className="inp">
-            <select value={mech.back} onChange={(e) => setM({ back: e.target.value === 'rollers' ? 'rollers' : 'hood' })} aria-label="球的另一邊">
-              <option value="hood">固定導板（不會轉）</option>
-              <option value="rollers">對面也有滾輪，一起夾著球</option>
+            <select value={mech.back} onChange={(e) => setM({ back: e.target.value === 'rollers' ? 'rollers' : 'hood' })} aria-label={t('球的另一邊', 'Other side of the ball')}>
+              <option value="hood">{t('固定導板（不會轉）', 'Fixed hood (doesn’t spin)')}</option>
+              <option value="rollers">{t('對面也有滾輪，一起夾著球', 'Rollers on the other side too, gripping the ball')}</option>
             </select>
           </span>
         </label>
@@ -52,12 +53,19 @@ export function MechFields({ mech, setM }: { mech: FlywheelMechanism; setM: (p: 
       {mech.back === 'rollers' && (
         <>
           <div className="fields three" style={{ marginTop: 12 }}>
-            <NumberField label="對面滾輪半徑" value={mech.backRadius} display={100} digits={2} onChange={(x) => setM({ backRadius: x })} min={0.5} max={15} step={0.1} unit="cm" />
-            <NumberField label="對面滾輪質量" value={mech.backMass} onChange={(x) => setM({ backMass: x })} min={0} max={5} step={0.05} unit="kg" hint="幾根加起來（滾輪＋軸）" />
-            <NumberField label="對面轉速比" value={mech.backRatio} onChange={(x) => setM({ backRatio: x })} min={0.1} max={5} step={0.05} unit="倍" hint="對面滾輪轉速 ÷ 大輪轉速；同一顆馬達 1:1 帶就填 1" />
+            <NumberField label={t('對面滾輪半徑', 'Opposite roller radius')} value={mech.backRadius} display={100} digits={2} onChange={(x) => setM({ backRadius: x })} min={0.5} max={15} step={0.1} unit="cm" />
+            <NumberField label={t('對面滾輪質量', 'Opposite roller mass')} value={mech.backMass} onChange={(x) => setM({ backMass: x })} min={0} max={5} step={0.05} unit="kg" hint={t('幾根加起來（滾輪＋軸）', 'All of them combined (rollers + shafts)')} />
+            <NumberField label={t('對面轉速比', 'Opposite speed ratio')} value={mech.backRatio} onChange={(x) => setM({ backRatio: x })} min={0.1} max={5} step={0.05} unit={t('倍', '×')} hint={t('對面滾輪轉速 ÷ 大輪轉速；同一顆馬達 1:1 帶就填 1', 'Opposite roller speed ÷ main wheel speed; 1 if the same motor drives it 1:1')} />
           </div>
           <p className="small muted" style={{ margin: '8px 0 0' }}>
-            對面輪緣速度是大輪的 {f(backSurfaceRatio(mech), 2)} 倍。球夾在中間，球速 ≈ 0.5 ×（大輪輪緣速度 + 對面輪緣速度）；對面滾輪也會被球拖慢，所以算進轉動慣量和每一發掉的轉速。對面有好幾根的話，半徑填碰到球最後一根的。
+            {t(
+              <>
+              對面輪緣速度是大輪的 {f(backSurfaceRatio(mech), 2)} 倍。球夾在中間，球速 ≈ 0.5 ×（大輪輪緣速度 + 對面輪緣速度）；對面滾輪也會被球拖慢，所以算進轉動慣量和每一發掉的轉速。對面有好幾根的話，半徑填碰到球最後一根的。
+              </>,
+              <>
+                The opposite surface speed is {f(backSurfaceRatio(mech), 2)} × the main wheel’s. With the ball gripped between them, ball speed ≈ 0.5 × (main surface speed + opposite surface speed); the opposite rollers are also slowed by the ball, so they count toward the moment of inertia and the drop per shot. With several rollers on the other side, use the radius of the last one touching the ball.
+              </>,
+            )}
           </p>
         </>
       )}
@@ -75,16 +83,18 @@ export function BallFields({ plan, setP }: { plan: ShotPlan; setP: (p: Partial<S
   }
   return (
     <>
-      <NumberField label="球的質量" value={plan.ballMass} onChange={(x) => setP({ ballMass: x })} min={0.01} max={1} step={0.005} unit="kg" />
+      <NumberField label={t('球的質量', 'Ball mass')} value={plan.ballMass} onChange={(x) => setP({ ballMass: x })} min={0.01} max={1} step={0.005} unit="kg" />
       <label className="f">
-        得分物件
+        {t('得分物件', 'Game piece')}
         <span className="inp">
-          <select value={piece} onChange={(e) => pickPiece(e.target.value)} aria-label="得分物件">
-            <option value="">自己填質量</option>
+          <select value={piece} onChange={(e) => pickPiece(e.target.value)} aria-label={t('得分物件', 'Game piece')}>
+            <option value="">{t('自己填質量', 'Enter mass yourself')}</option>
             <optgroup label="FRC 2026 REBUILT">
               {GAME_PIECES_2026.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.label}（{f(p.mass * 1000, 0)} g）
+                  {p.label}
+                  {t('（', ' (')}
+                  {f(p.mass * 1000, 0)} g{t('）', ')')}
                 </option>
               ))}
             </optgroup>
@@ -99,10 +109,17 @@ export function HubPreset({ setP }: { setP: (p: Partial<ShotPlan>) => void }) {
   return (
     <div className="fw-preset">
       <button className="btn small" type="button" onClick={() => setP(HUB_2026)}>
-        套用 2026 HUB 高度
+        {t('套用 2026 HUB 高度', 'Use the 2026 HUB height')}
       </button>
       <span className="small muted">
-        REBUILT 的 HUB：開口前緣離地 72 in（{f(HUB_2026.goalHeight, 2)} m），六角形開口寬 41.7 in（{f(HUB_2026.goalWidth, 2)} m）。目標距離照你站的位置自己填。
+        {t(
+          <>
+          REBUILT 的 HUB：開口前緣離地 72 in（{f(HUB_2026.goalHeight, 2)} m），六角形開口寬 41.7 in（{f(HUB_2026.goalWidth, 2)} m）。目標距離照你站的位置自己填。
+          </>,
+          <>
+            REBUILT HUB: the opening’s front edge is 72 in ({f(HUB_2026.goalHeight, 2)} m) above the floor and the hexagonal opening is 41.7 in ({f(HUB_2026.goalWidth, 2)} m) wide. Fill in the target distance for where you’re standing.
+          </>,
+        )}
       </span>
     </div>
   )

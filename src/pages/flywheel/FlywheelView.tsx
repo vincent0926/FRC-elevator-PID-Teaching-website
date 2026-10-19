@@ -13,6 +13,7 @@ import {
   type ShotPlan,
 } from '../../core/flywheel/flywheel'
 import { missText } from './flywheelTune'
+import { t } from '../../core/lang'
 
 /**
  * 射球飛輪側視圖：左邊是飛輪（畫面轉速放慢，輪子不照比例），右邊是球飛出去的路線和目標（照比例，不計空氣阻力）。
@@ -90,7 +91,7 @@ export function FlywheelView({
   const fired = shots.filter((sh) => sh.at <= now)
   const ok = Math.abs(w - plan.target) <= tol
   const lastShot = fired.length ? fired[fired.length - 1] : null
-  const status = fired.length === 0 ? (ok ? '到速了，可以射' : '還沒到速') : ok ? '可以射' : '掉速中，還不能射'
+  const status = fired.length === 0 ? (ok ? t('到速了，可以射', 'At speed, ready to shoot') : t('還沒到速', 'Not at speed yet')) : ok ? t('可以射', 'Ready to shoot') : t('掉速中，還不能射', 'Speed dropped, not ready')
 
   // 轉速表：0 到 1.15 倍目標
   const gw = 150
@@ -98,7 +99,7 @@ export function FlywheelView({
 
   return (
     <div className="fw-view">
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`射球側視圖：轉速 ${f(w / TAU, 1)} rps，已射 ${fired.length} 發`}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={t(`射球側視圖：轉速 ${f(w / TAU, 1)} rps，已射 ${fired.length} 發`, `Shooter side view: ${f(w / TAU, 1)} rps, ${fired.length} shots fired`)}>
         <rect x={0} y={GROUND} width={W} height={H - GROUND} className="ev-base" />
         <line x1={g1} y1={gy} x2={g1} y2={GROUND} className="fv-goal-post" />
         <line x1={g0} y1={gy} x2={g1} y2={gy} className="fv-goal" />
@@ -140,21 +141,31 @@ export function FlywheelView({
       </svg>
       <div className="fv-read">
         <span>
-          轉速 <b>{f(w / TAU, 1)} rps</b>
-          <em>（目標 {f(plan.target / TAU, 1)}）</em>
+          {t('轉速', 'Speed')} <b>{f(w / TAU, 1)} rps</b>
+          <em>{t(`（目標 ${f(plan.target / TAU, 1)}）`, ` (target ${f(plan.target / TAU, 1)})`)}</em>
         </span>
         <span className={ok ? 'pass' : 'fail'}>{status}</span>
         <span>
-          已射 <b>{fired.length}</b> / {shots.length} 發
+          {t('已射', 'Fired')} <b>{fired.length}</b> / {shots.length}{t(' 發', '')}
         </span>
         {lastShot && (
           <span>
-            第 {fired.length} 發：球速 <b>{f(lastShot.exit, 2)} m/s</b>，{missText(lastShot, plan.goalHeight)}
+            {t(`第 ${fired.length} 發：球速 `, `Shot ${fired.length}: ball speed `)}
+            <b>{f(lastShot.exit, 2)} m/s</b>
+            {t('，', ', ')}
+            {missText(lastShot, plan.goalHeight)}
           </span>
         )}
       </div>
       <p className="small muted" style={{ margin: '4px 0 0' }}>
-        上面的條是轉速，淺色區是「可以射」的範圍。右邊的橫線是目標（開口），虛線是用目標轉速射的路線，實線是每一發真的路線；球往下掉經過目標高度的地方畫一個點，綠色是進了、紅色是沒進。輪子畫面轉速放慢 {VIS_SLOW} 倍、不照比例；路線和目標照比例，不計空氣阻力。
+        {t(
+          <>
+          上面的條是轉速，淺色區是「可以射」的範圍。右邊的橫線是目標（開口），虛線是用目標轉速射的路線，實線是每一發真的路線；球往下掉經過目標高度的地方畫一個點，綠色是進了、紅色是沒進。輪子畫面轉速放慢 {VIS_SLOW} 倍、不照比例；路線和目標照比例，不計空氣阻力。
+          </>,
+          <>
+            The bar at the top is the wheel speed; the light band is the “ready to shoot” range. The line on the right is the target (opening), the dashed line is the path at the target speed, and the solid lines are each shot’s real path. A dot marks where the ball falls through the target height: green is in, red is a miss. The wheel’s on-screen spin is slowed {VIS_SLOW}× and not to scale; paths and the target are to scale, ignoring air drag.
+          </>,
+        )}
       </p>
     </div>
   )

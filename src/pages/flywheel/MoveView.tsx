@@ -1,5 +1,6 @@
 import { flightTime, movePose, type FlywheelSimResult, type MoveAim, type MoveOutcome, type RobotMotion, type ShotPlan } from '../../core/flywheel/flywheel'
 import { moveMissText } from './flywheelTune'
+import { t } from '../../core/lang'
 
 /**
  * 邊移動邊射的俯視圖：右邊是目標（開口畫成圓），左邊是機器人開過去的路線。
@@ -68,7 +69,7 @@ export function MoveView({
 
   return (
     <div className="fw-view">
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="mv-view" role="img" aria-label={`邊移動邊射俯視圖：離目標 ${f(pose.distance, 2)} m，已射 ${fired.length} 發`}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="mv-view" role="img" aria-label={t(`邊移動邊射俯視圖：離目標 ${f(pose.distance, 2)} m，已射 ${fired.length} 發`, `Shoot-on-the-move top view: ${f(pose.distance, 2)} m from the target, ${fired.length} shots fired`)}>
         <rect x={0} y={0} width={W} height={H} className="mv-field" />
         {/* 整段路線 */}
         <line x1={px(start.x)} y1={py(start.y)} x2={px(end.x)} y2={py(end.y)} className="mv-route" />
@@ -98,24 +99,32 @@ export function MoveView({
       </svg>
       <div className="fv-read">
         <span>
-          轉速 <b>{f(w / TAU, 1)} rps</b>
-          <em>（目標 {f(target / TAU, 1)}）</em>
+          {t('轉速', 'Speed')} <b>{f(w / TAU, 1)} rps</b>
+          <em>{t(`（目標 ${f(target / TAU, 1)}）`, ` (target ${f(target / TAU, 1)})`)}</em>
         </span>
-        <span className={ok ? 'pass' : 'fail'}>{ok ? '轉速到了' : '轉速還沒到'}</span>
+        <span className={ok ? 'pass' : 'fail'}>{ok ? t('轉速到了', 'At speed') : t('轉速還沒到', 'Not at speed yet')}</span>
         <span>
-          離目標 <b>{f(pose.distance, 2)} m</b>
+          {t('離目標', 'Distance')} <b>{f(pose.distance, 2)} m</b>
         </span>
         <span>
-          已射 <b>{fired.length}</b> / {shots.length} 發
+          {t('已射', 'Fired')} <b>{fired.length}</b> / {shots.length}{t(' 發', '')}
         </span>
         {lastShot && (
           <span>
-            第 {fired.length} 發：{moveMissText(lastShot, plan.goalHeight)}
+            {t(`第 ${fired.length} 發：`, `Shot ${fired.length}: `)}
+            {moveMissText(lastShot, plan.goalHeight)}
           </span>
         )}
       </div>
       <p className="small muted" style={{ margin: '4px 0 0' }}>
-        從上面往下看：右邊的圓是目標開口，虛線是機器人開的路線，方塊上的線是底盤朝向。細線是每一發從出射的地方飛到掉進目標高度的地方，綠點是進了、紅點是沒進。照比例，不計空氣阻力。
+        {t(
+          <>
+          從上面往下看：右邊的圓是目標開口，虛線是機器人開的路線，方塊上的線是底盤朝向。細線是每一發從出射的地方飛到掉進目標高度的地方，綠點是進了、紅點是沒進。照比例，不計空氣阻力。
+          </>,
+          <>
+            Seen from above: the circle on the right is the target opening, the dashed line is the robot’s route, and the line on the square is the chassis heading. Each thin line is one shot from where it was released to where it falls through the target height; green dots are in, red dots are misses. To scale, ignoring air drag.
+          </>,
+        )}
       </p>
     </div>
   )
