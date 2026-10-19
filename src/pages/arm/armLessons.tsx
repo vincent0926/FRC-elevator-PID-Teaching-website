@@ -175,7 +175,7 @@ function Derive({ m, ff }: ArmLessonCtx) {
 kV = G / Kv                      ${t('每 1 rad/s 要抵的反電動勢', 'back-EMF to cancel per 1 rad/s')}
 kA = J × R / (G·n·kT)            ${t('每 1 rad/s² 要多少電壓', 'volts per 1 rad/s²')}
 
-${t('你的手臂', 'Your arm')} (G = ${f(m.gearRatio, 1)}, n = ${m.motorCount}, R = ${f(R, 4)} Ω, kT = ${f(kT, 4)} N·m/A, Kv = ${f(Kv, 1)} rad/s/V):
+${t(`你的手臂（G = ${f(m.gearRatio, 1)}、n = ${m.motorCount}、R = ${f(R, 4)} Ω、kT = ${f(kT, 4)} N·m/A、Kv = ${f(Kv, 1)} rad/s/V）：`, `Your arm (G = ${f(m.gearRatio, 1)}, n = ${m.motorCount}, R = ${f(R, 4)} Ω, kT = ${f(kT, 4)} N·m/A, Kv = ${f(Kv, 1)} rad/s/V):`)}
 kG = ${f(ff.gravityTorque, 2)} / ${f(m.gearRatio, 1)} × ${f(R, 4)} / (${m.motorCount} × ${f(kT, 4)}) = ${f(ff.kG)} V
 kV = ${f(m.gearRatio, 1)} / ${f(Kv, 1)} = ${f(ff.kV)} V/(rad/s)
 kA = ${f(ff.inertia, 3)} × ${f(R, 4)} / (${f(m.gearRatio, 1)} × ${m.motorCount} × ${f(kT, 4)}) = ${f(ff.kA, 4)} V/(rad/s²)`}</div>

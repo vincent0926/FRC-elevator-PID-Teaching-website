@@ -125,8 +125,8 @@ export function Unit3() {
           }
         >
           <div className="formula" style={{ margin: '4px 0 10px' }}>{`你的電梯夾 ${payload.piece} kg（最上層，× ${kTop}）：
-  kG 沒夾 ${payload.without.toFixed(3)} V → 有夾 ${payload.with.toFixed(3)} V，差 ${payload.dKg.toFixed(3)} V
-  只靠 kP ${theory.feedback.kP.toFixed(0)} V/m 補的話，會停低 ${(payload.err * 100).toFixed(1)} cm`}</div>
+kG 沒夾 ${payload.without.toFixed(3)} V → 有夾 ${payload.with.toFixed(3)} V，差 ${payload.dKg.toFixed(3)} V
+只靠 kP ${theory.feedback.kP.toFixed(0)} V/m 補的話，會停低 ${(payload.err * 100).toFixed(1)} cm`}</div>
         </Pit>
   
         <h3>檢核</h3>
