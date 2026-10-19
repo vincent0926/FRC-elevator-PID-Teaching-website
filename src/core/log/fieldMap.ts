@@ -1,5 +1,6 @@
 import type { Series, WpilogEntryInfo } from './reader'
 import { NUMERIC_TYPES } from './wpilog'
+import { t } from '../lang'
 
 /**
  * 欄位對應：把日誌裡的欄位名稱對到分析需要的「角色」。
@@ -31,16 +32,16 @@ export interface RoleDef {
 }
 
 export const ROLES: RoleDef[] = [
-  { key: 'position', label: '位置', unit: 'm', required: true, lengthUnit: true, patterns: [/\/PositionMeters$/i, /elevator.*\/position/i, /\/position$/i, /height/i] },
-  { key: 'velocity', label: '速度', unit: 'm/s', required: true, lengthUnit: true, patterns: [/\/VelocityMetersPerSec$/i, /elevator.*\/velocity/i, /\/velocity$/i] },
-  { key: 'reference', label: '目標位置（閉迴路參考）', unit: 'm', required: true, lengthUnit: true, patterns: [/\/ClosedLoopReferenceMeters$/i, /ClosedLoopReference$/i, /setpoint(position)?$/i, /\/goal/i] },
-  { key: 'referenceSlope', label: '參考速度', unit: 'm/s', required: false, lengthUnit: true, patterns: [/\/ClosedLoopReferenceSlopeMetersPerSec$/i, /ReferenceSlope/i, /setpointvelocity/i] },
-  { key: 'appliedVolts', label: '輸出電壓', unit: 'V', required: true, lengthUnit: false, patterns: [/\/AppliedVolts$/i, /MotorVoltage$/i, /appliedvolt/i, /volts?$/i] },
-  { key: 'statorCurrent', label: 'Stator 電流', unit: 'A', required: false, lengthUnit: false, patterns: [/\/StatorCurrentAmps$/i, /statorcurrent/i, /current(amps)?$/i] },
-  { key: 'supplyVoltage', label: '電池電壓', unit: 'V', required: false, lengthUnit: false, patterns: [/SystemStats\/BatteryVoltage$/i, /batteryvoltage/i, /\/SupplyVoltage$/i] },
-  { key: 'closedLoopOutput', label: '回授輸出（P+I+D）', unit: 'V', required: false, lengthUnit: false, patterns: [/\/ClosedLoopOutputVolts$/i, /ClosedLoopOutput$/i] },
-  { key: 'feedforwardOutput', label: '前饋輸出', unit: 'V', required: false, lengthUnit: false, patterns: [/\/ClosedLoopFeedForwardVolts$/i, /ClosedLoopFeedForward$/i] },
-  { key: 'enabled', label: '機器人 Enable', unit: '', required: false, lengthUnit: false, patterns: [/DriverStation\/Enabled$/i, /\/Enabled$/i] },
+  { key: 'position', label: t('位置', 'Position'), unit: 'm', required: true, lengthUnit: true, patterns: [/\/PositionMeters$/i, /elevator.*\/position/i, /\/position$/i, /height/i] },
+  { key: 'velocity', label: t('速度', 'Velocity'), unit: 'm/s', required: true, lengthUnit: true, patterns: [/\/VelocityMetersPerSec$/i, /elevator.*\/velocity/i, /\/velocity$/i] },
+  { key: 'reference', label: t('目標位置（閉迴路參考）', 'Target position (closed-loop reference)'), unit: 'm', required: true, lengthUnit: true, patterns: [/\/ClosedLoopReferenceMeters$/i, /ClosedLoopReference$/i, /setpoint(position)?$/i, /\/goal/i] },
+  { key: 'referenceSlope', label: t('參考速度', 'Reference velocity'), unit: 'm/s', required: false, lengthUnit: true, patterns: [/\/ClosedLoopReferenceSlopeMetersPerSec$/i, /ReferenceSlope/i, /setpointvelocity/i] },
+  { key: 'appliedVolts', label: t('輸出電壓', 'Output voltage'), unit: 'V', required: true, lengthUnit: false, patterns: [/\/AppliedVolts$/i, /MotorVoltage$/i, /appliedvolt/i, /volts?$/i] },
+  { key: 'statorCurrent', label: t('Stator 電流', 'Stator current'), unit: 'A', required: false, lengthUnit: false, patterns: [/\/StatorCurrentAmps$/i, /statorcurrent/i, /current(amps)?$/i] },
+  { key: 'supplyVoltage', label: t('電池電壓', 'Battery voltage'), unit: 'V', required: false, lengthUnit: false, patterns: [/SystemStats\/BatteryVoltage$/i, /batteryvoltage/i, /\/SupplyVoltage$/i] },
+  { key: 'closedLoopOutput', label: t('回授輸出（P+I+D）', 'Feedback output (P+I+D)'), unit: 'V', required: false, lengthUnit: false, patterns: [/\/ClosedLoopOutputVolts$/i, /ClosedLoopOutput$/i] },
+  { key: 'feedforwardOutput', label: t('前饋輸出', 'Feedforward output'), unit: 'V', required: false, lengthUnit: false, patterns: [/\/ClosedLoopFeedForwardVolts$/i, /ClosedLoopFeedForward$/i] },
+  { key: 'enabled', label: t('機器人 Enable', 'Robot enabled'), unit: '', required: false, lengthUnit: false, patterns: [/DriverStation\/Enabled$/i, /\/Enabled$/i] },
 ]
 
 export interface RoleMapping {
@@ -132,20 +133,20 @@ export interface AlignedLog {
 export function alignSeries(series: Map<string, Series>, map: FieldMapping): AlignedLog {
   const posName = map.position.entry
   const base = posName ? series.get(posName) : undefined
-  if (!base) throw new Error('缺少位置欄位，無法對齊')
-  const t = base.t
+  if (!base) throw new Error(t('缺少位置欄位，無法對齊', 'Missing the position field, so the data can’t be aligned'))
+  const time = base.t
   const cols: Partial<Record<RoleKey, Float64Array>> = {}
   for (const r of ROLES) {
     const m = map[r.key]
     const s = m.entry ? series.get(m.entry) : undefined
     if (!s || s.t.length === 0) continue
-    const out = new Float64Array(t.length)
+    const out = new Float64Array(time.length)
     let j = 0
-    for (let i = 0; i < t.length; i++) {
-      while (j + 1 < s.t.length && s.t[j + 1] <= t[i]) j++
-      out[i] = s.t[j] <= t[i] ? s.v[j] * m.scale : NaN
+    for (let i = 0; i < time.length; i++) {
+      while (j + 1 < s.t.length && s.t[j + 1] <= time[i]) j++
+      out[i] = s.t[j] <= time[i] ? s.v[j] * m.scale : NaN
     }
     cols[r.key] = out
   }
-  return { t, cols }
+  return { t: time, cols }
 }
