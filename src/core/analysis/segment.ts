@@ -1,4 +1,5 @@
 import type { AlignedLog } from '../log/fieldMap'
+import { t } from '../lang'
 
 /**
  * 步驟 1 的切段：依「參考」速度與加速度把每一筆資料分成
@@ -9,13 +10,13 @@ import type { AlignedLog } from '../log/fieldMap'
 export const PHASES = ['off', 'hold', 'accel', 'cruise', 'decel', 'settle', 'transition'] as const
 export type Phase = (typeof PHASES)[number]
 export const PHASE_LABEL: Record<Phase, string> = {
-  off: '未 Enable',
-  hold: '靜止保持',
-  accel: '加速',
-  cruise: '等速',
-  decel: '減速',
-  settle: '到位穩定',
-  transition: '交界',
+  off: t('未 Enable', 'Not enabled'),
+  hold: t('靜止保持', 'Holding'),
+  accel: t('加速', 'Accelerating'),
+  cruise: t('等速', 'Cruising'),
+  decel: t('減速', 'Decelerating'),
+  settle: t('到位穩定', 'Settling'),
+  transition: t('交界', 'Transition'),
 }
 const P = Object.fromEntries(PHASES.map((p, i) => [p, i])) as Record<Phase, number>
 
@@ -76,7 +77,7 @@ export function segment(log: AlignedLog, opt: SegmentOptions = {}): Segments {
   const n = t.length
   const settleWindow = opt.settleWindow ?? 0.5
   const ref = cols.reference
-  if (!ref) throw new Error('缺少目標位置欄位，無法切段')
+  if (!ref) throw new Error(t('缺少目標位置欄位，無法切段', 'Missing the target position field, so it can’t be segmented'))
   const vref = cols.referenceSlope ? Float64Array.from(cols.referenceSlope, (v) => (Number.isFinite(v) ? v : 0)) : derivative(t, ref)
   const aref = derivative(t, vref)
   const vScale = percentileAbs(vref, 0.98)
