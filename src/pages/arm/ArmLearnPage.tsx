@@ -321,47 +321,49 @@ export function ArmLearnPage() {
         </summary>
         <div className="body">
           <div className="goal lgoal">{t('學習目標：認出手臂特有的錯誤，看到日誌能想到是哪一個。', 'Goal: recognize mistakes specific to arms, and think of the right one when you see a log.')}</div>
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>{t('坑', 'Pitfall')}</th>
-                <th>{t('日誌上看到', 'What the log shows')}</th>
-                <th>{t('怎麼修', 'How to fix')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{t('GravityType 設 Elevator_Static', 'GravityType set to Elevator_Static')}</td>
-                <td className="small">{t('水平時沒事，抬越高回授越往下壓；前饋在每個角度都一樣高', 'Fine at horizontal, feedback pushes down more the higher it goes; feedforward is the same height at every angle')}</td>
-                <td className="small">{t('改 Arm_Cosine，kG 不用動', 'Change to Arm_Cosine; leave kG alone')}</td>
-              </tr>
-              <tr>
-                <td>{t('零點不在水平', 'Zero not at horizontal')}</td>
-                <td className="small">{t('kG 看起來在某些角度太大、某些角度太小；角度讀數跟水平儀對不上', 'kG looks too big at some angles and too small at others; the angle reading doesn’t match a level')}</td>
-                <td className="small">{t('內建編碼器：開機角度（BOOT_ANGLE_DEG）；CANcoder：磁鐵偏移', 'Built-in encoder: boot angle (BOOT_ANGLE_DEG); CANcoder: magnet offset')}</td>
-              </tr>
-              <tr>
-                <td>{t('用 kI 補 kG', 'kI covering for kG')}</td>
-                <td className="small">{t('停住時慢慢爬到目標，大動作後衝過頭（積分飽和）', 'Creeps slowly to the target when stopped, overshoots after big moves (integral windup)')}</td>
-                <td className="small">{t('kI 設回 0，先把 kG 修對', 'Set kI back to 0 and fix kG first')}</td>
-              </tr>
-              <tr>
-                <td>{t('夾到遊戲物件後變重', 'Heavier after grabbing a game piece')}</td>
-                <td className="small">{t('空手時很準，夾東西後停在目標下面', 'Accurate empty, stops below the target when holding something')}</td>
-                <td className="small">{t('1F 填負載算 kG；差很多時分兩組參數（空手、有物件）或靠 kP 補', 'Enter the load in 1F to compute kG; if very different, use two gain sets (empty, holding) or let kP make it up')}</td>
-              </tr>
-              <tr>
-                <td>{t('CANcoder 比例填錯', 'CANcoder ratio entered wrong')}</td>
-                <td className="small">{t('角度跟實際不成比例，轉越多差越多', 'The angle isn’t proportional to reality; the more it turns, the bigger the error')}</td>
-                <td className="small">{t('SensorToMechanismRatio = CANcoder : 手臂，RotorToSensorRatio = 齒比 ÷ 那個比例', 'SensorToMechanismRatio = CANcoder : arm, RotorToSensorRatio = gear ratio ÷ that ratio')}</td>
-              </tr>
-              <tr>
-                <td>{t('內建編碼器開機位置不對', 'Built-in encoder booted at the wrong position')}</td>
-                <td className="small">{t('整段日誌角度都偏同一個量', 'The angle is off by the same amount through the whole log')}</td>
-                <td className="small">{t('開機前把手臂靠在硬擋；或改用 CANcoder', 'Rest the arm against the hard stop before booting, or switch to a CANcoder')}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>{t('坑', 'Pitfall')}</th>
+                  <th>{t('日誌上看到', 'What the log shows')}</th>
+                  <th>{t('怎麼修', 'How to fix')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{t('GravityType 設 Elevator_Static', 'GravityType set to Elevator_Static')}</td>
+                  <td className="small">{t('水平時沒事，抬越高回授越往下壓；前饋在每個角度都一樣高', 'Fine at horizontal, feedback pushes down more the higher it goes; feedforward is the same height at every angle')}</td>
+                  <td className="small">{t('改 Arm_Cosine，kG 不用動', 'Change to Arm_Cosine; leave kG alone')}</td>
+                </tr>
+                <tr>
+                  <td>{t('零點不在水平', 'Zero not at horizontal')}</td>
+                  <td className="small">{t('kG 看起來在某些角度太大、某些角度太小；角度讀數跟水平儀對不上', 'kG looks too big at some angles and too small at others; the angle reading doesn’t match a level')}</td>
+                  <td className="small">{t('內建編碼器：開機角度（BOOT_ANGLE_DEG）；CANcoder：磁鐵偏移', 'Built-in encoder: boot angle (BOOT_ANGLE_DEG); CANcoder: magnet offset')}</td>
+                </tr>
+                <tr>
+                  <td>{t('用 kI 補 kG', 'kI covering for kG')}</td>
+                  <td className="small">{t('停住時慢慢爬到目標，大動作後衝過頭（積分飽和）', 'Creeps slowly to the target when stopped, overshoots after big moves (integral windup)')}</td>
+                  <td className="small">{t('kI 設回 0，先把 kG 修對', 'Set kI back to 0 and fix kG first')}</td>
+                </tr>
+                <tr>
+                  <td>{t('夾到遊戲物件後變重', 'Heavier after grabbing a game piece')}</td>
+                  <td className="small">{t('空手時很準，夾東西後停在目標下面', 'Accurate empty, stops below the target when holding something')}</td>
+                  <td className="small">{t('1F 填負載算 kG；差很多時分兩組參數（空手、有物件）或靠 kP 補', 'Enter the load in 1F to compute kG; if very different, use two gain sets (empty, holding) or let kP make it up')}</td>
+                </tr>
+                <tr>
+                  <td>{t('CANcoder 比例填錯', 'CANcoder ratio entered wrong')}</td>
+                  <td className="small">{t('角度跟實際不成比例，轉越多差越多', 'The angle isn’t proportional to reality; the more it turns, the bigger the error')}</td>
+                  <td className="small">{t('SensorToMechanismRatio = CANcoder : 手臂，RotorToSensorRatio = 齒比 ÷ 那個比例', 'SensorToMechanismRatio = CANcoder : arm, RotorToSensorRatio = gear ratio ÷ that ratio')}</td>
+                </tr>
+                <tr>
+                  <td>{t('內建編碼器開機位置不對', 'Built-in encoder booted at the wrong position')}</td>
+                  <td className="small">{t('整段日誌角度都偏同一個量', 'The angle is off by the same amount through the whole log')}</td>
+                  <td className="small">{t('開機前把手臂靠在硬擋；或改用 CANcoder', 'Rest the arm against the hard stop before booting, or switch to a CANcoder')}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <Quiz quiz={QUIZ3} done={lessonsDone['arm-unit3']} onCorrect={() => markLesson('arm-unit3')} />
           <Quiz quiz={QUIZ_UNIT3} done={lessonsDone['arm-unit3b']} onCorrect={() => markLesson('arm-unit3b')} />
         </div>

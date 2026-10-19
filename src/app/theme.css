@@ -396,6 +396,8 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .lang-toggle { position: fixed; top: 8px; right: 8px; z-index: 50; display: flex; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); overflow: hidden; box-shadow: var(--lift-shadow) }
 .lang-toggle button { border: 0; background: none; padding: 3px 9px; font-size: 12.5px; cursor: pointer; color: var(--ink-3) }
 .lang-toggle button[aria-pressed="true"] { background: var(--yellow); color: var(--yellow-ink); font-weight: 600; cursor: default }
+/* 手機：主內容往下一點，不要跟右上角的中/EN 疊在一起 */
+@media (max-width: 720px) { main { padding-top: 48px } }
 /* 回課程網站：側欄一行、主內容上方一行（手機看不到側欄時也找得到） */
 .course-link { display: block; margin: 0 20px 12px; font-size: 12.5px; color: #93A0AE; text-decoration: none }
 .course-link:hover { color: #DDE3EA; text-decoration: underline }
@@ -410,9 +412,12 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .av-target { stroke: var(--ink-3); stroke-width: 2; stroke-dasharray: 5 4 }
 .av-cg { fill: var(--ink); }
 
-/* 320px 這種很窄的螢幕：標籤可以換行、滑桿旁的數字欄縮小、分段按鈕不超出 */
-@media (max-width: 360px) {
+/* 手機：標籤可以換行（英文版的標籤比較長，不換行會撐出橫向捲動） */
+@media (max-width: 720px) {
   .tag, .src-tag { white-space: normal }
+}
+/* 320px 這種很窄的螢幕：滑桿旁的數字欄縮小、分段按鈕不超出 */
+@media (max-width: 360px) {
   .tune-row { grid-template-columns: minmax(0, 1fr) minmax(100px, 136px) }
   .seg { max-width: 100%; overflow-x: auto }
 }

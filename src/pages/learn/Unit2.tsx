@@ -50,27 +50,29 @@ export function Unit2() {
   
         <h3>1. SysId 在做什麼</h3>
         <div className="formula">電壓 = kS·sgn(v) + kG + kV·v + kA·a</div>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>測試</th>
-              <th>怎麼給電壓</th>
-              <th>量什麼</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>準靜態（Quasistatic）往上 / 往下</td>
-              <td>從 0 慢慢加（範例 0.5 V/s）</td>
-              <td>加速度 ≈ 0，拆出 kS、kG、kV：往上往下的差是 2·kS，平均是 kG，斜率是 kV</td>
-            </tr>
-            <tr>
-              <td>動態（Dynamic）往上 / 往下</td>
-              <td>一次給固定電壓（範例 3 V）</td>
-              <td>從靜止加速的過程量 kA</td>
-            </tr>
-          </tbody>
-        </table>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>測試</th>
+                <th>怎麼給電壓</th>
+                <th>量什麼</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>準靜態（Quasistatic）往上 / 往下</td>
+                <td>從 0 慢慢加（範例 0.5 V/s）</td>
+                <td>加速度 ≈ 0，拆出 kS、kG、kV：往上往下的差是 2·kS，平均是 kG，斜率是 kV</td>
+              </tr>
+              <tr>
+                <td>動態（Dynamic）往上 / 往下</td>
+                <td>一次給固定電壓（範例 3 V）</td>
+                <td>從靜止加速的過程量 kA</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <p className="small">
           量到的值跟理論不一樣很正常：理論沒算摩擦（kS 只能靠量）、齒輪箱效率、線材和螺絲的重量、拖鏈在不同高度的重量變化。差太多才要回頭檢查。
           每個參數是「模型」「模型給起點再鑑別」「一定要量」「閉迴路調參」還是「自己設的限制」，整理在 1F 最下面的對照表。
@@ -161,27 +163,29 @@ export function Unit2() {
 
           <h3>1. What SysId does</h3>
           <div className="formula">voltage = kS·sgn(v) + kG + kV·v + kA·a</div>
-          <table className="tbl">
-          <thead>
-          <tr>
-          <th>Test</th>
-          <th>How voltage is applied</th>
-          <th>What it measures</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr>
-          <td>Quasistatic up / down</td>
-          <td>Ramp slowly from 0 (0.5 V/s in the example)</td>
-          <td>Acceleration ≈ 0, separating kS, kG, kV: the up/down difference is 2·kS, the average is kG, the slope is kV</td>
-          </tr>
-          <tr>
-          <td>Dynamic up / down</td>
-          <td>A fixed voltage all at once (3 V in the example)</td>
-          <td>kA from accelerating from rest</td>
-          </tr>
-          </tbody>
-          </table>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+            <thead>
+            <tr>
+            <th>Test</th>
+            <th>How voltage is applied</th>
+            <th>What it measures</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+            <td>Quasistatic up / down</td>
+            <td>Ramp slowly from 0 (0.5 V/s in the example)</td>
+            <td>Acceleration ≈ 0, separating kS, kG, kV: the up/down difference is 2·kS, the average is kG, the slope is kV</td>
+            </tr>
+            <tr>
+            <td>Dynamic up / down</td>
+            <td>A fixed voltage all at once (3 V in the example)</td>
+            <td>kA from accelerating from rest</td>
+            </tr>
+            </tbody>
+            </table>
+          </div>
           <p className="small">
           Measured values differing from theory is normal: theory leaves out friction (kS can only be measured), gearbox efficiency, the weight of wiring and screws, and how the drag chain’s weight changes with height. Only go back and check when it’s off by a lot.{' '}
           Whether each gain is “model”, “model start then identify”, “must measure”, “closed-loop tuning” or “a limit you set” is summarized in the table at the bottom of 1F.

@@ -79,7 +79,7 @@ export function Shell({ children }: { children: ReactNode }) {
             {/* 使用說明放在最上面一格：樓層是靠下對齊，加在上面不會動到原本的樓層位置；車廂從 G 往上數剛好停在這一格 */}
             {!flywheel && (
               <button type="button" className="floor" data-floor="guide" aria-current={page === 'guide' ? 'page' : undefined} onClick={() => go('guide')}>
-                <span className="lv">？</span>
+                <span className="lv">{t('？', '?')}</span>
                 <span className="nm">{t('使用說明', 'Guide')}</span>
                 <span className="nm-short">{t('說明', 'Guide')}</span>
               </button>
