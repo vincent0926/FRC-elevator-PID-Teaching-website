@@ -257,10 +257,9 @@ export function Unit2() {
           <li>Run the SysId gains on the calibrated model: go to the robot only when all metrics are green. The sim is still an approximation; fine-tune on the robot following 2F’s advice.</li>
           </ol>
 
-          <h3>Check</h3>
-        </>,
+          </>,
       )}
-      <h3>檢核</h3>
+      <h3>{t('檢核', 'Check')}</h3>
       <QuizSet quizzes={QUIZZES} done={lessonsDone['unit2']} onDone={() => markLesson('unit2')} />
     </div>
   )
