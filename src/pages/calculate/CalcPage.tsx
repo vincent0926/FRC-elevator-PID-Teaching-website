@@ -9,6 +9,7 @@ import { ParamSources } from './ParamSources'
 import { RatioSweep, ShareMechanism } from './RatioSweep'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
+import { t } from '../../core/lang'
 
 const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
@@ -29,11 +30,14 @@ export function CalcPage() {
     <section aria-labelledby="t-calc">
       <div className="head">
         <div>
-          <h1 id="t-calc">計算參數</h1>
-          <p className="lead">填入機構資料，右邊的參數卡會即時更新。數字怎麼來的，跟著下方五個關卡一步一步看。 <HelpLink section={GUIDE_ANCHOR.calc} /></p>
+          <h1 id="t-calc">{t('計算參數', 'Calculate gains')}</h1>
+          <p className="lead">
+            {t('填入機構資料，右邊的參數卡會即時更新。數字怎麼來的，跟著下方五個關卡一步一步看。', 'Enter your mechanism data and the parameter card on the right updates immediately. To see where each number comes from, follow the five lessons below step by step.')}{' '}
+            <HelpLink section={GUIDE_ANCHOR.calc} />
+          </p>
         </div>
         <span className="phase">
-          教學關卡 {done} / {LESSONS.length}
+          {t(`教學關卡 ${done} / ${LESSONS.length}`, `Lessons ${done} / ${LESSONS.length}`)}
         </span>
       </div>
 
@@ -44,12 +48,12 @@ export function CalcPage() {
             <>
               {' '}
               <button className="linkbtn" type="button" onClick={() => dismissShared(true)}>
-                復原成我原本的
+                {t('復原成我原本的', 'Restore mine')}
               </button>
             </>
           )}{' '}
           <button className="linkbtn" type="button" onClick={() => dismissShared(false)}>
-            知道了
+            {t('知道了', 'Got it')}
           </button>
         </div>
       )}
@@ -59,7 +63,7 @@ export function CalcPage() {
           <MechanismForm m={mechanism} onChange={setMechanism} voltsPerCm={voltsPerCm} onVoltsPerCm={setVoltsPerCm} />
 
           <div className="panel">
-            <h2>教學關卡</h2>
+            <h2>{t('教學關卡', 'Lessons')}</h2>
             <ol className="lessons">
               {LESSONS.map((l) => {
                 const isOpen = open === l.id
@@ -73,7 +77,7 @@ export function CalcPage() {
                     </button>
                     {isOpen && (
                       <div className="body">
-                        <div className="goal">學習目標：{l.goal}</div>
+                        <div className="goal">{t('學習目標：', 'Goal: ')}{l.goal}</div>
                         <l.Body m={mechanism} ff={ff} kP={theory.feedback.kP} done={lessonsDone[l.id]} />
                         <Quiz key={l.id} quiz={l.quiz} done={lessonsDone[l.id]} onCorrect={() => markLesson(l.id)} />
                       </div>
@@ -97,11 +101,11 @@ export function CalcPage() {
               ]),
             )}
             notes={{
-              kS: ff.kS > 0 ? '你量到的值（機構資料最下面）' : '公式算不出，一定要上機量',
-              kI: '預設 0，穩態誤差交給 kG',
-              kD: '到位後振盪時再加',
-              cruise: `上限 ${f(ff.maxVelocity, 2)} 的 75%${ff.frictionIncluded ? '（已扣 kS）' : '（沒扣摩擦，實際會更低）'}`,
-              accel: `上限 ${f(ff.maxAccelUp, 1)} 的 75%${ff.frictionIncluded ? '（已扣 kS）' : '（沒扣摩擦）'}`,
+              kS: ff.kS > 0 ? t('你量到的值（機構資料最下面）', 'Your measured value (bottom of the mechanism data)') : t('公式算不出，一定要上機量', 'Can’t be calculated; you must measure it on the robot'),
+              kI: t('預設 0，穩態誤差交給 kG', 'Default 0; kG handles steady-state error'),
+              kD: t('到位後振盪時再加', 'Add it if it oscillates after arriving'),
+              cruise: t(`上限 ${f(ff.maxVelocity, 2)} 的 75%${ff.frictionIncluded ? '（已扣 kS）' : '（沒扣摩擦，實際會更低）'}`, `75% of the ${f(ff.maxVelocity, 2)} limit${ff.frictionIncluded ? ' (kS subtracted)' : ' (friction not subtracted; real limit is lower)'}`),
+              accel: t(`上限 ${f(ff.maxAccelUp, 1)} 的 75%${ff.frictionIncluded ? '（已扣 kS）' : '（沒扣摩擦）'}`, `75% of the ${f(ff.maxAccelUp, 1)} limit${ff.frictionIncluded ? ' (kS subtracted)' : ' (friction not subtracted)'}`),
             }}
           />
           {ff.warnings.length ? (
@@ -112,21 +116,21 @@ export function CalcPage() {
             ))
           ) : (
             <div className="ok">
-              等效質量：重力 {f(ff.mass.gravity, 1)} kg、慣性 {f(ff.mass.inertia, 1)} kg。沒有發現問題。
+              {t(`等效質量：重力 ${f(ff.mass.gravity, 1)} kg、慣性 ${f(ff.mass.inertia, 1)} kg。沒有發現問題。`, `Equivalent mass: gravity ${f(ff.mass.gravity, 1)} kg, inertia ${f(ff.mass.inertia, 1)} kg. No problems found.`)}
             </div>
           )}
           <div className="row" style={{ marginTop: 16 }}>
             <button className="btn primary" type="button" onClick={() => toSim(false)}>
-              送到模擬
+              {t('送到模擬', 'Send to sim')}
             </button>
-            <button className="btn" type="button" onClick={() => toSim(true)} title="複製一份當「自訂」，在模擬裡自由改">
-              複製成自訂再模擬
+            <button className="btn" type="button" onClick={() => toSim(true)} title={t('複製一份當「自訂」，在模擬裡自由改', 'Copy as “Custom” and change it freely in the sim')}>
+              {t('複製成自訂再模擬', 'Copy as custom and simulate')}
             </button>
           </div>
           <p className="small muted" style={{ margin: '8px 0 0' }}>
-            參數名稱旁的小字是它怎麼來的：算、算＋量、量、調、限制（游標停在上面看說明）。
+            {t('參數名稱旁的小字是它怎麼來的：算、算＋量、量、調、限制（游標停在上面看說明）。', 'The small tag next to each gain says where it comes from: calc, calc + measure, measure, tune, limit (hover for details). ')}
             <button className="linkbtn" type="button" onClick={() => document.getElementById('param-sources')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>
-              看對照表
+              {t('看對照表', 'See the table')}
             </button>
           </p>
         </aside>
@@ -134,8 +138,8 @@ export function CalcPage() {
 
       <details className="panel scen" style={{ marginTop: 20 }}>
         <summary>
-          <b>齒比怎麼選</b>
-          <span className="small muted">只換齒比，看跑完全程要多久、停在半空要吃多少電流。</span>
+          <b>{t('齒比怎麼選', 'Choosing a gear ratio')}</b>
+          <span className="small muted">{t('只換齒比，看跑完全程要多久、停在半空要吃多少電流。', 'Change only the gear ratio and see how long a full move takes and how much current it draws holding mid-air.')}</span>
         </summary>
         <div style={{ marginTop: 12 }}>
           <RatioSweep />
@@ -144,8 +148,8 @@ export function CalcPage() {
 
       <details className="panel scen" style={{ marginTop: 12 }}>
         <summary>
-          <b>分享這台電梯</b>
-          <span className="small muted">把機構資料放進網址傳給隊友，打開就是同一台電梯。</span>
+          <b>{t('分享這台電梯', 'Share this elevator')}</b>
+          <span className="small muted">{t('把機構資料放進網址傳給隊友，打開就是同一台電梯。', 'Put the mechanism data in a link for teammates; opening it loads the same elevator.')}</span>
         </summary>
         <div style={{ marginTop: 12 }}>
           <ShareMechanism />
