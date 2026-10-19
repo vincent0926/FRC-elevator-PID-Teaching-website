@@ -129,7 +129,7 @@ function CustomCalc() {
             <div className="fields">
               <NumberField label="目標轉速" value={plan.target} display={1 / TAU} digits={1} onChange={(x) => setP({ target: x })} min={1} max={150} step={1} unit="rps" />
               <BallFields plan={plan} setP={setP} />
-              <NumberField label="砲台角度" value={turretDeg(plan.angle)} digits={0} onChange={(x) => setP({ angle: angleFromTurret(x) })} min={95} max={175} step={1} unit="°" hint="水平朝後 0°、正上方 90°、水平朝目標 180°" />
+              <NumberField label="砲台角度" value={turretDeg(plan.angle)} digits={0} onChange={(x) => setP({ angle: angleFromTurret(x) })} min={5} max={85} step={1} unit="°" hint="正上方 0°，往目標倒角度變大" />
               <NumberField label="出射高度" value={plan.height} onChange={(x) => setP({ height: x })} min={0} max={2} step={0.05} unit="m" hint="離地多高" />
             </div>
             <div className="fields three" style={{ marginTop: 12 }}>
