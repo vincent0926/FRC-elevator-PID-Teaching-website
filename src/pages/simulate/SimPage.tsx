@@ -29,6 +29,7 @@ import { buildSimInput, DEFAULT_KNOBS, TOGGLES, type PlantKnobs } from './plantK
 import { SIM_SCENARIOS, type SimScenario } from './simScenarios'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
+import { t } from '../../core/lang'
 
 /**
  * 3F 模擬。三個入口（理論值、調參建議值、自訂）共用這一頁，差別只在參數來源。
@@ -37,9 +38,9 @@ import { GUIDE_ANCHOR } from '../guide/guideContent'
  */
 
 const SOURCES: { id: SimSource; label: string }[] = [
-  { id: 'theory', label: '理論值' },
-  { id: 'tuning', label: '調參建議值' },
-  { id: 'custom', label: '自訂' },
+  { id: 'theory', label: t('理論值', 'Theory') },
+  { id: 'tuning', label: t('調參建議值', 'Tuning suggestion') },
+  { id: 'custom', label: t('自訂', 'Custom') },
 ]
 
 /** 挑戰模式的受控體：真實模型，倍率與摩擦是隱藏的 */
@@ -138,7 +139,7 @@ export function SimPage() {
   // 從滑桿切到自訂時存下的那組（例如調參建議值）優先當疊圖對象（挑戰模式不疊）
   const libCompare = challenge ? null : compareSet
   const otherPs = libCompare ? libCompare.params : otherSource ? sets[otherSource] : null
-  const otherLabel = libCompare ? `「${libCompare.label}」` : otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : ''
+  const otherLabel = libCompare ? t(`「${libCompare.label}」`, `“${libCompare.label}”`) : otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : ''
   useEffect(() => {
     if (compareSet) setCompare(true)
   }, [compareSet])
@@ -160,28 +161,28 @@ export function SimPage() {
     const fit = (a: Float64Array) => (other ? resampleByTime(result.t, other.t, a) : a)
     const err = (r: SimResult) => r.refPos.map((x, i) => (x - r.pos[i]) * 100)
     const pos: ChartSeries[] = [
-      { label: '目標（軌跡）', color: '--steel', dash: true, values: result.refPos },
-      { label: '實際位置', color: '--blue', values: result.pos },
+      { label: t('目標（軌跡）', 'Target (profile)'), color: '--steel', dash: true, values: result.refPos },
+      { label: t('實際位置', 'Actual position'), color: '--blue', values: result.pos },
     ]
     const vel: ChartSeries[] = [
-      { label: '參考速度', color: '--steel', dash: true, values: result.refVel },
-      { label: '實際速度', color: '--blue', values: result.vel },
+      { label: t('參考速度', 'Reference velocity'), color: '--steel', dash: true, values: result.refVel },
+      { label: t('實際速度', 'Actual velocity'), color: '--blue', values: result.vel },
     ]
-    const errS: ChartSeries[] = [{ label: '跟隨誤差（目標 − 實際）', color: '--red', values: err(result) }]
+    const errS: ChartSeries[] = [{ label: t('跟隨誤差（目標 − 實際）', 'Following error (target − actual)'), color: '--red', values: err(result) }]
     if (other) {
-      pos.push({ label: `${otherLabel}的實際位置`, color: '--violet', values: fit(other.pos) })
-      vel.push({ label: `${otherLabel}的實際速度`, color: '--violet', values: fit(other.vel) })
-      errS.push({ label: `${otherLabel}的跟隨誤差`, color: '--violet', values: fit(err(other)) })
+      pos.push({ label: t(`${otherLabel}的實際位置`, `${otherLabel} actual position`), color: '--violet', values: fit(other.pos) })
+      vel.push({ label: t(`${otherLabel}的實際速度`, `${otherLabel} actual velocity`), color: '--violet', values: fit(other.vel) })
+      errS.push({ label: t(`${otherLabel}的跟隨誤差`, `${otherLabel} following error`), color: '--violet', values: fit(err(other)) })
     }
     const volt: ChartSeries[] = [
-      { label: '輸出電壓', color: '--ink-2', values: result.voltage },
-      { label: '前饋', color: '--green', values: result.feedforward },
-      { label: '回授（P+I+D）', color: '--red', values: result.feedback },
+      { label: t('輸出電壓', 'Output voltage'), color: '--ink-2', values: result.voltage },
+      { label: t('前饋', 'Feedforward'), color: '--green', values: result.feedforward },
+      { label: t('回授（P+I+D）', 'Feedback (P+I+D)'), color: '--red', values: result.feedback },
     ]
     const perMotor = Math.max(1, mechanism.motorCount)
     const cur: ChartSeries[] = [
-      { label: '每顆馬達 Stator 電流', color: '--amber', values: result.statorCurrent },
-      { label: '每顆馬達電池端（Supply）電流', color: '--blue', dash: true, values: result.supplyCurrent.map((x) => x / perMotor) },
+      { label: t('每顆馬達 Stator 電流', 'Stator current per motor'), color: '--amber', values: result.statorCurrent },
+      { label: t('每顆馬達電池端（Supply）電流', 'Battery-side (supply) current per motor'), color: '--blue', dash: true, values: result.supplyCurrent.map((x) => x / perMotor) },
     ]
     return { pos, vel, err: errS, volt, cur }
   }, [result, other, otherLabel, mechanism.motorCount])
@@ -194,14 +195,14 @@ export function SimPage() {
       return
     }
     const label = SOURCES.find((x) => x.id === source)!.label
-    setCustom(patch({ ...ps, source: 'custom', createdAt: new Date().toISOString(), note: `從${label}開始調` }))
+    setCustom(patch({ ...ps, source: 'custom', createdAt: new Date().toISOString(), note: t(`從${label}開始調`, `Tuned from ${label}`) }))
     setSimSource('custom')
     // 疊圖要比的是剛才看的那組：理論值切過來時自然會比理論值；其他來源（調參建議值）存一份快照來比
     setCompareSet(source === 'theory' ? null : { label, params: ps })
     setCompare(true)
   }
   const resetToTheory = () => {
-    setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString(), note: '理論值' })
+    setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString(), note: t('理論值', 'Theory') })
     setSimSource('custom')
   }
 
@@ -221,11 +222,11 @@ export function SimPage() {
     // 出題：理論值就過了的不要；參考解答也過不了的也不要
     const hidden = makeChallenge(Math.floor(Math.random() * 1e9), level, (h) => probe(h, theory) || !probe(h, solutionParams(h)))
     if (!hidden) {
-      setError('這台電梯的機構資料出不了題目：試了 30 台，不是理論值就過了、就是怎麼調都過不了。檢查 1F 的機構資料（例如 kG 是不是超過計算電壓的一半），或換個難度。')
+      setError(t('這台電梯的機構資料出不了題目：試了 30 台，不是理論值就過了、就是怎麼調都過不了。檢查 1F 的機構資料（例如 kG 是不是超過計算電壓的一半），或換個難度。', 'Couldn’t make a challenge from this elevator’s mechanism data: of 30 tries, each either passed with theory values or couldn’t pass no matter what. Check the 1F mechanism data (e.g. whether kG is over half the calculation voltage), or try another difficulty.'))
       return
     }
     setError(null)
-    const start: ParameterSet = { ...theory, source: 'custom', createdAt: new Date().toISOString(), note: '挑戰模式' }
+    const start: ParameterSet = { ...theory, source: 'custom', createdAt: new Date().toISOString(), note: t('挑戰模式', 'Challenge mode') }
     setCustom(start)
     setScenario(null)
     setCompare(false)
@@ -243,7 +244,7 @@ export function SimPage() {
       ...theory,
       source: 'custom',
       createdAt: new Date().toISOString(),
-      note: '挑戰模式參考解答',
+      note: t('挑戰模式參考解答', 'Challenge reference solution'),
       feedforward: { kS: sol.kS, kG: sol.kG, kV: sol.kV, kA: sol.kA },
       feedback: { ...theory.feedback, kP: sol.kP },
       motionMagic: { cruiseVelocity: theory.motionMagic.cruiseVelocity * sol.motionMagicScale, acceleration: theory.motionMagic.acceleration * sol.motionMagicScale },
@@ -288,11 +289,14 @@ export function SimPage() {
     <section aria-labelledby="t-sim">
       <div className="head">
         <div>
-          <h1 id="t-sim">模擬</h1>
-          <p className="lead">上機前先在模擬裡找出明顯的參數問題。改一個數字看看會怎樣，不用怕撞壞機構。 <HelpLink section={GUIDE_ANCHOR.sim} /></p>
+          <h1 id="t-sim">{t('模擬', 'Simulate')}</h1>
+          <p className="lead">
+            {t('上機前先在模擬裡找出明顯的參數問題。改一個數字看看會怎樣，不用怕撞壞機構。', 'Find obvious gain problems in the sim before going to the robot. Change a number and see what happens, with no risk of breaking anything.')}{' '}
+            <HelpLink section={GUIDE_ANCHOR.sim} />
+          </p>
         </div>
         <span className="phase">
-          {challenge ? '挑戰中（受控體隱藏）' : knobs.calibrated ? '已校正模型' : knobs.realistic ? '真實模型' : '理想模型'}・{knobs.realistic && !challenge ? (knobs.controllerType === 'sparkmax' ? 'SPARK MAX' : 'TalonFX') + ' ' : ''}{location === 'talonfx' ? '1 kHz' : 'roboRIO 50 Hz'}
+          {challenge ? t('挑戰中（受控體隱藏）', 'Challenge (plant hidden)') : knobs.calibrated ? t('已校正模型', 'Calibrated model') : knobs.realistic ? t('真實模型', 'Realistic model') : t('理想模型', 'Ideal model')}・{knobs.realistic && !challenge ? (knobs.controllerType === 'sparkmax' ? 'SPARK MAX' : 'TalonFX') + ' ' : ''}{location === 'talonfx' ? '1 kHz' : 'roboRIO 50 Hz'}
         </span>
       </div>
 
@@ -314,7 +318,7 @@ export function SimPage() {
           }}
           onReset={() => {
             setScenario(null)
-            setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString(), note: '理論值' })
+            setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString(), note: t('理論值', 'Theory') })
             setSimSource('custom')
           }}
           onWellTuned={() => {
@@ -326,7 +330,7 @@ export function SimPage() {
               ...theory,
               source: 'custom',
               createdAt: new Date().toISOString(),
-              note: '調好的範例',
+              note: t('調好的範例', 'Tuned example'),
               feedforward: { ...theory.feedforward, kS, kG: theory.feedforward.kG * knobs.kGScale + dKg, kV: theory.feedforward.kV * knobs.kVScale, kA: theory.feedforward.kA * knobs.kAScale },
             })
             setSimSource('custom')
@@ -340,14 +344,14 @@ export function SimPage() {
       {!challenge && <ScenarioPicker active={scenario} onPick={loadScenario} onLeave={leaveScenario} />}
 
       <div className="bar">
-        <div className="seg" role="group" aria-label="參數來源">
+        <div className="seg" role="group" aria-label={t('參數來源', 'Gain source')}>
           {SOURCES.map((s) => (
             <button
               key={s.id}
               type="button"
               aria-pressed={source === s.id}
               disabled={(!sets[s.id] && s.id !== 'custom') || (!!challenge && s.id !== 'custom')}
-              title={s.id === 'tuning' && !tuning ? '還沒有調參建議值：先到 2F 分析日誌並套用一個建議' : undefined}
+              title={s.id === 'tuning' && !tuning ? t('還沒有調參建議值：先到 2F 分析日誌並套用一個建議', 'No tuning suggestion yet: analyze a log in 2F and apply a suggestion first') : undefined}
               onClick={() => {
                 if (s.id === 'custom' && !custom) setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString() })
                 setSimSource(s.id)
@@ -358,20 +362,20 @@ export function SimPage() {
           ))}
         </div>
         <div style={{ width: 140 }}>
-          <NumberField label="起始高度" value={safeStart} onChange={setStart} unit="m" step={0.05} min={0} max={mechanism.travel} />
+          <NumberField label={t('起始高度', 'Start height')} value={safeStart} onChange={setStart} unit="m" step={0.05} min={0} max={mechanism.travel} />
         </div>
         <div style={{ width: 140 }}>
-          <NumberField label="目標高度" value={goal} onChange={setGoal} unit="m" step={0.05} min={0} max={mechanism.travel} />
+          <NumberField label={t('目標高度', 'Target height')} value={goal} onChange={setGoal} unit="m" step={0.05} min={0} max={mechanism.travel} />
         </div>
         {otherPs && (
           <label className="check">
             <input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} />
-            疊上{otherLabel}比較
+            {t(`疊上${otherLabel}比較`, `Overlay ${otherLabel} to compare`)}
           </label>
         )}
         {libCompare && (
           <button className="linkbtn small" type="button" onClick={() => setCompareSet(null)}>
-            不疊「{libCompare.label}」，改回{otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : '原本的'}
+            {t(`不疊「${libCompare.label}」，改回${otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : '原本的'}`, `Stop overlaying “${libCompare.label}”, back to ${otherSource ? SOURCES.find((s) => s.id === otherSource)!.label : 'the original'}`)}
           </button>
         )}
         {!challenge && (
@@ -379,23 +383,30 @@ export function SimPage() {
             className="btn small"
             type="button"
             disabled={!result || !resultInfo || resultInfo.challenge}
-            title="把這次模擬的資料送到 2F 調參建議，看哪個參數該先改"
+            title={t('把這次模擬的資料送到 2F 調參建議，看哪個參數該先改', 'Send this simulation’s data to 2F tuning advice to see which gain to change first')}
             onClick={() => {
               // 挑戰模式的結果（隱藏的受控體）不能送：退出挑戰後、一般模擬還沒算完前，畫面上還是挑戰的結果
               if (!result || !resultInfo || resultInfo.challenge) return
-              setSimLog({ log: alignedFromSim(result), name: `3F 模擬（${resultInfo.label}）`, params: resultInfo.params, location: resultInfo.location })
+              setSimLog({ log: alignedFromSim(result), name: t(`3F 模擬（${resultInfo.label}）`, `3F sim (${resultInfo.label})`), params: resultInfo.params, location: resultInfo.location })
               go('tune')
             }}
           >
-            送到 2F 調參建議
+            {t('送到 2F 調參建議', 'Send to 2F tuning advice')}
           </button>
         )}
       </div>
 
-      {error && <div className="warn">模擬失敗：{error}</div>}
+      {error && <div className="warn">{t('模擬失敗：', 'Simulation failed: ')}{error}</div>}
       {source === 'tuning' && !knobs.calibrated && !challenge && (
         <div className="note" style={{ marginBottom: 12 }}>
-          未校正，僅供參考：目前的受控體是用 1F 理論值算的。到下面「模型校正」用實機日誌校正後，預覽調參建議會比較接近真的機器人。
+          {t(
+            <>
+            未校正，僅供參考：目前的受控體是用 1F 理論值算的。到下面「模型校正」用實機日誌校正後，預覽調參建議會比較接近真的機器人。
+            </>,
+            <>
+              Not calibrated, for reference only: the current plant is computed from the 1F theory values. Calibrate it with a robot log in “Model calibration” below, and the tuning suggestion preview gets closer to the real robot.
+            </>,
+          )}
         </div>
       )}
 
@@ -415,19 +426,19 @@ export function SimPage() {
               units={ELEVATOR_UNITS}
               rotation={{
                 perRot: metersPerRotation(mechanism.drumRadius),
-                note: `鼓輪轉 1 圈 = ${metersPerRotation(mechanism.drumRadius).toFixed(4)} m`,
-                copy: ps.slotByDirection ? 'kV、kA、kP、kI、kD 的數字 Slot0Configs（往上）和 Slot1Configs（往下）都填一樣的；kS、kG 照下面參數區的往上、往下分開填；巡航速度、加速度填 MotionMagicConfigs。' : undefined,
+                note: t(`鼓輪轉 1 圈 = ${metersPerRotation(mechanism.drumRadius).toFixed(4)} m`, `One drum turn = ${metersPerRotation(mechanism.drumRadius).toFixed(4)} m`),
+                copy: ps.slotByDirection ? t('kV、kA、kP、kI、kD 的數字 Slot0Configs（往上）和 Slot1Configs（往下）都填一樣的；kS、kG 照下面參數區的往上、往下分開填；巡航速度、加速度填 MotionMagicConfigs。', 'kV, kA, kP, kI and kD go into both Slot0Configs (up) and Slot1Configs (down) the same; set kS and kG separately for up and down in the gain section below; cruise velocity and acceleration go into MotionMagicConfigs.') : undefined,
               }}
-              disabled={ps.slotByDirection ? { kS: '開了往下 Slot 1，kS 在下面的參數區分往上、往下設', kG: '開了往下 Slot 1，kG 在下面的參數區分往上、往下設' } : undefined}
+              disabled={ps.slotByDirection ? { kS: t('開了往下 Slot 1，kS 在下面的參數區分往上、往下設', 'With the down Slot 1 on, set kS separately for up and down in the gain section below'), kG: t('開了往下 Slot 1，kG 在下面的參數區分往上、往下設', 'With the down Slot 1 on, set kG separately for up and down in the gain section below') } : undefined}
             />
           )}
           {charts && result && (
             <>
-              <Chart title="位置" x={result.t} series={charts.pos} height={220} yLabel="m" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是 Motion Magic 的軌跡（電梯應該在的高度），實線是電梯真的位置（鼓輪線位移）。兩條線貼在一起就是跟得好。" />
-              <Chart title="跟隨誤差" x={result.t} series={charts.err} height={170} yLabel="cm" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="軌跡減實際位置。正的是落後（還沒到）、負的是超前或衝過頭。停住後應該回到 0 附近。" />
-              <Chart title="速度" x={result.t} series={charts.vel} height={170} yLabel="m/s" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="虛線是軌跡要的速度（梯形：加速、等速、減速），實線是真的速度。" />
-              <Chart title="電壓（前饋 + 回授）" x={result.t} series={charts.volt} height={190} yLabel="V" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="綠線是前饋（kS + kG + kV·v + kA·a，照軌跡事先算好），紅線是回授（P+I+D，看誤差補的）。前饋準的時候紅線幾乎是 0；紅線一直偏同一邊，就是前饋哪裡不對。" />
-              <Chart title="電流" x={result.t} series={charts.cur} height={170} yLabel="A" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note="每顆馬達的電流。貼著電流限制（真實模型）時馬達已經出全力，調 PID 沒有用，要放慢 Motion Magic。" />
+              <Chart title={t('位置', 'Position')} x={result.t} series={charts.pos} height={220} yLabel="m" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note={t('虛線是 Motion Magic 的軌跡（電梯應該在的高度），實線是電梯真的位置（鼓輪線位移）。兩條線貼在一起就是跟得好。', 'The dashed line is the Motion Magic profile (where the elevator should be) and the solid line is the real position (drum rope displacement). When the two lines overlap, it’s tracking well.')} />
+              <Chart title={t('跟隨誤差', 'Following error')} x={result.t} series={charts.err} height={170} yLabel="cm" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note={t('軌跡減實際位置。正的是落後（還沒到）、負的是超前或衝過頭。停住後應該回到 0 附近。', 'Profile minus actual position. Positive is lagging (not there yet); negative is ahead or overshooting. After stopping it should return near 0.')} />
+              <Chart title={t('速度', 'Velocity')} x={result.t} series={charts.vel} height={170} yLabel="m/s" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note={t('虛線是軌跡要的速度（梯形：加速、等速、減速），實線是真的速度。', 'The dashed line is the profile’s velocity (trapezoid: accelerate, cruise, decelerate) and the solid line is the real velocity.')} />
+              <Chart title={t('電壓（前饋 + 回授）', 'Voltage (feedforward + feedback)')} x={result.t} series={charts.volt} height={190} yLabel="V" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note={t('綠線是前饋（kS + kG + kV·v + kA·a，照軌跡事先算好），紅線是回授（P+I+D，看誤差補的）。前饋準的時候紅線幾乎是 0；紅線一直偏同一邊，就是前饋哪裡不對。', 'The green line is feedforward (kS + kG + kV·v + kA·a, computed ahead from the profile) and the red line is feedback (P+I+D, making up the error). With accurate feedforward the red line is almost 0; if it stays on one side, something in the feedforward is off.')} />
+              <Chart title={t('電流', 'Current')} x={result.t} series={charts.cur} height={170} yLabel="A" syncKey="sim" cursorX={pb.idx !== null ? result.t[pb.idx] : null} note={t('每顆馬達的電流。貼著電流限制（真實模型）時馬達已經出全力，調 PID 沒有用，要放慢 Motion Magic。', 'Current per motor. When it’s pinned at the current limit (realistic model) the motor is already giving everything; tuning PID won’t help, so slow down Motion Magic.')} />
             </>
           )}
         </div>
@@ -445,14 +456,14 @@ export function SimPage() {
 
       <div className="grid2" style={{ marginTop: 20 }}>
         <div className="panel">
-          <h2>{source === 'custom' ? '自訂參數：Slot 1 與基準' : '進階設定'}</h2>
+          <h2>{source === 'custom' ? t('自訂參數：Slot 1 與基準', 'Custom gains: Slot 1 and baseline') : t('進階設定', 'Advanced settings')}</h2>
           {source === 'custom' && custom && (
             <CustomEditor
               custom={custom}
               edit={editCustom}
               resetTheory={() => setCustom({ ...theory, source: 'custom', createdAt: new Date().toISOString() })}
               baseline={baseline}
-              setBaseline={(p) => setBaseline({ ...p, createdAt: new Date().toISOString(), note: p.note ?? '自訂' })}
+              setBaseline={(p) => setBaseline({ ...p, createdAt: new Date().toISOString(), note: p.note ?? t('自訂', 'Custom') })}
               resetBaseline={() => baseline && setCustom({ ...baseline, source: 'custom', createdAt: new Date().toISOString() })}
               locked={!!challenge}
             />
@@ -460,8 +471,10 @@ export function SimPage() {
           {/* 滑桿在開了 Slot 1 時把 kS、kG 停用並指到這裡；不是自訂時沒有編輯欄，至少讓人看到往上、往下各是多少 */}
           {source !== 'custom' && ps.slotByDirection && (
             <p className="small">
-              往上（Slot 0）kS {ps.slotByDirection.up.kS.toFixed(3)} V、kG {ps.slotByDirection.up.kG.toFixed(3)} V；往下（Slot 1）kS {ps.slotByDirection.down.kS.toFixed(3)} V、kG{' '}
-              {ps.slotByDirection.down.kG.toFixed(3)} V
+              {t(
+                `往上（Slot 0）kS ${ps.slotByDirection.up.kS.toFixed(3)} V、kG ${ps.slotByDirection.up.kG.toFixed(3)} V；往下（Slot 1）kS ${ps.slotByDirection.down.kS.toFixed(3)} V、kG ${ps.slotByDirection.down.kG.toFixed(3)} V`,
+                `Up (Slot 0) kS ${ps.slotByDirection.up.kS.toFixed(3)} V, kG ${ps.slotByDirection.up.kG.toFixed(3)} V; down (Slot 1) kS ${ps.slotByDirection.down.kS.toFixed(3)} V, kG ${ps.slotByDirection.down.kG.toFixed(3)} V`,
+              )}
             </p>
           )}
           {!challenge && <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />}
@@ -469,8 +482,8 @@ export function SimPage() {
 
         {challenge ? (
           <div className="panel">
-            <h2>受控體（隱藏中）</h2>
-            <p className="small muted">挑戰模式：這台電梯跟理論值不一樣，但不告訴你哪裡不一樣。真實模型（摩擦、電流限制、電池壓降），TalonFX 1 kHz。挑戰結束後會公布答案。</p>
+            <h2>{t('受控體（隱藏中）', 'Plant (hidden)')}</h2>
+            <p className="small muted">{t('挑戰模式：這台電梯跟理論值不一樣，但不告訴你哪裡不一樣。真實模型（摩擦、電流限制、電池壓降），TalonFX 1 kHz。挑戰結束後會公布答案。', 'Challenge mode: this elevator differs from theory, but you aren’t told how. Realistic model (friction, current limits, battery sag), TalonFX 1 kHz. The answer is revealed when the challenge ends.')}</p>
           </div>
         ) : (
         <PlantPanel
@@ -507,8 +520,8 @@ function ScenarioPicker({ active, onPick, onLeave }: { active: SimScenario | nul
   return (
     <details className="panel scen" open={active !== null || undefined} style={{ marginBottom: 16 }}>
       <summary>
-        <b>教學情境</b>
-        <span className="small muted">按一下載入一個「故意設錯」的例子，看圖找出問題。會換掉目前的「自訂」參數。</span>
+        <b>{t('教學情境', 'Teaching scenarios')}</b>
+        <span className="small muted">{t('按一下載入一個「故意設錯」的例子，看圖找出問題。會換掉目前的「自訂」參數。', 'Click to load a deliberately wrong example and find the problem from the charts. This replaces your current “Custom” gains.')}</span>
       </summary>
       <div className="scen-list">
         {SIM_SCENARIOS.map((s) => (
@@ -522,13 +535,13 @@ function ScenarioPicker({ active, onPick, onLeave }: { active: SimScenario | nul
           <h3>{active.title}</h3>
           <p>{active.concept}</p>
           <dl>
-            <dt>看哪裡</dt>
+            <dt>{t('看哪裡', 'Where to look')}</dt>
             <dd>{active.lookFor}</dd>
-            <dt>接著試試</dt>
+            <dt>{t('接著試試', 'Try next')}</dt>
             <dd>{active.tryNext}</dd>
           </dl>
           <button className="btn small" type="button" onClick={onLeave}>
-            離開情境（回到理論值、理想模型）
+            {t('離開情境（回到理論值、理想模型）', 'Leave scenario (back to theory, ideal model)')}
           </button>
         </div>
       )}
@@ -566,43 +579,43 @@ function PlantPanel({
   const set = (patch: Partial<PlantKnobs>) => setKnobs({ ...knobs, ...patch, calibrated: false })
   return (
     <div className="panel">
-      <h2>受控體（模擬的電梯）</h2>
-      <div className="seg" role="group" aria-label="模型">
+      <h2>{t('受控體（模擬的電梯）', 'Plant (the simulated elevator)')}</h2>
+      <div className="seg" role="group" aria-label={t('模型', 'Model')}>
         <button type="button" aria-pressed={!knobs.realistic} onClick={() => set({ realistic: false })}>
-          理想模型
+          {t('理想模型', 'Ideal model')}
         </button>
         <button type="button" aria-pressed={knobs.realistic && !knobs.calibrated} onClick={() => set({ realistic: true })}>
-          真實模型
+          {t('真實模型', 'Realistic model')}
         </button>
-        <button type="button" aria-pressed={knobs.calibrated} disabled={!calibration} title={calibration ? undefined : '先到下面「模型校正」用實機日誌校正'} onClick={onCalibrated}>
-          已校正
+        <button type="button" aria-pressed={knobs.calibrated} disabled={!calibration} title={calibration ? undefined : t('先到下面「模型校正」用實機日誌校正', 'First calibrate with a robot log in “Model calibration” below')} onClick={onCalibrated}>
+          {t('已校正', 'Calibrated')}
         </button>
       </div>
       <p className="small muted" style={{ margin: '8px 0 12px' }}>
         {knobs.calibrated && calibration
-          ? `重力、kV、慣性、摩擦用「${calibration.logName}」校正過（重播誤差 ${(calibration.rms * 100).toFixed(1)} cm）。改任何一項就變回一般的真實模型。`
+          ? t(`重力、kV、慣性、摩擦用「${calibration.logName}」校正過（重播誤差 ${(calibration.rms * 100).toFixed(1)} cm）。改任何一項就變回一般的真實模型。`, `Gravity, kV, inertia and friction were calibrated with “${calibration.logName}” (replay error ${(calibration.rms * 100).toFixed(1)} cm). Changing anything switches back to the plain realistic model.`)
           : knobs.realistic
-          ? '每一項都可以單獨開關。一次只開一項，看圖怎麼變，就知道它對電梯的影響。'
-          : '沒有摩擦、沒有電流限制、沒有控制器的其他限制，只有重力、慣性和反電動勢（電壓最多到電池電壓）。理論值在這裡應該幾乎完美。'}
+          ? t('每一項都可以單獨開關。一次只開一項，看圖怎麼變，就知道它對電梯的影響。', 'Each item can be switched on and off separately. Turn on one at a time and watch how the charts change to see its effect on the elevator.')
+          : t('沒有摩擦、沒有電流限制、沒有控制器的其他限制，只有重力、慣性和反電動勢（電壓最多到電池電壓）。理論值在這裡應該幾乎完美。', 'No friction, no current limit, no other controller limits: only gravity, inertia and back-EMF (voltage up to the battery voltage). Theory values should be nearly perfect here.')}
       </p>
       <ApproxNote
         summary={
           knobs.calibrated
-            ? '校正只調了重力、kV、慣性、摩擦四個數，其他簡化還在。用來預覽趨勢、抓明顯的錯，數字以實測為準。'
-            : '教學模擬：用來理解趨勢、先抓出明顯的錯（振盪、飽和、撞限位），不是 TalonFX 韌體的數值重現，也不保證跟真的機器人一樣。數字以實測為準。'
+            ? t('校正只調了重力、kV、慣性、摩擦四個數，其他簡化還在。用來預覽趨勢、抓明顯的錯，數字以實測為準。', 'Calibration only adjusts four numbers (gravity, kV, inertia, friction); the other simplifications remain. Use it to preview trends and catch obvious mistakes; real numbers come from testing.')
+            : t('教學模擬：用來理解趨勢、先抓出明顯的錯（振盪、飽和、撞限位），不是 TalonFX 韌體的數值重現，也不保證跟真的機器人一樣。數字以實測為準。', 'A teaching simulation: for understanding trends and catching obvious mistakes first (oscillation, saturation, hitting limits). It isn’t a numerical reproduction of TalonFX firmware, and it isn’t guaranteed to match the real robot. Real numbers come from testing.')
         }
         items={PLANT_ASSUMPTIONS}
       >
         <p className="small" style={{ margin: '8px 0 4px' }}>
-          <b>教學模擬，不是 TalonFX／SPARK MAX 韌體的數值重現。</b>
+          <b>{t('教學模擬，不是 TalonFX／SPARK MAX 韌體的數值重現。', 'A teaching simulation, not a numerical reproduction of TalonFX / SPARK MAX firmware.')}</b>
         </p>
         <div className="sim-scope">
           {SIM_SCOPE.map((g) => (
             <div key={g.title}>
               <b className="small">{g.title}</b>
               <ul className="small">
-                {g.items.map((t) => (
-                  <li key={t}>{t}</li>
+                {g.items.map((it) => (
+                  <li key={it}>{it}</li>
                 ))}
               </ul>
             </div>
@@ -611,36 +624,36 @@ function PlantPanel({
       </ApproxNote>
       {knobs.realistic && (
         <ul className="toggles">
-          {TOGGLES.map((t) => (
-            <li key={t.key}>
+          {TOGGLES.map((tg) => (
+            <li key={tg.key}>
               <label className="check">
-                <input type="checkbox" checked={knobs[t.key]} onChange={(e) => set({ [t.key]: e.target.checked })} />
-                <b>{t.label}</b>
+                <input type="checkbox" checked={knobs[tg.key]} onChange={(e) => set({ [tg.key]: e.target.checked })} />
+                <b>{tg.label}</b>
               </label>
               <p className="small muted">
-                {t.what}
-                {t.key === 'stageJump' && !continuous && '（你的機構是串級式，通常不會有這個問題）'}
+                {tg.what}
+                {tg.key === 'stageJump' && !continuous && t('（你的機構是串級式，通常不會有這個問題）', '(your mechanism is a cascade, so this usually isn’t an issue)')}
               </p>
-              {knobs[t.key] && t.key === 'friction' && (
+              {knobs[tg.key] && tg.key === 'friction' && (
                 <div className="fields">
-                  <NumberField label="往上摩擦" value={knobs.frictionUp} min={0} max={3} onChange={(v) => set({ frictionUp: v })} unit="V" />
-                  <NumberField label="往下摩擦" value={knobs.frictionDown} min={0} max={3} onChange={(v) => set({ frictionDown: v })} unit="V" />
+                  <NumberField label={t('往上摩擦', 'Friction up')} value={knobs.frictionUp} min={0} max={3} onChange={(v) => set({ frictionUp: v })} unit="V" />
+                  <NumberField label={t('往下摩擦', 'Friction down')} value={knobs.frictionDown} min={0} max={3} onChange={(v) => set({ frictionDown: v })} unit="V" />
                 </div>
               )}
-              {knobs[t.key] && t.key === 'gearbox' && (
+              {knobs[tg.key] && tg.key === 'gearbox' && (
                 <div className="fields">
-                  <NumberField label="效率" value={knobs.efficiency} display={100} min={30} max={100} onChange={(v) => set({ efficiency: v })} unit="%" />
+                  <NumberField label={t('效率', 'Efficiency')} value={knobs.efficiency} display={100} min={30} max={100} onChange={(v) => set({ efficiency: v })} unit="%" />
                 </div>
               )}
-              {knobs[t.key] && t.key === 'sensor' && (
+              {knobs[tg.key] && tg.key === 'sensor' && (
                 <div className="fields">
-                  <NumberField label="延遲" value={knobs.sensorDelay} display={1000} min={0} max={200} onChange={(v) => set({ sensorDelay: v })} unit="ms" />
-                  <NumberField label="位置雜訊" value={knobs.sensorNoise} display={1000} min={0} max={20} onChange={(v) => set({ sensorNoise: v })} unit="mm" />
+                  <NumberField label={t('延遲', 'Delay')} value={knobs.sensorDelay} display={1000} min={0} max={200} onChange={(v) => set({ sensorDelay: v })} unit="ms" />
+                  <NumberField label={t('位置雜訊', 'Position noise')} value={knobs.sensorNoise} display={1000} min={0} max={20} onChange={(v) => set({ sensorNoise: v })} unit="mm" />
                 </div>
               )}
-              {knobs[t.key] && t.key === 'stageJump' && (
+              {knobs[tg.key] && tg.key === 'stageJump' && (
                 <div className="fields">
-                  <NumberField label="kG 跳多少" value={knobs.stageJumpDelta} min={-3} max={3} onChange={(v) => set({ stageJumpDelta: v })} unit="V" />
+                  <NumberField label={t('kG 跳多少', 'kG jump')} value={knobs.stageJumpDelta} min={-3} max={3} onChange={(v) => set({ stageJumpDelta: v })} unit="V" />
                 </div>
               )}
             </li>
@@ -649,35 +662,35 @@ function PlantPanel({
       )}
       {knobs.realistic && <ControllerSettings knobs={knobs} set={set} statorDefault={statorDefault} travel={travel} />}
       <div className="fields" style={{ marginTop: 12 }}>
-        <NumberField label="電池電壓" value={knobs.batteryVoltage} min={6} max={13.5} onChange={(v) => set({ batteryVoltage: v })} unit="V" />
+        <NumberField label={t('電池電壓', 'Battery voltage')} value={knobs.batteryVoltage} min={6} max={13.5} onChange={(v) => set({ batteryVoltage: v })} unit="V" />
         <span />
         <NumberField
-          label="實際重力 / 理論"
+          label={t('實際重力 / 理論', 'Actual gravity / theory')}
           value={knobs.kGScale}
           display={100}
           min={0}
           max={300}
           onChange={(v) => set({ kGScale: v })}
           unit="%"
-          hint="例如實際比量的重 20%，填 120"
+          hint={t('例如實際比量的重 20%，填 120', 'e.g. enter 120 if it’s really 20% heavier than measured')}
         />
-        <NumberField label="實際 kV / 理論" value={knobs.kVScale} display={100} min={10} max={300} onChange={(v) => set({ kVScale: v })} unit="%" />
-        <NumberField label="實際慣性 / 理論" value={knobs.kAScale} display={100} min={10} max={300} onChange={(v) => set({ kAScale: v })} unit="%" />
+        <NumberField label={t('實際 kV / 理論', 'Actual kV / theory')} value={knobs.kVScale} display={100} min={10} max={300} onChange={(v) => set({ kVScale: v })} unit="%" />
+        <NumberField label={t('實際慣性 / 理論', 'Actual inertia / theory')} value={knobs.kAScale} display={100} min={10} max={300} onChange={(v) => set({ kAScale: v })} unit="%" />
       </div>
-      <h3 style={{ marginTop: 18 }}>控制器位置</h3>
-      <div className="seg" role="group" aria-label="控制器位置">
+      <h3 style={{ marginTop: 18 }}>{t('控制器位置', 'Controller location')}</h3>
+      <div className="seg" role="group" aria-label={t('控制器位置', 'Controller location')}>
         {(['talonfx', 'roborio'] as const).map((l) => (
           <button key={l} type="button" aria-pressed={location === l && periodOverride === null} onClick={() => setLocation(l)}>
-            {l === 'talonfx' ? '馬達控制器內建（1 kHz）' : 'roboRIO（50 Hz）'}
+            {l === 'talonfx' ? t('馬達控制器內建（1 kHz）', 'On the motor controller (1 kHz)') : t('roboRIO（50 Hz）', 'roboRIO (50 Hz)')}
           </button>
         ))}
       </div>
       <details style={{ marginTop: 10 }}>
         <summary className="small" style={{ cursor: 'pointer' }}>
-          進階：自訂控制週期
+          {t('進階：自訂控制週期', 'Advanced: custom control period')}
         </summary>
         <div className="fields" style={{ marginTop: 8 }}>
-          <NumberField label="控制週期" value={controlPeriod} display={1000} min={1} max={100} onChange={(v) => setPeriodOverride(v)} unit="ms" />
+          <NumberField label={t('控制週期', 'Control period')} value={controlPeriod} display={1000} min={1} max={100} onChange={(v) => setPeriodOverride(v)} unit="ms" />
         </div>
       </details>
       <div className="row" style={{ marginTop: 14 }}>
@@ -689,7 +702,7 @@ function PlantPanel({
             setLocation('talonfx')
           }}
         >
-          重置受控體
+          {t('重置受控體', 'Reset plant')}
         </button>
       </div>
     </div>
