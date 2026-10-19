@@ -1,4 +1,6 @@
 import type { PageId, Track } from '../../app/store'
+import { getLang } from '../../core/lang'
+import { guideContentEn } from './guideContentEn'
 
 /**
  * 「使用說明」頁的內容。電梯、手臂共用同一套結構，差別的地方用 track 換字。
@@ -54,7 +56,12 @@ export const GUIDE_ANCHOR = {
   learn: 'guide-learn',
 } as const
 
+/** 目前語言的使用說明（英文版在 guideContentEn.ts，結構一樣） */
 export function guideContent(track: Track): GuideContent {
+  return getLang() === 'en' ? guideContentEn(track) : guideContentZh(track)
+}
+
+function guideContentZh(track: Track): GuideContent {
   const arm = track === 'arm'
   const thing = arm ? '手臂' : '電梯'
   const pos = arm ? '角度' : '高度'
