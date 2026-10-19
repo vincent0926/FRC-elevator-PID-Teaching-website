@@ -4,6 +4,7 @@ import type { WpilogEntryInfo } from '../../core/log/reader'
 import { NUMERIC_TYPES } from '../../core/log/wpilog'
 import { metersPerRotation } from '../../core/units'
 import type { ElevatorMechanism } from '../../schema/parameterSet'
+import { t } from '../../core/lang'
 
 /**
  * 欄位對應表。長度類欄位可以設倍率：日誌存的是轉數（rot、rps）時，
@@ -26,8 +27,8 @@ const armUnit = (u: string) => u.replace(/^m/, 'rad')
  */
 export function entryLabel(e: { name: string; count: number }): string {
   const i = e.name.lastIndexOf('/')
-  if (i <= 0 || i === e.name.length - 1) return `${e.name}（${e.count} 筆）`
-  return `${e.name.slice(i + 1)}（${e.name.slice(0, i)}，${e.count} 筆）`
+  if (i <= 0 || i === e.name.length - 1) return t(`${e.name}（${e.count} 筆）`, `${e.name} (${e.count} records)`)
+  return t(`${e.name.slice(i + 1)}（${e.name.slice(0, i)}，${e.count} 筆）`, `${e.name.slice(i + 1)} (${e.name.slice(0, i)}, ${e.count} records)`)
 }
 
 export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Props) {
@@ -42,9 +43,9 @@ export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Pro
       <table className="tbl" style={{ marginTop: 10 }}>
         <thead>
           <tr>
-            <th>要用的資料</th>
-            <th>日誌欄位</th>
-            <th>倍率</th>
+            <th>{t('要用的資料', 'Data needed')}</th>
+            <th>{t('日誌欄位', 'Log field')}</th>
+            <th>{t('倍率', 'Scale')}</th>
           </tr>
         </thead>
         <tbody>
@@ -60,8 +61,8 @@ export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Pro
                 </td>
                 <td style={{ minWidth: 200 }}>
                   <span className="inp">
-                    <select aria-label={`${r.label}對應欄位`} title={m.entry ?? ''} value={m.entry ?? ''} onChange={(e) => set(r.key, { entry: e.target.value || null })}>
-                      <option value="">（不使用）</option>
+                    <select aria-label={t(`${r.label}對應欄位`, `${r.label} field`)} title={m.entry ?? ''} value={m.entry ?? ''} onChange={(e) => set(r.key, { entry: e.target.value || null })}>
+                      <option value="">{t('（不使用）', '(not used)')}</option>
                       {options.map((e) => (
                         <option key={e.name} value={e.name}>
                           {entryLabel(e)}
@@ -73,30 +74,30 @@ export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Pro
                 <td style={{ minWidth: 150 }}>
                   {r.lengthUnit ? (
                     <>
-                      <NumberField hideLabel label={`${r.label}倍率`} value={m.scale} onChange={(v) => set(r.key, { scale: v })} />
+                      <NumberField hideLabel label={t(`${r.label}倍率`, `${r.label} scale`)} value={m.scale} onChange={(v) => set(r.key, { scale: v })} />
                       {arm ? (
                         <div className="row" style={{ gap: 6, marginTop: 4 }}>
                           <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 1 })}>
-                            已是 rad
+                            {t('已是 rad', 'already rad')}
                           </button>
-                          <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 2 * Math.PI })} title="日誌存的是手臂圈數（Phoenix 6 的 rot、rps）">
-                            轉 → rad
+                          <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 2 * Math.PI })} title={t('日誌存的是手臂圈數（Phoenix 6 的 rot、rps）', 'The log stores arm rotations (Phoenix 6 rot, rps)')}>
+                            {t('轉 → rad', 'rot → rad')}
                           </button>
-                          <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: Math.PI / 180 })} title="日誌存的是度">
-                            度 → rad
+                          <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: Math.PI / 180 })} title={t('日誌存的是度', 'The log stores degrees')}>
+                            {t('度 → rad', 'deg → rad')}
                           </button>
                         </div>
                       ) : (
                       <div className="row" style={{ gap: 6, marginTop: 4 }}>
                         <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 1 })}>
-                          已是公尺
+                          {t('已是公尺', 'already meters')}
                         </button>
-                        <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: drum })} title="日誌存的是機構圈數（鼓輪座標）">
-                          轉 → m
+                        <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: drum })} title={t('日誌存的是機構圈數（鼓輪座標）', 'The log stores mechanism rotations (drum coordinates)')}>
+                          {t('轉 → m', 'rot → m')}
                         </button>
                         {mechanism?.controlTop && kTop !== 1 && (
-                          <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 1 / kTop })} title="日誌存的是最上層高度（公尺）">
-                            最上層 → 鼓輪
+                          <button type="button" className="linkbtn small" onClick={() => set(r.key, { scale: 1 / kTop })} title={t('日誌存的是最上層高度（公尺）', 'The log stores the top stage height (meters)')}>
+                            {t('最上層 → 鼓輪', 'top stage → drum')}
                           </button>
                         )}
                       </div>
@@ -113,8 +114,8 @@ export function FieldMappingTable({ entries, mapping, onChange, mechanism }: Pro
       </table>
       <p className="small muted" style={{ margin: '6px 0 0' }}>
         {arm
-          ? '* 必填。手臂的角度以弧度計算，0 = 水平、往上為正；範例機器人程式（ArmIO）記錄的就是這個單位，倍率保持 1。'
-          : '* 必填。網站內部以鼓輪線位移（公尺）計算；範例機器人程式記錄的就是這個單位，倍率保持 1。'}
+          ? t('* 必填。手臂的角度以弧度計算，0 = 水平、往上為正；範例機器人程式（ArmIO）記錄的就是這個單位，倍率保持 1。', '* Required. Arm angles are in radians, 0 = horizontal, up is positive; the example robot code (ArmIO) logs exactly this, so keep the scale at 1.')
+          : t('* 必填。網站內部以鼓輪線位移（公尺）計算；範例機器人程式記錄的就是這個單位，倍率保持 1。', '* Required. The site works in drum rope displacement (meters); the example robot code logs exactly this, so keep the scale at 1.')}
       </p>
     </div>
   )
