@@ -55,10 +55,10 @@ export function ControllerSettings({
       </p>
       <div className="seg" role="group" aria-label={t('馬達控制器', 'Motor controller')}>
         <button type="button" aria-pressed={!spark} onClick={() => set({ controllerType: 'talonfx' })}>
-          TalonFX（Phoenix 6）
+          {t('TalonFX（Phoenix 6）', 'TalonFX (Phoenix 6)')}
         </button>
         <button type="button" aria-pressed={spark} onClick={() => set({ controllerType: 'sparkmax' })}>
-          SPARK MAX（REVLib）
+          {t('SPARK MAX（REVLib）', 'SPARK MAX (REVLib)')}
         </button>
       </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SimResult } from '../../core/physics/simulate'
 import { frameIndex } from './playback'
+import { t } from '../../core/lang'
 
 /**
  * 動畫區：小井道照模擬結果播放電梯位置，虛線框是軌跡目前的目標。
@@ -113,23 +114,23 @@ export function MiniShaft({ result, travel, goal, idx }: { result: SimResult | n
 export function PlaybackBar({ result, pb, unit = 'm', readout }: { result: { t: Float64Array; pos?: Float64Array } | null; pb: Playback; unit?: 'm' | 'rad'; readout?: (k: number) => string }) {
   const last = result ? result.t.length - 1 : 0
   const k = pb.idx ?? last
-  const t = result?.t[k] ?? 0
+  const now = result?.t[k] ?? 0
   return (
     <>
     <div className="playbar">
       <button className="btn small" type="button" disabled={!result} onClick={pb.playing ? pb.pause : pb.play}>
-        {pb.playing ? '暫停' : '播放'}
+        {pb.playing ? t('暫停', 'Pause') : t('播放', 'Play')}
       </button>
-      <div className="seg" role="group" aria-label="播放速度">
+      <div className="seg" role="group" aria-label={t('播放速度', 'Playback speed')}>
         {SPEEDS.map((s) => (
           <button key={s} type="button" aria-pressed={pb.speed === s} onClick={() => pb.setSpeed(s)}>
-            {s === 1 ? '正常' : `${s}×`}
+            {s === 1 ? t('正常', 'Normal') : `${s}×`}
           </button>
         ))}
       </div>
       <input
         type="range"
-        aria-label="時間軸"
+        aria-label={t('時間軸', 'Timeline')}
         min={0}
         max={last}
         step={10}
@@ -138,11 +139,18 @@ export function PlaybackBar({ result, pb, unit = 'm', readout }: { result: { t: 
         onChange={(e) => pb.seek(Number(e.target.value))}
       />
       <span className="small muted num-w">
-        {t.toFixed(2)} s・{readout ? readout(k) : result?.pos && Number.isFinite(result.pos[k]) ? unit === 'rad' ? `${((result.pos[k] * 180) / Math.PI).toFixed(1)}°` : `${(result.pos[k] * 100).toFixed(1)} cm` : '—'}
+        {now.toFixed(2)} s・{readout ? readout(k) : result?.pos && Number.isFinite(result.pos[k]) ? unit === 'rad' ? `${((result.pos[k] * 180) / Math.PI).toFixed(1)}°` : `${(result.pos[k] * 100).toFixed(1)} cm` : '—'}
       </span>
     </div>
     <p className="small muted" style={{ margin: 0 }}>
-      拖時間軸或滑鼠移到圖上看某一刻的數值；在圖上左右拖曳放大，點兩下還原。
+      {t(
+        <>
+        拖時間軸或滑鼠移到圖上看某一刻的數值；在圖上左右拖曳放大，點兩下還原。
+        </>,
+        <>
+          Drag the timeline or hover over a chart to see the values at a moment; drag left/right on a chart to zoom, double-click to reset.
+        </>,
+      )}
     </p>
     </>
   )

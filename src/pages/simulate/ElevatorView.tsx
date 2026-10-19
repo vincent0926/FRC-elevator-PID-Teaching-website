@@ -1,5 +1,6 @@
 import type { SimResult } from '../../core/physics/simulate'
 import type { ElevatorMechanism } from '../../schema/parameterSet'
+import { t } from '../../core/lang'
 
 /**
  * 電梯側視圖（像 WPILib Mechanism2d）：每一級畫在 x·kᵢ 的高度，
@@ -40,7 +41,7 @@ export function ElevatorView({ result, mechanism, goal, idx }: { result: SimResu
   const cw = Math.max(24, W - 2 * inner)
 
   return (
-    <div className="elev-view" aria-label="電梯側視圖" role="img">
+    <div className="elev-view" aria-label={t('電梯側視圖', 'Elevator side view')} role="img">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMax meet">
         {railK.map((r, i) => {
           const bottom = clampH(xs * r)
@@ -53,7 +54,7 @@ export function ElevatorView({ result, mechanism, goal, idx }: { result: SimResu
                 <line x1={left} y1={y} x2={left} y2={H - BASE} className="ev-frame" />
                 <line x1={W - left} y1={y} x2={W - left} y2={H - BASE} className="ev-frame" />
                 <line x1={left} y1={y} x2={W - left} y2={y} className="ev-frame" />
-                <text x={left + 3} y={y + 10} className="ev-label">固定架</text>
+                <text x={left + 3} y={y + 10} className="ev-label">{t('固定架', 'Frame')}</text>
               </g>
             )
           }
@@ -62,14 +63,14 @@ export function ElevatorView({ result, mechanism, goal, idx }: { result: SimResu
               <rect x={left} y={y} width={W - 2 * left} height={railLen * scale} rx={2} className="ev-stage" />
               {/* 級的名稱靠右、往下錯開一行：靠左會跟「固定架」疊在一起（電梯在底部時兩個框的上緣同高） */}
               <text x={W - left - 3} y={y + 10 + 11 * (i - 1)} textAnchor="end" className="ev-label">
-                第 {i} 級
+                {t(`第 ${i} 級`, `Stage ${i}`)}
               </text>
             </g>
           )
         })}
         <rect x={inner} y={py(clampH(xr * kTop) + CARRIAGE)} width={cw} height={CARRIAGE * scale} rx={2} className="ev-target" />
         <rect x={inner} y={py(clampH(xs * kTop) + CARRIAGE)} width={cw} height={CARRIAGE * scale} rx={2} className="ev-carriage" />
-        <text x={W / 2} y={py(clampH(xs * kTop)) - 3} textAnchor="middle" className="ev-label ev-on-carriage">托架</text>
+        <text x={W / 2} y={py(clampH(xs * kTop)) - 3} textAnchor="middle" className="ev-label ev-on-carriage">{t('托架', 'Carriage')}</text>
         {mechanism.payloadMass > 0 && <rect x={W / 2 - 8} y={py(clampH(xs * kTop) + CARRIAGE) - 11} width={16} height={11} rx={2} className="ev-payload" />}
         <rect x={0} y={H - BASE} width={W} height={BASE} className="ev-base" />
       </svg>
@@ -77,17 +78,17 @@ export function ElevatorView({ result, mechanism, goal, idx }: { result: SimResu
         {ok ? (
           <>
             <span>
-              鼓輪線位移 <b>{x.toFixed(2)} m</b>
+              {t('鼓輪線位移', 'Drum rope displacement')} <b>{x.toFixed(2)} m</b>
             </span>
             <span>
-              最上層高度 <b>{(x * kTop).toFixed(2)} m</b>
-              {kTop !== 1 && <em>（× {kTop}）</em>}
+              {t('最上層高度', 'Top stage height')} <b>{(x * kTop).toFixed(2)} m</b>
+              {kTop !== 1 && <em>{t(`（× ${kTop}）`, ` (× ${kTop})`)}</em>}
             </span>
           </>
         ) : (
-          <span className="fail">模擬數值發散，看不到位置：檢查參數（kP、kD 是不是大得不合理）</span>
+          <span className="fail">{t('模擬數值發散，看不到位置：檢查參數（kP、kD 是不是大得不合理）', 'The simulation diverged, so the position can’t be shown: check the gains (are kP or kD unreasonably large?)')}</span>
         )}
-        <span className="muted">黃色：托架　藍色虛線：軌跡目標</span>
+        <span className="muted">{t('黃色：托架　藍色虛線：軌跡目標', 'Yellow: carriage · Blue dashed: profile target')}</span>
       </div>
     </div>
   )

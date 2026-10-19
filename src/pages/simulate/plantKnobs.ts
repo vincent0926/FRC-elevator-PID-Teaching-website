@@ -4,6 +4,7 @@ import { plantFromMechanism } from '../../core/physics/elevator'
 import { NOMINAL_VOLTAGE, type SimInput } from '../../core/physics/simulate'
 import { trapezoidProfile } from '../../core/profile'
 import type { ElevatorMechanism, ParameterSet } from '../../schema/parameterSet'
+import { t } from '../../core/lang'
 
 /**
  * 3F 模擬的受控體設定。真實模型的每一項都能單獨開關（Phase 3 步驟 5），
@@ -179,10 +180,10 @@ function outputConfig(knobs: PlantKnobs, travel: number): NonNullable<SimInput['
 export type ToggleKey = 'friction' | 'batterySag' | 'gearbox' | 'sensor' | 'stageJump' | 'voltageLimit'
 
 export const TOGGLES: { key: ToggleKey; label: string; what: string }[] = [
-  { key: 'voltageLimit', label: '電壓飽和', what: '輸出最多只有電池電壓。關掉只是讓你看「如果馬達要多少給多少」會怎樣，真的馬達做不到。' },
-  { key: 'friction', label: '摩擦', what: '滑軌、軸承的庫侖摩擦，速度接近 0 時會卡住。往上往下可以不一樣。' },
-  { key: 'batterySag', label: '電池壓降', what: '電池內阻 0.02 Ω，電流大時電壓往下掉，飽和上限跟著變低；Supply 電流限制也照掉下來的電壓算。' },
-  { key: 'gearbox', label: '齒輪箱效率', what: '馬達出力打折，要多一點電壓才撐得住。理論 kG 會偏小。' },
-  { key: 'sensor', label: '感測延遲與雜訊', what: '控制器看到的位置、速度是舊的而且會抖。kP、kD 太大時最容易出事。' },
-  { key: 'stageJump', label: '換級 kG 跳變', what: '連續式電梯換級時，被拉動的質量改變，kG 在行程一半突然變大。' },
+  { key: 'voltageLimit', label: t('電壓飽和', 'Voltage saturation'), what: t('輸出最多只有電池電壓。關掉只是讓你看「如果馬達要多少給多少」會怎樣，真的馬達做不到。', 'Output is at most the battery voltage. Turning it off only shows what would happen if the motor got whatever it asked for; a real motor can’t.') },
+  { key: 'friction', label: t('摩擦', 'Friction'), what: t('滑軌、軸承的庫侖摩擦，速度接近 0 時會卡住。往上往下可以不一樣。', 'Coulomb friction in the slides and bearings, which sticks near zero speed. Can differ up and down.') },
+  { key: 'batterySag', label: t('電池壓降', 'Battery sag'), what: t('電池內阻 0.02 Ω，電流大時電壓往下掉，飽和上限跟著變低；Supply 電流限制也照掉下來的電壓算。', 'Battery internal resistance of 0.02 Ω: at high current the voltage drops and the saturation limit drops with it; the supply current limit also uses the sagged voltage.') },
+  { key: 'gearbox', label: t('齒輪箱效率', 'Gearbox efficiency'), what: t('馬達出力打折，要多一點電壓才撐得住。理論 kG 會偏小。', 'Motor output is discounted, so it takes a bit more voltage to hold. Theoretical kG comes out low.') },
+  { key: 'sensor', label: t('感測延遲與雜訊', 'Sensor delay and noise'), what: t('控制器看到的位置、速度是舊的而且會抖。kP、kD 太大時最容易出事。', 'The position and velocity the controller sees are old and noisy. Most likely to cause trouble when kP or kD is too big.') },
+  { key: 'stageJump', label: t('換級 kG 跳變', 'Stage-change kG jump'), what: t('連續式電梯換級時，被拉動的質量改變，kG 在行程一半突然變大。', 'When a continuous elevator changes stages, the mass being lifted changes and kG suddenly increases halfway up the travel.') },
 ]
