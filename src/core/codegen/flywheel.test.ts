@@ -38,7 +38,8 @@ describe('邊移動邊射的 Java', () => {
   const java = moveShotJava(DEFAULT_FLYWHEEL, plan, 90 * TAU, 0.04)
 
   it('常數照選好的軌跡寫', () => {
-    expect(java).toContain('PITCH = Math.toRadians(45.3)')
+    expect(java).toContain('TURRET_ANGLE = 134.7;')
+    expect(java).toContain('PITCH = Math.toRadians(180.0 - TURRET_ANGLE)')
     expect(java).toContain(`SHOOTER_HEIGHT = ${DEFAULT_PLAN.height}`)
     expect(java).toContain('MAX_RPS = 90.0')
     expect(java).toContain('RPS_TOLERANCE = 0.02')

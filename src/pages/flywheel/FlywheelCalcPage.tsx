@@ -17,6 +17,8 @@ import {
   type FlywheelKnobs,
   type FlywheelMechanism,
   type ShotPlan,
+  angleFromTurret,
+  turretDeg,
 } from '../../core/flywheel/flywheel'
 import { FLYWHEEL_LESSONS } from './flywheelLessons'
 import { BallFields, HubPreset, MechFields } from './FlywheelForms'
@@ -31,7 +33,6 @@ import { loadFlywheelStyle, useFlywheelMechanism, useMoveSettings, usePersisted,
  */
 
 const TAU = 2 * Math.PI
-const D2R = Math.PI / 180
 const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
 export function FlywheelCalcPage() {
@@ -51,7 +52,7 @@ function MoveCalc() {
       <div className="head">
         <div>
           <h1 id="t-fw-move">射球飛輪・邊移動邊射</h1>
-          <p className="lead">Shoot on the move：先填機構和球、離目標多遠，再填機器人怎麼動，看每個仰角要幾 rps、底盤要偏幾度，選一條軌跡，再到 3F 邊開邊射。</p>
+          <p className="lead">Shoot on the move：先填機構和球、離目標多遠，再填機器人怎麼動，看每個砲台角度要幾 rps、底盤要偏幾度，選一條軌跡，再到 3F 邊開邊射。</p>
         </div>
       </div>
       <FlywheelAim mech={mech} setMech={setMech} plan={plan} setPlan={setPlan} onSimulate={() => go('sim')} move={{ settings: move, set: setMove }} />
@@ -67,8 +68,8 @@ function BallisticCalc() {
     <section aria-labelledby="t-fw-aim">
       <div className="head">
         <div>
-          <h1 id="t-fw-aim">射球飛輪・算轉速和仰角</h1>
-          <p className="lead">先填機構和球，再填離目標多遠，看每個仰角要幾 rps，選一條軌跡，再到 3F 連射模擬。</p>
+          <h1 id="t-fw-aim">射球飛輪・算轉速和砲台角度</h1>
+          <p className="lead">先填機構和球，再填離目標多遠，看每個砲台角度要幾 rps，選一條軌跡，再到 3F 連射模擬。</p>
         </div>
       </div>
       <FlywheelAim mech={mech} setMech={setMech} plan={plan} setPlan={setPlan} onSimulate={() => go('sim')} />
@@ -128,7 +129,7 @@ function CustomCalc() {
             <div className="fields">
               <NumberField label="目標轉速" value={plan.target} display={1 / TAU} digits={1} onChange={(x) => setP({ target: x })} min={1} max={150} step={1} unit="rps" />
               <BallFields plan={plan} setP={setP} />
-              <NumberField label="出射仰角" value={plan.angle} display={1 / D2R} digits={0} onChange={(x) => setP({ angle: x })} min={5} max={85} step={1} unit="°" />
+              <NumberField label="砲台角度" value={turretDeg(plan.angle)} digits={0} onChange={(x) => setP({ angle: angleFromTurret(x) })} min={95} max={175} step={1} unit="°" hint="水平朝後 0°、正上方 90°、水平朝目標 180°" />
               <NumberField label="出射高度" value={plan.height} onChange={(x) => setP({ height: x })} min={0} max={2} step={0.05} unit="m" hint="離地多高" />
             </div>
             <div className="fields three" style={{ marginTop: 12 }}>
@@ -165,8 +166,8 @@ function CustomCalc() {
             </dl>
             <div className="fw-need" style={{ marginTop: 12 }}>
               要進目標的轉速
-              <b>{needW === null ? '這個仰角射不進（目標太近或太高）' : `${f(needW / TAU, 1)} rps`}</b>
-              {needW !== null && needW > ff.freeSpeed * 0.9 && <span className="small fail">超過最高轉速的 90%，馬達轉不到：改齒比或仰角</span>}
+              <b>{needW === null ? '這個砲台角度射不進（目標太近或太高）' : `${f(needW / TAU, 1)} rps`}</b>
+              {needW !== null && needW > ff.freeSpeed * 0.9 && <span className="small fail">超過最高轉速的 90%，馬達轉不到：改齒比或砲台角度</span>}
               {needW !== null && Math.abs(needW - plan.target) > 0.05 * TAU && (
                 <span>
                   <button className="btn small" type="button" onClick={() => setP({ target: Math.round((needW / TAU) * 10) * (TAU / 10) })}>
