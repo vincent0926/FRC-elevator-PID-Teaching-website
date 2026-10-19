@@ -3,6 +3,7 @@ import type { AlignedLog } from '../log/fieldMap'
 import type { CheckReport } from './checks'
 import { ols, savitzkyGolayDerivative, type OlsResult } from './regression'
 import { PHASES, segment, spansWhere, type Phase, type Segments } from './segment'
+import { t } from '../lang'
 
 /**
  * 步驟 1–2：找問題、給建議。
@@ -19,15 +20,15 @@ export const ISSUE_ORDER = ['physical', 'oscillation', 'mechanism', 'kG', 'kS', 
 export type IssueKey = (typeof ISSUE_ORDER)[number]
 
 export const ISSUE_LABEL: Record<IssueKey, string> = {
-  physical: '物理限制',
-  oscillation: '振盪',
-  mechanism: '機構問題',
-  kG: 'kG 不對',
-  kS: 'kS 不對（摩擦）',
-  kV: 'kV 不對',
-  kA: 'kA 不對',
-  kP: 'kP 不夠（到位慢）',
-  kD: 'kD 不夠（到位後超過、晃）',
+  physical: t('物理限制', 'Physical limit'),
+  oscillation: t('振盪', 'Oscillation'),
+  mechanism: t('機構問題', 'Mechanism problem'),
+  kG: t('kG 不對', 'kG wrong'),
+  kS: t('kS 不對（摩擦）', 'kS wrong (friction)'),
+  kV: t('kV 不對', 'kV wrong'),
+  kA: t('kA 不對', 'kA wrong'),
+  kP: t('kP 不夠（到位慢）', 'kP too small (slow to arrive)'),
+  kD: t('kD 不夠（到位後超過、晃）', 'kD too small (overshoots and wobbles after arriving)'),
 }
 
 export type GainKey = keyof Slot0Gains
@@ -491,26 +492,26 @@ export function isDerivativeNoise(osc: Oscillation, gains: Slot0Gains): boolean 
 }
 
 function oscillationIssue(osc: Oscillation, gains: Slot0Gains, kPFactor: number, u: UnitFmt): Issue {
-  const evidence = [`高通後輸出電壓 RMS ${osc.voltageRms.toFixed(2)} V，約 ${osc.frequency.toFixed(1)} Hz`, `位置來回約 ±${u.pos(osc.positionRms * Math.SQRT2)}`]
+  const evidence = [t(`高通後輸出電壓 RMS ${osc.voltageRms.toFixed(2)} V，約 ${osc.frequency.toFixed(1)} Hz`, `High-passed output voltage RMS ${osc.voltageRms.toFixed(2)} V, about ${osc.frequency.toFixed(1)} Hz`), t(`位置來回約 ±${u.pos(osc.positionRms * Math.SQRT2)}`, `Position swings about ±${u.pos(osc.positionRms * Math.SQRT2)}`)]
   if (isDerivativeNoise(osc, gains)) {
     return {
       key: 'oscillation',
-      summary: '輸出電壓一直抖，但位置幾乎沒動：不是 kP 造成的振盪，是 kD 把速度量測的雜訊放大了。降 kD，不要降 kP。',
+      summary: t('輸出電壓一直抖，但位置幾乎沒動：不是 kP 造成的振盪，是 kD 把速度量測的雜訊放大了。降 kD，不要降 kP。', 'Output voltage keeps jittering but the position barely moves: this isn’t oscillation from kP, it’s kD amplifying velocity measurement noise. Lower kD, not kP.'),
       evidence: [
         ...evidence,
-        `kP × 位置振幅只有 ${(gains.kP * osc.positionRms).toFixed(2)} V，解釋不了電壓的抖動`,
-        gains.kD > 0 ? `目前 kD = ${gains.kD.toFixed(2)}` : '日誌看不出目前的 kD（TalonFX 用 1 kHz 的速度算 D）：把機器人上的 kD 改成 0 或原本的三分之一以下',
+        t(`kP × 位置振幅只有 ${(gains.kP * osc.positionRms).toFixed(2)} V，解釋不了電壓的抖動`, `kP × position amplitude is only ${(gains.kP * osc.positionRms).toFixed(2)} V, which can’t explain the voltage jitter`),
+        gains.kD > 0 ? t(`目前 kD = ${gains.kD.toFixed(2)}`, `Current kD = ${gains.kD.toFixed(2)}`) : t('日誌看不出目前的 kD（TalonFX 用 1 kHz 的速度算 D）：把機器人上的 kD 改成 0 或原本的三分之一以下', 'The log doesn’t show the current kD (the TalonFX computes D from 1 kHz velocity): set the robot’s kD to 0 or below a third of what it was'),
       ],
-      lookAt: '電壓圖：到位後回授輸出（紅線）是不是一條很粗的毛線？位置圖卻幾乎是平的？',
+      lookAt: t('電壓圖：到位後回授輸出（紅線）是不是一條很粗的毛線？位置圖卻幾乎是平的？', 'Voltage chart: after arrival, is the feedback output (red line) a thick fuzzy band while the position chart is almost flat?'),
       spans: osc.spans,
       change: gains.kD > 0 ? { kind: 'gain', param: 'kD', from: gains.kD, to: round3(Math.min(gains.kD * 0.3, Math.max(0, suggestedKd(gains)) || gains.kD * 0.1)) } : undefined,
     }
   }
   return {
     key: 'oscillation',
-    summary: '輸出電壓來回抖。振盪會污染後面所有的分析，先把它壓下來。',
+    summary: t('輸出電壓來回抖。振盪會污染後面所有的分析，先把它壓下來。', 'Output voltage swings back and forth. Oscillation contaminates every later analysis, so get it under control first.'),
     evidence,
-    lookAt: '電壓圖與位置圖：放大看有沒有一直來回的鋸齒，特別是靜止保持和到位穩定的時候。',
+    lookAt: t('電壓圖與位置圖：放大看有沒有一直來回的鋸齒，特別是靜止保持和到位穩定的時候。', 'Voltage and position charts: zoom in for a sawtooth that keeps going back and forth, especially while holding still and settling.'),
     spans: osc.spans,
     change: { kind: 'gain', param: 'kP', from: gains.kP, to: round3(gains.kP * kPFactor) },
   }
@@ -521,16 +522,16 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
   const arm = mech === 'arm'
   const uf = unitFmt(mech)
   const tol = opt.tolerance ?? (arm ? Math.PI / 180 : 0.01)
-  const { t, cols } = log
-  const n = t.length
+  const { t: time, cols } = log
+  const n = time.length
   const seg = segment(log)
   const notes: string[] = []
   const issues: Issue[] = []
   const osc = detectOscillation(log, seg)
   const moves = moveMetrics(log, seg, tol)
   const { fb, source } = feedbackSignal(log, seg, gains, mech)
-  if (source === 'computed') notes.push('日誌裡沒有回授輸出或前饋欄位，回授是用「輸出電壓 − 目前參數算的前饋」估的，參數選錯結果就會錯。建議照範例程式記錄 ClosedLoopOutput。')
-  if (source === 'ffColumn') notes.push('日誌裡沒有回授輸出欄位，改用「輸出電壓 − 前饋欄位」。飽和時會不準。')
+  if (source === 'computed') notes.push(t('日誌裡沒有回授輸出或前饋欄位，回授是用「輸出電壓 − 目前參數算的前饋」估的，參數選錯結果就會錯。建議照範例程式記錄 ClosedLoopOutput。', 'The log has no feedback output or feedforward field, so feedback is estimated as “output voltage − feedforward from the current gains”; pick the wrong gains and the result is wrong. Log ClosedLoopOutput like the example code.'))
+  if (source === 'ffColumn') notes.push(t('日誌裡沒有回授輸出欄位，改用「輸出電壓 − 前饋欄位」。飽和時會不準。', 'The log has no feedback output field, so it uses “output voltage − feedforward field” instead. Inaccurate when saturated.'))
 
   // 飽和或限流的樣本不拿來迴歸：那時候輸出不是控制器想要的值
   const sat = new Uint8Array(n)
@@ -546,14 +547,14 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
   const ones = gravityColumn(log, mech, 'reference')
   const onesActual = gravityColumn(log, mech, 'position')
   const on = (i: number) => seg.phase[i] !== PI.off
-  const inOsc = (i: number) => osc.spans.some(([a, b]) => t[i] >= a && t[i] <= b)
+  const inOsc = (i: number) => osc.spans.some(([a, b]) => time[i] >= a && time[i] <= b)
 
   // ---------- 機構特性量測 ----------
   // 用實際速度與加速度（Savitzky-Golay 微分），避開相位交界：參考加速度在那裡跳，平滑後的實際加速度會糊
   let plant: PlantFit | null = null
   const vel = cols.velocity
   if (u && vel) {
-    const acc = savitzkyGolayDerivative(t, vel, 0.12)
+    const acc = savitzkyGolayDerivative(time, vel, 0.12)
     const nearEdge = (i: number) => seg.phase[i] === PI.transition
     const useB = new Uint8Array(n)
     const vTh = Math.max(0.02, 0.05 * seg.vScale)
@@ -568,8 +569,8 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
   // 飽和結束後誤差還在消，這段回授不是前饋誤差造成的，也不用
   const afterSat = new Uint8Array(n)
   for (let i = 0, last = -Infinity; i < n; i++) {
-    if (sat[i]) last = t[i]
-    if (t[i] - last < 0.25) afterSat[i] = 1
+    if (sat[i]) last = time[i]
+    if (time[i] - last < 0.25) afterSat[i] = 1
   }
   const useFf = new Uint8Array(n)
   let up = 0
@@ -582,7 +583,7 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
   }
   // 閉迴路反應由「真實機構」決定：量得到就用量測值，否則用目前參數
   const loop = { kP: gains.kP, kD: gains.kD, kA: plantOk ? plant!.kA : gains.kA, kV: plantOk ? plant!.kV : gains.kV }
-  const H = (x: Float64Array) => closedLoopFilter(t, x, loop, on, opt.controlPeriod ?? 0.001)
+  const H = (x: Float64Array) => closedLoopFilter(time, x, loop, on, opt.controlPeriod ?? 0.001)
   const sgn = Float64Array.from(seg.vref, Math.sign)
   const separable = up >= 10 && down >= 10
   let nAcc = 0
@@ -593,8 +594,8 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
   if (fitA) {
     const c = fitA.coef
     ffError = { dKs: c.kS, dKg: c.kG, dKv: c.kV, dKa: c.kA, fit: fitA.fit, se: { ...fitA.se }, separable, ksKvCombined: fitA.ksKvCombined, splitByPlant: false, noKa: fitA.noKa }
-    if (!separable) notes.push(`只有往${up ? '上' : '下'}的移動，kS 和 kG 分不開，先當成都是 kG。錄一段上下來回的資料會比較準。`)
-    if (fitA.noKa) notes.push('加速段太短（Motion Magic 加速度很大，50 Hz 的日誌只抓到一兩格），這份資料看不出 kA 對不對。想檢查 kA，錄一段加速度調低的。')
+    if (!separable) notes.push(t(`只有往${up ? '上' : '下'}的移動，kS 和 kG 分不開，先當成都是 kG。錄一段上下來回的資料會比較準。`, `Only moves going ${up ? 'up' : 'down'}, so kS and kG can’t be separated; treating it all as kG for now. A log moving up and down is more accurate.`))
+    if (fitA.noKa) notes.push(t('加速段太短（Motion Magic 加速度很大，50 Hz 的日誌只抓到一兩格），這份資料看不出 kA 對不對。想檢查 kA，錄一段加速度調低的。', 'The acceleration sections are too short (Motion Magic acceleration is high and a 50 Hz log only catches a sample or two), so this data can’t tell whether kA is right. To check kA, record with a lower acceleration.'))
     if (fitA.ksKvCombined) {
       // 合併值 = ΔkS + ΔkV·v；機構特性量測（用實際速度，加減速時有變化）分得開就用它拆
       if (plantOk) {
@@ -603,12 +604,12 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
         ffError.se = { ...ffError.se, kV: ffError.se.kS / vTyp }
         ffError.ksKvCombined = false
         ffError.splitByPlant = true
-        notes.push('移動時速度幾乎都一樣，kS 和 kV 是用機構特性量測拆開的，準度差一點。')
+        notes.push(t('移動時速度幾乎都一樣，kS 和 kV 是用機構特性量測拆開的，準度差一點。', 'Velocity was almost the same throughout the moves, so kS and kV were separated using the mechanism characterization, which is a bit less accurate.'))
       } else {
-        notes.push(`移動時速度幾乎都一樣，kS 和 kV 分不開：只知道在 ${uf.vel(vTyp)} 時往上往下差 ${V(c.kS * 2)}。錄一段 Motion Magic 速度只有一半的資料，就能分開。`)
+        notes.push(t(`移動時速度幾乎都一樣，kS 和 kV 分不開：只知道在 ${uf.vel(vTyp)} 時往上往下差 ${V(c.kS * 2)}。錄一段 Motion Magic 速度只有一半的資料，就能分開。`, `Velocity was almost the same throughout the moves, so kS and kV can’t be separated: all we know is that at ${uf.vel(vTyp)} up and down differ by ${V(c.kS * 2)}. Record with Motion Magic at half the speed to separate them.`))
       }
     }
-  } else notes.push('移動的資料太少，沒辦法做前饋誤差分析。')
+  } else notes.push(t('移動的資料太少，沒辦法做前饋誤差分析。', 'Too little movement data for a feedforward error analysis.'))
 
   // ---------- 物理限制 ----------
   // 只有「前饋修正好之後還是會頂到」才算物理限制；kA 太大或振盪造成的限流，修掉參數就沒了
@@ -644,9 +645,9 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       const f = 0.8
       issues.push({
         key: 'physical',
-        summary: '馬達在部分時間已經全力輸出，這段調任何參數都沒用，先把 Motion Magic 放慢。',
-        evidence: phys.map((p) => `${p.label}：${p.detail}`),
-        lookAt: '電壓圖：輸出電壓有沒有貼著電池電壓；電流圖：有沒有頂到限制。通常發生在加速段。',
+        summary: t('馬達在部分時間已經全力輸出，這段調任何參數都沒用，先把 Motion Magic 放慢。', 'The motor was at full output part of the time; no gain change helps there, so slow down Motion Magic first.'),
+        evidence: phys.map((p) => t(`${p.label}：${p.detail}`, `${p.label}: ${p.detail}`)),
+        lookAt: t('電壓圖：輸出電壓有沒有貼著電池電壓；電流圖：有沒有頂到限制。通常發生在加速段。', 'Voltage chart: is the output voltage pinned to the battery voltage? Current chart: is it hitting the limit? Usually during acceleration.'),
         spans: phys.flatMap((p) => p.spans ?? []),
         change: {
           kind: 'motionMagic',
@@ -655,14 +656,14 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
         },
       })
     } else {
-      notes.push(`有 ${phys.map((p) => p.label).join('、')}，但算起來是參數錯${osc.detected ? '或振盪' : ''}造成的：前饋修正後就不會頂到。先處理下面的問題。`)
+      notes.push(t(`有 ${phys.map((p) => p.label).join('、')}，但算起來是參數錯${osc.detected ? '或振盪' : ''}造成的：前饋修正後就不會頂到。先處理下面的問題。`, `There is ${phys.map((p) => p.label).join(', ')}, but by the numbers it comes from wrong gains${osc.detected ? ' or oscillation' : ''}: once feedforward is corrected it won’t hit the limit. Deal with the problems below first.`))
     }
   }
 
   // ---------- 振盪 ----------
   if (osc.detected) {
     issues.push(oscillationIssue(osc, gains, 0.6, uf))
-    if (!isDerivativeNoise(osc, gains)) notes.push('振盪時先降 kP。如果閉迴路在 roboRIO 上跑（50 Hz），延遲會讓振盪更容易發生，改用 TalonFX 內建的閉迴路（1 kHz）。')
+    if (!isDerivativeNoise(osc, gains)) notes.push(t('振盪時先降 kP。如果閉迴路在 roboRIO 上跑（50 Hz），延遲會讓振盪更容易發生，改用 TalonFX 內建的閉迴路（1 kHz）。', 'When oscillating, lower kP first. If the closed loop runs on the roboRIO (50 Hz), the delay makes oscillation more likely; use the TalonFX’s built-in closed loop (1 kHz).'))
   }
 
   // ---------- 機構問題 ----------
@@ -671,24 +672,24 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
   if (plant && plant.fit.cond < COND_LIMIT && !osc.detected && excitationOk && (plant.fit.r2 < 0.85 || plant.kV <= 0)) {
     issues.push({
       key: 'mechanism',
-      summary: '用馬達模型解釋不了這份資料：電壓和速度、加速度的關係亂掉了，通常是機構本身有問題，不是參數。',
-      evidence: [`機構特性量測 R² = ${plant.fit.r2.toFixed(2)}（正常應 > 0.9）`, `量到 kV = ${plant.kV.toFixed(2)}、kA = ${plant.kA.toFixed(3)}`],
-      lookAt: '速度圖：實際速度有沒有忽快忽慢、卡一下又衝出去；電流圖：同樣速度電流差很多。',
+      summary: t('用馬達模型解釋不了這份資料：電壓和速度、加速度的關係亂掉了，通常是機構本身有問題，不是參數。', 'The motor model can’t explain this data: the relationship between voltage, velocity and acceleration is scrambled, which usually means a mechanism problem, not gains.'),
+      evidence: [t(`機構特性量測 R² = ${plant.fit.r2.toFixed(2)}（正常應 > 0.9）`, `Mechanism characterization R² = ${plant.fit.r2.toFixed(2)} (should normally be > 0.9)`), t(`量到 kV = ${plant.kV.toFixed(2)}、kA = ${plant.kA.toFixed(3)}`, `Measured kV = ${plant.kV.toFixed(2)}, kA = ${plant.kA.toFixed(3)}`)],
+      lookAt: t('速度圖：實際速度有沒有忽快忽慢、卡一下又衝出去；電流圖：同樣速度電流差很多。', 'Velocity chart: does the real velocity speed up and slow down, catching then lurching forward? Current chart: very different current at the same velocity.'),
       spans: [],
       checklist: arm
         ? [
-            '皮帶、鏈條或齒輪有背隙、跳齒',
-            '轉軸或軸承卡住，某個角度特別緊（斷電後用手轉轉看整個範圍）',
-            '線材勾到手臂',
-            'CANcoder 鬆脫、磁鐵偏移，或 SensorToMechanismRatio、RotorToSensorRatio 設錯',
-            '零點不在水平（cos θ 整個偏掉）',
+            t('皮帶、鏈條或齒輪有背隙、跳齒', 'Backlash or skipped teeth in the belt, chain or gears'),
+            t('轉軸或軸承卡住，某個角度特別緊（斷電後用手轉轉看整個範圍）', 'The pivot or bearings bind, tighter at some angle (with power off, turn it through the full range by hand)'),
+            t('線材勾到手臂', 'Wiring catching on the arm'),
+            t('CANcoder 鬆脫、磁鐵偏移，或 SensorToMechanismRatio、RotorToSensorRatio 設錯', 'CANcoder loose or magnet shifted, or SensorToMechanismRatio / RotorToSensorRatio set wrong'),
+            t('零點不在水平（cos θ 整個偏掉）', 'Zero isn’t horizontal (shifts the whole cos θ)'),
           ]
         : [
-        '皮帶或鏈條鬆了、跳齒',
-        '軌道卡住或某一段特別緊（用手推推看整個行程）',
-        '線材勾到機構',
-        '兩顆馬達方向或 follower 設定錯，互相對抗',
-        '編碼器鬆脫、SensorToMechanismRatio 設錯',
+        t('皮帶或鏈條鬆了、跳齒', 'Belt or chain loose, skipped teeth'),
+        t('軌道卡住或某一段特別緊（用手推推看整個行程）', 'The track binds or is tighter in one section (push it through the full travel by hand)'),
+        t('線材勾到機構', 'Wiring catching on the mechanism'),
+        t('兩顆馬達方向或 follower 設定錯，互相對抗', 'Two motors fighting each other from wrong direction or follower settings'),
+        t('編碼器鬆脫、SensorToMechanismRatio 設錯', 'Encoder loose, or SensorToMechanismRatio set wrong'),
           ],
     })
   }
@@ -708,11 +709,11 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
         wrongGravityType = true
         issues.push({
           key: 'kG',
-          summary: '控制器的重力補償是一個常數，沒有跟著角度變：GravityType 設成 Elevator_Static 了。改成 Arm_Cosine，kG 的大小先不用動。',
-          evidence: [`日誌的前饋欄位裡，固定不變的部分 ${V(c0)}、跟 cos θ 變的部分只有 ${V(cCos)}`, '停在水平附近沒事，抬高之後回授一直往下壓：常數 kG 在高角度補過頭'],
-          lookAt: '電壓圖：前饋輸出在不同角度停住時是不是都一樣高？回授輸出是不是抬越高越負？',
-          spans: spansWhere(t, (i) => seg.phase[i] === PI.hold),
-          checklist: ['Slot0Configs 的 GravityType 改成 GravityTypeValue.Arm_Cosine', '確認水平時角度讀成 0（Arm_Cosine 用這個位置算 cos）'],
+          summary: t('控制器的重力補償是一個常數，沒有跟著角度變：GravityType 設成 Elevator_Static 了。改成 Arm_Cosine，kG 的大小先不用動。', 'The controller’s gravity compensation is a constant that doesn’t change with angle: GravityType is set to Elevator_Static. Change it to Arm_Cosine and leave kG’s size alone for now.'),
+          evidence: [t(`日誌的前饋欄位裡，固定不變的部分 ${V(c0)}、跟 cos θ 變的部分只有 ${V(cCos)}`, `In the log’s feedforward field, the constant part is ${V(c0)} and the part that follows cos θ is only ${V(cCos)}`), t('停在水平附近沒事，抬高之後回授一直往下壓：常數 kG 在高角度補過頭', 'Fine near horizontal, but raised up the feedback keeps pushing down: a constant kG over-compensates at high angles')],
+          lookAt: t('電壓圖：前饋輸出在不同角度停住時是不是都一樣高？回授輸出是不是抬越高越負？', 'Voltage chart: is the feedforward output the same height when stopped at different angles? Is the feedback more negative the higher it goes?'),
+          spans: spansWhere(time, (i) => seg.phase[i] === PI.hold),
+          checklist: [t('Slot0Configs 的 GravityType 改成 GravityTypeValue.Arm_Cosine', 'Set GravityType in Slot0Configs to GravityTypeValue.Arm_Cosine'), t('確認水平時角度讀成 0（Arm_Cosine 用這個位置算 cos）', 'Make sure horizontal reads as angle 0 (Arm_Cosine computes cos from this position)')],
         })
       }
     }
@@ -723,9 +724,9 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
     const f = ffError
     const { kS: seS, kG: seG, kV: seV, kA: seA } = f.se
     const aTyp = Math.max(seg.aScale, 1e-3)
-    const holdSpans = spansWhere(t, (i) => seg.phase[i] === PI.hold || seg.phase[i] === PI.settle)
-    const cruiseSpans = spansWhere(t, (i) => seg.phase[i] === PI.cruise)
-    const accSpans = spansWhere(t, (i) => seg.phase[i] === PI.accel || seg.phase[i] === PI.decel)
+    const holdSpans = spansWhere(time, (i) => seg.phase[i] === PI.hold || seg.phase[i] === PI.settle)
+    const cruiseSpans = spansWhere(time, (i) => seg.phase[i] === PI.cruise)
+    const accSpans = spansWhere(time, (i) => seg.phase[i] === PI.accel || seg.phase[i] === PI.decel)
     // 前饋誤差分析要顯著；機構特性量測（跟 kP 無關的另一種方法）量得準時，方向也要一致
     const sig = (d: number, s: number, th: number, plantDelta?: number) =>
       Math.abs(d) > th && Math.abs(d) > 3 * s && (plantDelta === undefined || (Math.sign(plantDelta) === Math.sign(d) && Math.abs(plantDelta) > 0.4 * th))
@@ -736,14 +737,14 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
     if (sig(f.dKg, seG, Math.max(0.05, 0.1 * Math.abs(gains.kG)), pd.kG)) {
       issues.push({
         key: 'kG',
-        summary: `回授一直在幫忙${f.dKg > 0 ? '往上撐' : '往下壓'}：kG ${f.dKg > 0 ? '太小' : '太大'}。`,
+        summary: t(`回授一直在幫忙${f.dKg > 0 ? '往上撐' : '往下壓'}：kG ${f.dKg > 0 ? '太小' : '太大'}。`, `Feedback keeps helping ${f.dKg > 0 ? 'hold it up' : 'push it down'}: kG is ${f.dKg > 0 ? 'too small' : 'too big'}.`),
         evidence: [
-          arm ? `回授輸出換算成水平時的偏移 ${V(f.dKg)}（跟著 cos θ 變，往上往下都一樣）` : `回授輸出的固定偏移 ${V(f.dKg)}（往上往下都一樣）`,
-          `目前 kG = ${gains.kG.toFixed(3)} V${arm ? '（水平時的值）' : ''}`,
+          arm ? t(`回授輸出換算成水平時的偏移 ${V(f.dKg)}（跟著 cos θ 變，往上往下都一樣）`, `Feedback output offset converted to horizontal ${V(f.dKg)} (follows cos θ, same up and down)`) : t(`回授輸出的固定偏移 ${V(f.dKg)}（往上往下都一樣）`, `Constant feedback output offset ${V(f.dKg)} (same up and down)`),
+          t(`目前 kG = ${gains.kG.toFixed(3)} V${arm ? '（水平時的值）' : ''}`, `Current kG = ${gains.kG.toFixed(3)} V${arm ? ' (horizontal value)' : ''}`),
         ],
         lookAt: arm
-          ? '電壓圖的靜止保持段：停在水平附近時回授輸出（紅線）是不是一直偏同一邊？停在接近直立時偏差是不是變小？'
-          : '電壓圖的靜止保持段：回授輸出（紅線）是不是一直偏同一邊？往上、往下移動時也一樣偏？',
+          ? t('電壓圖的靜止保持段：停在水平附近時回授輸出（紅線）是不是一直偏同一邊？停在接近直立時偏差是不是變小？', 'Holding sections of the voltage chart: near horizontal, does the feedback output (red line) stay on one side? Does the offset shrink near vertical?')
+          : t('電壓圖的靜止保持段：回授輸出（紅線）是不是一直偏同一邊？往上、往下移動時也一樣偏？', 'Holding sections of the voltage chart: does the feedback output (red line) stay on one side? Is it off the same way moving up and down?'),
         spans: holdSpans,
         change: { kind: 'gain', param: 'kG', from: gains.kG, to: round3(gains.kG + f.dKg) },
       })
@@ -753,22 +754,22 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       const to = Math.max(0, round3(plantOk ? plant!.kS : gains.kS + f.dKs))
       issues.push({
         key: 'kS',
-        summary: `往上時回授${f.dKs > 0 ? '偏正' : '偏負'}、往下時${f.dKs > 0 ? '偏負' : '偏正'}，大小差不多：這是摩擦，kS ${f.dKs > 0 ? '太小' : '太大'}。`,
-        evidence: [`往上偏 ${V(f.dKg + f.dKs)}、往下偏 ${V(f.dKg - f.dKs)}`, `差的一半就是 kS 要補的量：${V(f.dKs)}`, `目前 kS = ${gains.kS.toFixed(3)} V`],
-        lookAt: '電壓圖的移動段：往上和往下時回授輸出的正負號是不是相反？（同號就是 kG）',
-        spans: spansWhere(t, (i) => isMoving(seg.phase[i])),
+        summary: t(`往上時回授${f.dKs > 0 ? '偏正' : '偏負'}、往下時${f.dKs > 0 ? '偏負' : '偏正'}，大小差不多：這是摩擦，kS ${f.dKs > 0 ? '太小' : '太大'}。`, `Going up feedback leans ${f.dKs > 0 ? 'positive' : 'negative'}, going down it leans ${f.dKs > 0 ? 'negative' : 'positive'}, by about the same amount: that’s friction, kS is ${f.dKs > 0 ? 'too small' : 'too big'}.`),
+        evidence: [t(`往上偏 ${V(f.dKg + f.dKs)}、往下偏 ${V(f.dKg - f.dKs)}`, `Up off by ${V(f.dKg + f.dKs)}, down off by ${V(f.dKg - f.dKs)}`), t(`差的一半就是 kS 要補的量：${V(f.dKs)}`, `Half the difference is what kS needs to add: ${V(f.dKs)}`), t(`目前 kS = ${gains.kS.toFixed(3)} V`, `Current kS = ${gains.kS.toFixed(3)} V`)],
+        lookAt: t('電壓圖的移動段：往上和往下時回授輸出的正負號是不是相反？（同號就是 kG）', 'Moving sections of the voltage chart: does the feedback output have opposite signs going up and going down? (Same sign means kG)'),
+        spans: spansWhere(time, (i) => isMoving(seg.phase[i])),
         change: { kind: 'gain', param: 'kS', from: gains.kS, to },
       })
     }
     if (!f.ksKvCombined && sig(f.dKv * vTyp, seV * vTyp, Math.max(0.1, 0.05 * Math.abs(gains.kV) * vTyp), pd.kV === undefined ? undefined : pd.kV * vTyp)) {
       issues.push({
         key: 'kV',
-        summary: `等速段回授輸出跟著速度變大、方向${f.dKv > 0 ? '相同' : '相反'}：kV ${f.dKv > 0 ? '太小，一直落後' : '太大，一直超前'}。`,
+        summary: t(`等速段回授輸出跟著速度變大、方向${f.dKv > 0 ? '相同' : '相反'}：kV ${f.dKv > 0 ? '太小，一直落後' : '太大，一直超前'}。`, `In the cruise sections feedback grows with velocity, in the ${f.dKv > 0 ? 'same' : 'opposite'} direction: kV is ${f.dKv > 0 ? 'too small, always lagging' : 'too big, always running ahead'}.`),
         evidence: [
-          `在 ${uf.vel(vTyp)} 時回授要多補 ${V(f.dKv * vTyp)}`,
-          `前饋還差 ${f.dKv >= 0 ? '+' : ''}${f.dKv.toFixed(3)} V/(${uf.velUnit})，目前 kV = ${gains.kV.toFixed(3)}`,
+          t(`在 ${uf.vel(vTyp)} 時回授要多補 ${V(f.dKv * vTyp)}`, `At ${uf.vel(vTyp)} feedback has to add ${V(f.dKv * vTyp)}`),
+          t(`前饋還差 ${f.dKv >= 0 ? '+' : ''}${f.dKv.toFixed(3)} V/(${uf.velUnit})，目前 kV = ${gains.kV.toFixed(3)}`, `Feedforward is off by ${f.dKv >= 0 ? '+' : ''}${f.dKv.toFixed(3)} V/(${uf.velUnit}); current kV = ${gains.kV.toFixed(3)}`),
         ],
-        lookAt: '速度圖和位置圖的等速段：實際是不是一直落後（或超前）目標？電壓圖的回授輸出往上往下是不是正負相反、跟速度同方向？',
+        lookAt: t('速度圖和位置圖的等速段：實際是不是一直落後（或超前）目標？電壓圖的回授輸出往上往下是不是正負相反、跟速度同方向？', 'Cruise sections of the velocity and position charts: does the actual keep lagging (or running ahead of) the target? Does the feedback output on the voltage chart flip sign between up and down, following velocity?'),
         spans: cruiseSpans,
         change: { kind: 'gain', param: 'kV', from: gains.kV, to: round3(gains.kV + f.dKv) },
       })
@@ -776,9 +777,9 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
     if (!f.noKa && sig(f.dKa * aTyp, seA * aTyp, Math.max(0.15, 0.15 * Math.abs(gains.kA) * aTyp), pd.kA === undefined ? undefined : pd.kA * aTyp)) {
       issues.push({
         key: 'kA',
-        summary: `只有加速、減速的時候對不上：kA ${f.dKa > 0 ? '太小' : '太大'}。`,
-        evidence: [`在 ${uf.acc(aTyp)} 時回授要多補 ${V(f.dKa * aTyp)}`, `目前 kA = ${gains.kA.toFixed(4)}`],
-        lookAt: '電壓圖的加速、減速段：回授輸出是不是只在速度變化時冒出來，等速時又回到 0？',
+        summary: t(`只有加速、減速的時候對不上：kA ${f.dKa > 0 ? '太小' : '太大'}。`, `Only off while accelerating and decelerating: kA is ${f.dKa > 0 ? 'too small' : 'too big'}.`),
+        evidence: [t(`在 ${uf.acc(aTyp)} 時回授要多補 ${V(f.dKa * aTyp)}`, `At ${uf.acc(aTyp)} feedback has to add ${V(f.dKa * aTyp)}`), t(`目前 kA = ${gains.kA.toFixed(4)}`, `Current kA = ${gains.kA.toFixed(4)}`)],
+        lookAt: t('電壓圖的加速、減速段：回授輸出是不是只在速度變化時冒出來，等速時又回到 0？', 'Accel and decel sections of the voltage chart: does the feedback output only appear while velocity changes and return to 0 at constant velocity?'),
         spans: accSpans,
         change: { kind: 'gain', param: 'kA', from: gains.kA, to: Math.max(0, round3(gains.kA + f.dKa)) },
       })
@@ -789,12 +790,12 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       const upV = gains.kG + f.dKg + gains.kS + f.dKs
       const downV = gains.kG + f.dKg - (gains.kS + f.dKs)
       notes.push(
-        `等速時往上需要 ${upV.toFixed(2)} V、往下 ${downV.toFixed(2)} V（不含 kV·v）。照建議改 kG、kS，一個 Slot 就夠；改好後還是不過，才考慮往下用 Slot 1。`,
+        t(`等速時往上需要 ${upV.toFixed(2)} V、往下 ${downV.toFixed(2)} V（不含 kV·v）。照建議改 kG、kS，一個 Slot 就夠；改好後還是不過，才考慮往下用 Slot 1。`, `At constant velocity going up needs ${upV.toFixed(2)} V and going down ${downV.toFixed(2)} V (excluding kV·v). Change kG and kS as suggested and one Slot is enough; only if it still fails afterward, consider Slot 1 for going down.`),
       )
     }
     // 前饋誤差迴歸解釋不了、殘差又很大：可能是機構或雜訊
     if (f.fit.sigma > 0.5 && f.fit.r2 < 0.3 && !issues.some((i) => i.key === 'mechanism') && !osc.detected) {
-      notes.push(`回授輸出有 ${f.fit.sigma.toFixed(2)} V 的變化解釋不了（R² ${f.fit.r2.toFixed(2)}）。如果重錄還是這樣，檢查機構。`)
+      notes.push(t(`回授輸出有 ${f.fit.sigma.toFixed(2)} V 的變化解釋不了（R² ${f.fit.r2.toFixed(2)}）。如果重錄還是這樣，檢查機構。`, `${f.fit.sigma.toFixed(2)} V of feedback output variation can’t be explained (R² ${f.fit.r2.toFixed(2)}). If it’s still like this after re-recording, check the mechanism.`))
     }
   }
 
@@ -805,16 +806,16 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
     const worstFinal = Math.max(...moves.map((m) => m.finalError))
     const overs = moves.map((m) => m.overshoot)
     const overMed = median(overs)
-    const settleSpans = spansWhere(t, (i) => seg.phase[i] === PI.settle)
+    const settleSpans = spansWhere(time, (i) => seg.phase[i] === PI.settle)
     if (unsettled.length > 0 || settleMed > 0.3) {
       issues.push({
         key: 'kP',
-        summary: `軌跡跑完之後，位置要很久才進到目標附近（或停在差一點的地方）：kP 不夠。${arm ? '前饋模型跟真的手臂總有差（重心、負載、摩擦），差的部分只能靠回授補。' : '前饋是常數，高度不同重力不一樣、摩擦不一樣的部分，只能靠回授補。'}`,
+        summary: t(`軌跡跑完之後，位置要很久才進到目標附近（或停在差一點的地方）：kP 不夠。${arm ? '前饋模型跟真的手臂總有差（重心、負載、摩擦），差的部分只能靠回授補。' : '前饋是常數，高度不同重力不一樣、摩擦不一樣的部分，只能靠回授補。'}`, `After the profile ends, the position takes a long time to get near the target (or stops a little off): kP is too small. ${arm ? 'The feedforward model never perfectly matches the real arm (center of mass, load, friction), and only feedback can make up the difference.' : 'Feedforward is constant, so differences in gravity and friction at different heights can only be made up by feedback.'}`),
         evidence: [
-          `到位時間中位數 ${settleMed >= 1.5 ? '> 1.5' : settleMed.toFixed(2)} s（容許誤差 ${uf.pos(tol)}）`,
-          `最大殘留誤差 ${uf.pos(worstFinal)}，${unsettled.length}/${moves.length} 次沒到位`,
+          t(`到位時間中位數 ${settleMed >= 1.5 ? '> 1.5' : settleMed.toFixed(2)} s（容許誤差 ${uf.pos(tol)}）`, `Median settling time ${settleMed >= 1.5 ? '> 1.5' : settleMed.toFixed(2)} s (tolerance ${uf.pos(tol)})`),
+          t(`最大殘留誤差 ${uf.pos(worstFinal)}，${unsettled.length}/${moves.length} 次沒到位`, `Largest remaining error ${uf.pos(worstFinal)}; ${unsettled.length}/${moves.length} moves didn’t settle`),
         ],
-        lookAt: '位置圖的到位穩定段：軌跡（虛線）停了以後，實際位置是不是慢慢爬過去、或停在差一點的地方？',
+        lookAt: t('位置圖的到位穩定段：軌跡（虛線）停了以後，實際位置是不是慢慢爬過去、或停在差一點的地方？', 'Settling section of the position chart: after the profile (dashed) stops, does the actual position slowly creep over, or stop a little short?'),
         spans: settleSpans,
         change: { kind: 'gain', param: 'kP', from: gains.kP, to: round3(Math.max(gains.kP * 1.5, 10)) },
       })
@@ -823,9 +824,9 @@ export function diagnose(log: AlignedLog, checks: CheckReport, gains: Slot0Gains
       const target = suggestedKd(gains)
       issues.push({
         key: 'kD',
-        summary: '到位時衝過頭再拉回來：阻尼不夠，加 kD。',
-        evidence: [`超過目標的中位數 ${uf.pos(overMed)}（容許 ${uf.pos(tol)}）`, `目前 kD = ${gains.kD.toFixed(2)}，建議值由 kA、kP 算阻尼比 0.7`],
-        lookAt: '位置圖的到位穩定段：實際位置有沒有超過目標再回來？',
+        summary: t('到位時衝過頭再拉回來：阻尼不夠，加 kD。', 'Overshoots on arrival and comes back: not enough damping, add kD.'),
+        evidence: [t(`超過目標的中位數 ${uf.pos(overMed)}（容許 ${uf.pos(tol)}）`, `Median overshoot ${uf.pos(overMed)} (tolerance ${uf.pos(tol)})`), t(`目前 kD = ${gains.kD.toFixed(2)}，建議值由 kA、kP 算阻尼比 0.7`, `Current kD = ${gains.kD.toFixed(2)}; the suggestion uses kA and kP for a damping ratio of 0.7`)],
+        lookAt: t('位置圖的到位穩定段：實際位置有沒有超過目標再回來？', 'Settling section of the position chart: does the actual position pass the target and come back?'),
         spans: settleSpans,
         change: { kind: 'gain', param: 'kD', from: gains.kD, to: round3(target > gains.kD * 1.2 ? target : Math.max(gains.kD * 1.5, 0.5)) },
       })
@@ -845,18 +846,18 @@ export function oscillationBehindRefusal(log: AlignedLog, gains: Slot0Gains, mec
   const osc = detectOscillation(log, seg)
   if (!osc.detected) return null
   const issue = oscillationIssue(osc, gains, 0.5, unitFmt(mech))
-  if (isDerivativeNoise(osc, gains)) return { ...issue, summary: '資料檢查沒過，但主因看起來是 kD 放大了雜訊：電壓一直抖、位置沒動。先把 kD 降下來再重錄。' }
+  if (isDerivativeNoise(osc, gains)) return { ...issue, summary: t('資料檢查沒過，但主因看起來是 kD 放大了雜訊：電壓一直抖、位置沒動。先把 kD 降下來再重錄。', 'Data checks failed, but the main cause looks like kD amplifying noise: voltage keeps jittering while the position stays still. Lower kD first, then re-record.') }
   return {
     ...issue,
-    summary: '資料檢查沒過，但主因看起來是振盪：電壓來回打到上下限。先把 kP 降下來再重錄，不要先去改 Motion Magic。',
-    lookAt: '電壓圖與位置圖：放大看有沒有一直來回的鋸齒。',
+    summary: t('資料檢查沒過，但主因看起來是振盪：電壓來回打到上下限。先把 kP 降下來再重錄，不要先去改 Motion Magic。', 'Data checks failed, but the main cause looks like oscillation: the voltage slams between the limits. Lower kP first and re-record; don’t change Motion Magic first.'),
+    lookAt: t('電壓圖與位置圖：放大看有沒有一直來回的鋸齒。', 'Voltage and position charts: zoom in for a sawtooth that keeps going back and forth.'),
   }
 }
 
 export function describeChange(c: ParamChange, mech: Mechanism = 'elevator'): string {
   if (c.kind === 'motionMagic') {
     const u = unitFmt(mech)
-    return `Motion Magic 巡航速度 ${u.vel(c.cruiseVelocity.from)} → ${u.vel(c.cruiseVelocity.to)}，加速度 ${u.acc(c.acceleration.from)} → ${u.acc(c.acceleration.to)}`
+    return t(`Motion Magic 巡航速度 ${u.vel(c.cruiseVelocity.from)} → ${u.vel(c.cruiseVelocity.to)}，加速度 ${u.acc(c.acceleration.from)} → ${u.acc(c.acceleration.to)}`, `Motion Magic cruise velocity ${u.vel(c.cruiseVelocity.from)} → ${u.vel(c.cruiseVelocity.to)}, acceleration ${u.acc(c.acceleration.from)} → ${u.acc(c.acceleration.to)}`)
   }
   return `${c.param} ${round3(c.from)} → ${round3(c.to)}`
 }
