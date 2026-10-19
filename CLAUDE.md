@@ -20,7 +20,7 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
   - `profile.ts` Motion Magic 梯形軌跡；`controller/slot0.ts` Slot0 控制公式（含積分防飽和教學選項）
   - `physics/` 受控體（控制輸入 u 以電壓 [V] 表示，不是「電壓是力」）與 RK4 閉迴路模擬、達標標準 `spec.ts`、穩健性測試 `robustness.ts`、模型校正 `calibrate.ts`
   - `arm/` 手臂前饋 `feedforward.ts`（kG·cos θ、轉動慣量）、受控體 `plant.ts`（共用 physics 的 simulate，`gravityCosine`）、範例日誌 `sampleLog.ts`（ArmIO 欄位）
-  - `flywheel/` 射球飛輪：前饋（kV、kA、轉動慣量；球的另一邊可以是固定導板或對面滾輪，見決策 120）、受控體與速度控制模擬（VelocityVoltage、連射掉速）、指標、球速與落點（拋體，不計空氣阻力；目標距離、高度、開口寬度，往下掉經過目標高度算落點）、邊移動邊射（球對地速度 = 發射速度 + 機器人速度，解轉速和底盤偏角，決策 124）、轉速上限 `wheelLimit`（決策 126）、參數修正意見 `moveFixes`（決策 127）、畫面的角度是砲台角度 `turretDeg`（水平朝後 0°、朝目標 180°，決策 130）；沒有 kG
+  - `flywheel/` 射球飛輪：前饋（kV、kA、轉動慣量；球的另一邊可以是固定導板或對面滾輪，見決策 120）、受控體與速度控制模擬（VelocityVoltage、連射掉速）、指標、球速與落點（拋體，不計空氣阻力；目標距離、高度、開口寬度，往下掉經過目標高度算落點）、邊移動邊射（球對地速度 = 發射速度 + 機器人速度，解轉速和底盤偏角，決策 124）、轉速上限 `wheelLimit`（決策 126）、參數修正意見 `moveFixes`（決策 127）、畫面的角度是砲台角度 `turretDeg`（正上方 0°、往目標倒變大，= 90° − 仰角，決策 131）；沒有 kG
   - `deepLink.ts` 課程網站的深層連結（`?track=&scenario=&section=&from=course&ch=`），情境與 4F 單元 id 改了要通知課程那邊
   - `challenge.ts` 3F 挑戰模式出題與判斷；`twoPoint.ts` 兩點法量 kS、kG；`ratioSweep.ts` 1F 齒比掃描；`shareLink.ts` 分享機構資料的網址編碼；`paramDiff.ts` 參數組逐項比較
   - `log/` .wpilog 串流解析、寫入器、欄位對應與對齊

@@ -35,7 +35,7 @@ import { yawText } from './flywheelTune'
 const TAU = 2 * Math.PI
 const DEG = 180 / Math.PI
 const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
-// 畫面上的角度都是砲台角度（水平朝後 0°、正上方 90°、水平朝目標 180°，見 turretDeg）；到 0.1°：範圍很窄時會有小數
+// 畫面上的角度都是砲台角度（正上方 0°、往目標倒角度變大、水平朝目標 90°，見 turretDeg）；到 0.1°：範圍很窄時會有小數
 const deg = (a: number) => Math.round(turretDeg(a) * 10) / 10
 /** 仰角範圍 lo～hi（rad）換成砲台角度，小的在前 */
 const span = (lo: number, hi: number) => `${deg(hi)}°～${deg(lo)}°`
@@ -161,11 +161,11 @@ export function FlywheelAim({
         </h2>
         {narrow && <FixAdvice win={win} fixes={fixes} values={{ toward, side, distance: plan.goalDistance, limit: maxWheel }} onApply={applyFix} />}
         {opts.length === 0 ? (
-          <p className="fail">{move ? '這個距離、高度和機器人速度，砲台角度 95°～170° 都射不進（目標太近、太高，或機器人開太快）。改距離、出射高度或機器人速度。' : '這個距離和高度，砲台角度 95°～170° 都射不進（目標太近或太高）。改距離或出射高度。'}</p>
+          <p className="fail">{move ? '這個距離、高度和機器人速度，砲台角度 5°～80° 都射不進（目標太近、太高，或機器人開太快）。改距離、出射高度或機器人速度。' : '這個距離和高度，砲台角度 5°～80° 都射不進（目標太近或太高）。改距離或出射高度。'}</p>
         ) : (
           <>
             <p className="small muted" style={{ marginTop: 0 }}>
-              同一個距離，砲台角度不同要的轉速也不同。每條線是一個砲台角度剛好打到目標中心的路線{move ? '（畫的是球對地的路線，已經加上機器人速度；標的度數是發射機構的砲台角度）' : ''}，點一條（或下面的按鈕）看它要幾 rps。砲台角度：水平朝後（左邊）是 0°、正上方 90°、水平朝目標（右邊）是 180°。
+              同一個距離，砲台角度不同要的轉速也不同。每條線是一個砲台角度剛好打到目標中心的路線{move ? '（畫的是球對地的路線，已經加上機器人速度；標的度數是發射機構的砲台角度）' : ''}，點一條（或下面的按鈕）看它要幾 rps。砲台角度：球往正上方是 0°，往目標倒角度變大，水平朝目標是 90°。
             </p>
             {fine && !narrow && (
               <p className="small muted">

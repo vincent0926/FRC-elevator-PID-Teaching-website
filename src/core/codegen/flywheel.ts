@@ -60,17 +60,17 @@ export function flywheelJava(g: FlywheelGains, mech: FlywheelMechanism, knobs: F
  */
 export function moveShotJava(mech: FlywheelMechanism, plan: ShotPlan, maxWheel: number, tolerance: number | null): string {
   const mpsPerRps = EXIT_RATIO * exitRadius(mech) * TAU
-  // 砲台角度（水平朝後 0°、正上方 90°、水平朝目標 180°，決策 130），到 0.1°
+  // 砲台角度（正上方 0°、往目標倒角度變大、水平朝目標 90°，決策 131），到 0.1°
   const turret = Math.round(turretDeg(plan.angle) * 10) / 10
   // 轉速可以差多少：用這條軌跡容許誤差的一半當起點，算不出來就 2%
   const rpsTol = tolerance === null ? 0.02 : Math.max(0.005, tolerance / 2)
   return `// 邊移動邊射（elevator-tuner 產生）：砲台角度固定、左右不能轉，左右靠底盤轉
 // 不計空氣阻力、假設球不打滑：上機射幾發，球一直偏近就把 MPS_PER_RPS 調小，偏遠就調大
 public final class ShootOnTheMove {
-  /** 砲台角度（度）：水平朝後 0°、正上方 90°、水平朝目標 180° */
+  /** 砲台角度（度）：正上方 0°、往目標倒角度變大、水平朝目標 90° */
   public static final double TURRET_ANGLE = ${jd(turret)};
   /** 換成仰角（水平朝目標 0°、往上為正），下面的公式用這個 */
-  public static final double PITCH = Math.toRadians(180.0 - TURRET_ANGLE);
+  public static final double PITCH = Math.toRadians(90.0 - TURRET_ANGLE);
   /** 出射點離地高度 m */
   public static final double SHOOTER_HEIGHT = ${jd(Math.max(0, plan.height))};
   /** 目標高度 m、開口寬度 m */
