@@ -392,6 +392,10 @@ label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; colo
 .ch-styles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
 @media (max-width: 560px) { .ch-styles { grid-template-columns: minmax(0, 1fr) } }
 .track-mobile { display: none }
+/* 右上角中/EN 切換（決策 132） */
+.lang-toggle { position: fixed; top: 8px; right: 8px; z-index: 50; display: flex; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); overflow: hidden; box-shadow: var(--lift-shadow) }
+.lang-toggle button { border: 0; background: none; padding: 3px 9px; font-size: 12.5px; cursor: pointer; color: var(--ink-3) }
+.lang-toggle button[aria-pressed="true"] { background: var(--yellow); color: var(--yellow-ink); font-weight: 600; cursor: default }
 /* 回課程網站：側欄一行、主內容上方一行（手機看不到側欄時也找得到） */
 .course-link { display: block; margin: 0 20px 12px; font-size: 12.5px; color: #93A0AE; text-decoration: none }
 .course-link:hover { color: #DDE3EA; text-decoration: underline }

@@ -7,6 +7,7 @@ import { loadJson, loadSession, saveJson, saveSession } from '../storage/local'
 import { decodeMechanism, SHARE_PARAM } from '../core/shareLink'
 import { hasDeepLink, parseDeepLink, stripDeepLink } from '../core/deepLink'
 import type { SimLogHandoff } from './simLog'
+import { t } from '../core/lang'
 
 /**
  * 全站共用狀態。參數組只有一種格式（ParameterSet），三個來源：
@@ -221,9 +222,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     history.replaceState(null, '', url.toString())
     const r = decodeMechanism(code)
     if (r.ok) {
-      setShared({ ok: true, text: `已載入分享連結的機構資料「${r.value.name}」。`, prev: mechanism })
+      setShared({ ok: true, text: t(`已載入分享連結的機構資料「${r.value.name}」。`, `Loaded the mechanism “${r.value.name}” from the shared link.`), prev: mechanism })
       setMechanism(r.value)
-    } else setShared({ ok: false, text: `分享連結沒有載入：${r.error}。` })
+    } else setShared({ ok: false, text: t(`分享連結沒有載入：${r.error}。`, `The shared link didn’t load: ${r.error}.`) })
     // 只在打開網頁時做一次
   }, [])
   const dismissShared = useCallback(

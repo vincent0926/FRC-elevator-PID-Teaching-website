@@ -1,7 +1,8 @@
 /// <reference lib="webworker" />
+import { setLang, type Lang } from '../core/lang'
 import { blobChunks, extractSeries, scanWpilog, type ScanResult, type Series } from '../core/log/reader'
 
-export type LogRequest = { id: number; kind: 'scan'; file: Blob } | { id: number; kind: 'extract'; file: Blob; names: string[] }
+export type LogRequest = { lang: Lang } & ({ id: number; kind: 'scan'; file: Blob } | { id: number; kind: 'extract'; file: Blob; names: string[] })
 
 export type LogResponse =
   | { id: number; kind: 'progress'; fraction: number }
@@ -13,6 +14,7 @@ const ctx = self as unknown as DedicatedWorkerGlobalScope
 
 ctx.onmessage = async (ev: MessageEvent<LogRequest>) => {
   const req = ev.data
+  setLang(req.lang)
   const size = req.file.size || 1
   let last = 0
   const progress = (bytes: number) => {

@@ -6,6 +6,7 @@ import type { ElevatorMechanism } from '../schema/parameterSet'
 import type { ScanResult, Series } from '../core/log/reader'
 import type { SimRequest, SimResponse } from './sim.worker'
 import type { LogRequest, LogResponse } from './log.worker'
+import { getLang, t } from '../core/lang'
 
 /** 主執行緒這邊的 Worker 介面：Promise 化，模擬只保留最新一次的結果。 */
 
@@ -46,7 +47,7 @@ function simCall<T>(channel: string, build: (id: number) => SimRequest): Promise
 }
 
 export function runSimulation(input: SimInput, channel = 'main'): Promise<SimResult> {
-  return simCall<SimResult>(channel, (id) => ({ id, kind: 'sim', input }))
+  return simCall<SimResult>(channel, (id) => ({ id, kind: 'sim', input, lang: getLang() }))
 }
 
 let robust: { worker: Worker; reject: (e: Error) => void } | null = null
@@ -76,13 +77,13 @@ export function runRobustnessTest(base: SimInput, mechanism: ElevatorMechanism, 
       done()
       if (!d.ok) reject(new Error(d.error))
       else if ('robust' in d) resolve(d.robust)
-      else reject(new Error('Worker 回傳格式不對'))
+      else reject(new Error(t('Worker 回傳格式不對', 'Unexpected reply from the worker')))
     }
     worker.onerror = (e) => {
       done()
-      reject(new Error(e.message || '模擬 Worker 發生錯誤'))
+      reject(new Error(e.message || t('模擬 Worker 發生錯誤', 'Simulation worker error')))
     }
-    worker.postMessage({ id, kind: 'robust', base, mechanism, ff, ranges, spec } satisfies SimRequest)
+    worker.postMessage({ id, kind: 'robust', base, mechanism, ff, ranges, spec, lang: getLang() } satisfies SimRequest)
   })
 }
 
@@ -99,24 +100,24 @@ function logCall<T>(build: (id: number) => LogRequest, pick: (r: LogResponse) =>
       worker.terminate()
       if (r.kind === 'error') return reject(new Error(r.error))
       const v = pick(r)
-      if (v === undefined) reject(new Error('Worker 回傳格式不對'))
+      if (v === undefined) reject(new Error(t('Worker 回傳格式不對', 'Unexpected reply from the worker')))
       else resolve(v)
     }
     worker.onerror = (e) => {
       worker.terminate()
-      reject(new Error(e.message || '日誌 Worker 發生錯誤'))
+      reject(new Error(e.message || t('日誌 Worker 發生錯誤', 'Log worker error')))
     }
     worker.postMessage(build(id))
   })
 }
 
 export function scanLog(file: Blob, onProgress?: (f: number) => void): Promise<ScanResult> {
-  return logCall((id) => ({ id, kind: 'scan', file }), (r) => (r.kind === 'scan' ? r.result : undefined), onProgress)
+  return logCall((id) => ({ id, kind: 'scan', file, lang: getLang() }), (r) => (r.kind === 'scan' ? r.result : undefined), onProgress)
 }
 
 export function extractLog(file: Blob, names: string[], onProgress?: (f: number) => void): Promise<Map<string, Series>> {
   return logCall(
-    (id) => ({ id, kind: 'extract', file, names }),
+    (id) => ({ id, kind: 'extract', file, names, lang: getLang() }),
     (r) => (r.kind === 'extract' ? new Map(r.series.map((s) => [s.name, s])) : undefined),
     onProgress,
   )

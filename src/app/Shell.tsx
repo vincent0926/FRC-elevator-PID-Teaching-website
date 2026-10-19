@@ -4,16 +4,17 @@ import { loadJson, saveJson } from '../storage/local'
 import { UpdateBanner } from './UpdateBanner'
 import { ErrorBoundary } from './ErrorBoundary'
 import { COURSE_URL, courseChapterUrl } from '../core/deepLink'
+import { t } from '../core/lang'
 
 /** 井道導覽：樓層由下往上，黃色車廂停在目前頁面。 */
 
 /** short：手機底部導覽用的短名稱（六個按鈕擠一排，長名稱會斷成好幾行） */
 const FLOORS: { id: PageId; lv: string; name: string; short: string }[] = [
-  { id: 'learn', lv: '4F', name: '實機資料教學', short: '實機' },
-  { id: 'sim', lv: '3F', name: '模擬', short: '模擬' },
-  { id: 'tune', lv: '2F', name: '調參建議', short: '調參' },
-  { id: 'calc', lv: '1F', name: '計算參數', short: '計算' },
-  { id: 'home', lv: 'G', name: '總覽', short: '總覽' },
+  { id: 'learn', lv: '4F', name: t('實機資料教學', 'Real-robot lessons'), short: t('實機', 'Robot') },
+  { id: 'sim', lv: '3F', name: t('模擬', 'Simulate'), short: t('模擬', 'Sim') },
+  { id: 'tune', lv: '2F', name: t('調參建議', 'Tuning advice'), short: t('調參', 'Tune') },
+  { id: 'calc', lv: '1F', name: t('計算參數', 'Calculate gains'), short: t('計算', 'Calc') },
+  { id: 'home', lv: 'G', name: t('總覽', 'Overview'), short: t('總覽', 'Home') },
 ]
 
 /** 射球飛輪有的樓層 */
@@ -27,7 +28,7 @@ function isDark(t: Theme) {
 
 export function Shell({ children }: { children: ReactNode }) {
   const { page: storePage, go, track, setTrack, courseChapter, pendingSection, clearPendingSection } = useStore()
-  const trackName = track === 'arm' ? '手臂' : track === 'flywheel' ? '射球飛輪' : '電梯'
+  const trackName = track === 'arm' ? t('手臂', 'Arm') : track === 'flywheel' ? t('射球飛輪', 'Flywheel shooter') : t('電梯', 'Elevator')
   // 射球飛輪只有 1F 計算和 3F 模擬，其他樓層和使用說明都不顯示
   const flywheel = track === 'flywheel'
   const floors = flywheel ? FLOORS.filter((f) => FLYWHEEL_PAGES.includes(f.id)) : FLOORS
@@ -63,12 +64,12 @@ export function Shell({ children }: { children: ReactNode }) {
     <>
       <UpdateBanner />
       <div className="app">
-        <nav className="shaft" aria-label="主選單">
+        <nav className="shaft" aria-label={t('主選單', 'Main menu')}>
           <div className="brand">
-            <b>{trackName}調參工作站</b>
-            <span>FRC 9427 前饋與 PID 學習</span>
+            <b>{t(`${trackName}調參工作站`, `${trackName} Tuning Station`)}</b>
+            <span>{t('FRC 9427 前饋與 PID 學習', 'FRC 9427 feedforward & PID learning')}</span>
             <button className="theme-btn" type="button" style={{ marginTop: 8, display: 'block' }} onClick={() => setTrack(null)}>
-              換機構（目前：{trackName}）
+              {t(`換機構（目前：${trackName}）`, `Switch mechanism (now: ${trackName})`)}
             </button>
           </div>
           <div className="floors">
@@ -79,8 +80,8 @@ export function Shell({ children }: { children: ReactNode }) {
             {!flywheel && (
               <button type="button" className="floor" data-floor="guide" aria-current={page === 'guide' ? 'page' : undefined} onClick={() => go('guide')}>
                 <span className="lv">？</span>
-                <span className="nm">使用說明</span>
-                <span className="nm-short">說明</span>
+                <span className="nm">{t('使用說明', 'Guide')}</span>
+                <span className="nm-short">{t('說明', 'Guide')}</span>
               </button>
             )}
             {floors.map((f) => (
@@ -99,25 +100,25 @@ export function Shell({ children }: { children: ReactNode }) {
             ))}
           </div>
           <a className="course-link" href={courseChapter !== null ? courseChapterUrl(courseChapter) : COURSE_URL}>
-            {courseChapter !== null ? `← 回到課程第 ${courseChapter} 章` : 'FRC 9427 程式課程'}
+            {courseChapter !== null ? t(`← 回到課程第 ${courseChapter} 章`, `← Back to course chapter ${courseChapter}`) : t('FRC 9427 程式課程', 'FRC 9427 programming course')}
           </a>
           <div className="shaft-foot">
             <span>v{__APP_VERSION__}</span>
             <button className="theme-btn" type="button" onClick={toggleTheme}>
-              {isDark(theme) ? '淺色' : '深色'}
+              {isDark(theme) ? t('淺色', 'Light') : t('深色', 'Dark')}
             </button>
           </div>
         </nav>
         <main>
           {courseChapter !== null && (
             <a className="course-back" href={courseChapterUrl(courseChapter)}>
-              ← 回到課程第 {courseChapter} 章
+              {t(`← 回到課程第 ${courseChapter} 章`, `← Back to course chapter ${courseChapter}`)}
             </a>
           )}
           <div className="track-mobile">
-            <span className="small muted">{trackName}調參工作站</span>
+            <span className="small muted">{t(`${trackName}調參工作站`, `${trackName} Tuning Station`)}</span>
             <button className="track-btn" type="button" onClick={() => setTrack(null)}>
-              換機構
+              {t('換機構', 'Switch mechanism')}
             </button>
           </div>
           <ErrorBoundary resetKey={`${track}:${page}`}>{children}</ErrorBoundary>
