@@ -73,13 +73,13 @@ export function phaseIs(seg: Segments, i: number, ...ps: Phase[]): boolean {
 }
 
 export function segment(log: AlignedLog, opt: SegmentOptions = {}): Segments {
-  const { t, cols } = log
-  const n = t.length
+  const { t: time, cols } = log
+  const n = time.length
   const settleWindow = opt.settleWindow ?? 0.5
   const ref = cols.reference
   if (!ref) throw new Error(t('缺少目標位置欄位，無法切段', 'Missing the target position field, so it can’t be segmented'))
-  const vref = cols.referenceSlope ? Float64Array.from(cols.referenceSlope, (v) => (Number.isFinite(v) ? v : 0)) : derivative(t, ref)
-  const aref = derivative(t, vref)
+  const vref = cols.referenceSlope ? Float64Array.from(cols.referenceSlope, (v) => (Number.isFinite(v) ? v : 0)) : derivative(time, ref)
+  const aref = derivative(time, vref)
   const vScale = percentileAbs(vref, 0.98)
   // 只在移動中找加速度量級，靜止時的 0 會把百分位拉低
   const movingAref = Float64Array.from(aref.filter((_, i) => Math.abs(vref[i]) > 0.05 * vScale))
@@ -120,13 +120,13 @@ export function segment(log: AlignedLog, opt: SegmentOptions = {}): Segments {
     while (i < n && raw[i] !== P.hold && raw[i] !== P.off && dir[i] === d) i++
     const profileEndIdx = Math.min(n - 1, i)
     let endIdx = profileEndIdx
-    while (endIdx + 1 < n && raw[endIdx + 1] === P.hold && t[endIdx + 1] - t[profileEndIdx] <= settleWindow) endIdx++
+    while (endIdx + 1 < n && raw[endIdx + 1] === P.hold && time[endIdx + 1] - time[profileEndIdx] <= settleWindow) endIdx++
     for (let k = profileEndIdx; k <= endIdx; k++) if (raw[k] === P.hold) phase[k] = P.settle
     moves.push({
       dir: d,
-      start: t[startIdx],
-      profileEnd: t[profileEndIdx],
-      end: t[endIdx],
+      start: time[startIdx],
+      profileEnd: time[profileEndIdx],
+      end: time[endIdx],
       startIdx,
       profileEndIdx,
       endIdx,
