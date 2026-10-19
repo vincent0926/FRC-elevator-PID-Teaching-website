@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { t } from '../core/lang'
 
 /**
  * 全網站唯一的參數格式。計算、調參建議、模擬都讀寫它。
@@ -92,5 +93,5 @@ export const DEFAULT_MECHANISM: ElevatorMechanism = {
 export function parseParameterSet(data: unknown): { ok: true; value: ParameterSet } | { ok: false; errors: string[] } {
   const r = ParameterSetSchema.safeParse(data)
   if (r.success) return { ok: true, value: r.data }
-  return { ok: false, errors: r.error.issues.map((i) => `${i.path.join('.') || '(根)'}：${i.message}`) }
+  return { ok: false, errors: r.error.issues.map((i) => t(`${i.path.join('.') || '(根)'}：${i.message}`, `${i.path.join('.') || '(root)'}: ${i.message}`)) }
 }

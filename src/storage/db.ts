@@ -1,4 +1,5 @@
 import { ParameterSetSchema, type ParameterSet } from '../schema/parameterSet'
+import { t } from '../core/lang'
 
 /**
  * IndexedDB：參數歷程。只存參數組（很小），設筆數上限，超過時刪最舊的。
@@ -13,10 +14,10 @@ export const HISTORY_LIMIT = 50
 /** 參數庫的標籤：自己存的才有標籤；輸出程式時自動記的沒有（超過上限會被刪） */
 export type ParamTag = 'theory' | 'simBest' | 'final' | 'other'
 export const PARAM_TAGS: { id: ParamTag; label: string }[] = [
-  { id: 'theory', label: '理論值' },
-  { id: 'simBest', label: '模擬最佳' },
-  { id: 'final', label: '實機最終' },
-  { id: 'other', label: '其他' },
+  { id: 'theory', label: t('理論值', 'Theory') },
+  { id: 'simBest', label: t('模擬最佳', 'Best in sim') },
+  { id: 'final', label: t('實機最終', 'Final on robot') },
+  { id: 'other', label: t('其他', 'Other') },
 ]
 
 export interface HistoryEntry {
@@ -29,7 +30,7 @@ export interface HistoryEntry {
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    if (typeof indexedDB === 'undefined') return reject(new Error('瀏覽器不支援 IndexedDB'))
+    if (typeof indexedDB === 'undefined') return reject(new Error(t('瀏覽器不支援 IndexedDB', 'This browser doesn’t support IndexedDB')))
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = () => {
       const db = req.result

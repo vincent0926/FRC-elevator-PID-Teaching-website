@@ -4,6 +4,7 @@ import type { FeedforwardResult } from '../feedforward'
 import type { AlignedLog } from '../log/fieldMap'
 import type { ElevatorMechanism } from '../../schema/parameterSet'
 import { plantFromMechanism, stepRK4, type PlantParams } from './elevator'
+import { t } from '../lang'
 
 /**
  * 模型校正（3F 步驟 9）：讓模擬的電梯跟實機對得上。
@@ -117,8 +118,8 @@ export function calibrate(log: AlignedLog, mechanism: ElevatorMechanism, ff: Fee
   const fit = fitPlantFromLog(log)
   if (!fit) return null
   const problems: string[] = []
-  if (fit.r2 < 0.9) problems.push(`擬合 R² 只有 ${fit.r2.toFixed(2)}：電壓和速度、加速度的關係不穩定，可能是機構卡住或資料有雜訊。`)
-  if (!(fit.kV > 0) || !(fit.kA > 0)) problems.push('擬合出來的 kV 或 kA 不是正的，這份資料不能拿來校正（加速段太短或都沒在動）。')
+  if (fit.r2 < 0.9) problems.push(t(`擬合 R² 只有 ${fit.r2.toFixed(2)}：電壓和速度、加速度的關係不穩定，可能是機構卡住或資料有雜訊。`, `Fit R² is only ${fit.r2.toFixed(2)}: the relationship between voltage, velocity and acceleration is unstable; the mechanism may be binding or the data noisy.`))
+  if (!(fit.kV > 0) || !(fit.kA > 0)) problems.push(t('擬合出來的 kV 或 kA 不是正的，這份資料不能拿來校正（加速段太短或都沒在動）。', 'The fitted kV or kA isn’t positive, so this data can’t be used for calibration (acceleration sections too short, or it barely moved).'))
   const kS = Math.max(0, fit.kS)
   const kVScale = fit.kV > 0 ? fit.kV / ff.kV : 1
   const kAScale = fit.kA > 0 ? fit.kA / ff.kA : 1
@@ -128,8 +129,8 @@ export function calibrate(log: AlignedLog, mechanism: ElevatorMechanism, ff: Fee
     log,
     plantFromMechanism(mechanism, ff, { realistic: true, frictionKs: kS, frictionKsDown: kS, kGScale, kVScale, kAScale, currentLimit: false, batterySag: false }),
   )
-  if (!theory.windows) problems.push('日誌裡沒有完整的移動，沒辦法重播。')
+  if (!theory.windows) problems.push(t('日誌裡沒有完整的移動，沒辦法重播。', 'The log has no complete moves, so it can’t be replayed.'))
   const ok = problems.length === 0 && calibrated.rms < CALIBRATION_RMS_LIMIT
-  if (problems.length === 0 && !ok) problems.push(`重播的位置誤差 ${(calibrated.rms * 100).toFixed(1)} cm，超過 ${CALIBRATION_RMS_LIMIT * 100} cm：模型還解釋不了這台電梯（可能有換級、拖鏈等隨高度變化的力）。`)
+  if (problems.length === 0 && !ok) problems.push(t(`重播的位置誤差 ${(calibrated.rms * 100).toFixed(1)} cm，超過 ${CALIBRATION_RMS_LIMIT * 100} cm：模型還解釋不了這台電梯（可能有換級、拖鏈等隨高度變化的力）。`, `Replay position error is ${(calibrated.rms * 100).toFixed(1)} cm, over ${CALIBRATION_RMS_LIMIT * 100} cm: the model still can’t explain this elevator (there may be height-dependent forces like stage changes or a drag chain).`))
   return { fit, kGScale, kVScale, kAScale, friction: kS, theory, calibrated, ok, problems }
 }
