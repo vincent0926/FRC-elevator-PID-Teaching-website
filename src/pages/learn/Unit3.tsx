@@ -187,8 +187,8 @@ export function Unit3() {
           }
           >
           <div className="formula" style={{ margin: '4px 0 10px' }}>{`Your elevator holding ${payload.piece} kg (top stage, × ${kTop}):
-          kG without ${payload.without.toFixed(3)} V → with ${payload.with.toFixed(3)} V, difference ${payload.dKg.toFixed(3)} V
-          Relying on kP ${theory.feedback.kP.toFixed(0)} V/m alone, it stops ${(payload.err * 100).toFixed(1)} cm low`}</div>
+kG without ${payload.without.toFixed(3)} V → with ${payload.with.toFixed(3)} V, difference ${payload.dKg.toFixed(3)} V
+Relying on kP ${theory.feedback.kP.toFixed(0)} V/m alone, it stops ${(payload.err * 100).toFixed(1)} cm low`}</div>
           </Pit>
 
           <h3>Check</h3>
