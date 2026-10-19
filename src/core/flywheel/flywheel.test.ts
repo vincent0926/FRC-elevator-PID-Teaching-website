@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { motorModel } from '../motors'
 import {
+  angleFromTurret,
+  turretDeg,
   GAME_PIECES_2026,
   HUB_2026,
   computeFlywheelFeedforward,
@@ -510,5 +512,15 @@ describe('邊移動邊射', () => {
   it('太近射不進的時候算不出來', () => {
     expect(solveMovingShot(rx, { ...DEFAULT_PLAN, goalDistance: 0.3 }, pitch, { toward: 1, side: 0 })).toBeNull()
     expect(GRAVITY).toBeCloseTo(9.81, 9)
+  })
+})
+
+describe('砲台角度（決策 130）', () => {
+  it('水平朝後 0°、正上方 90°、水平朝目標 180°：仰角 50° 是 130°', () => {
+    expect(turretDeg((50 * Math.PI) / 180)).toBeCloseTo(130, 10)
+    expect(turretDeg(Math.PI / 2)).toBeCloseTo(90, 10)
+    expect(turretDeg(0)).toBe(180)
+    expect(angleFromTurret(130)).toBeCloseTo((50 * Math.PI) / 180, 12)
+    expect(angleFromTurret(turretDeg(0.3))).toBeCloseTo(0.3, 12)
   })
 })

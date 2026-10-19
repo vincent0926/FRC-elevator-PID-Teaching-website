@@ -10,6 +10,7 @@ import {
   trajectoryOptions,
   wheelForGoal,
   wheelLimit,
+  turretDeg,
   exitRadius,
   moveFixes,
   moveWindow,
@@ -34,8 +35,10 @@ import { yawText } from './flywheelTune'
 const TAU = 2 * Math.PI
 const DEG = 180 / Math.PI
 const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
-// 到 0.1°：範圍很窄時候選仰角會有小數
-const deg = (a: number) => Math.round(a * DEG * 10) / 10
+// 畫面上的角度都是砲台角度（水平朝後 0°、正上方 90°、水平朝目標 180°，見 turretDeg）；到 0.1°：範圍很窄時會有小數
+const deg = (a: number) => Math.round(turretDeg(a) * 10) / 10
+/** 仰角範圍 lo～hi（rad）換成砲台角度，小的在前 */
+const span = (lo: number, hi: number) => `${deg(hi)}°～${deg(lo)}°`
 
 export function FlywheelAim({
   mech,
@@ -158,15 +161,15 @@ export function FlywheelAim({
         </h2>
         {narrow && <FixAdvice win={win} fixes={fixes} values={{ toward, side, distance: plan.goalDistance, limit: maxWheel }} onApply={applyFix} />}
         {opts.length === 0 ? (
-          <p className="fail">{move ? '這個距離、高度和機器人速度，10°～85° 都射不進（目標太近、太高，或機器人開太快）。改距離、出射高度或機器人速度。' : '這個距離和高度，10°～85° 都射不進（目標太近或太高）。改距離或出射高度。'}</p>
+          <p className="fail">{move ? '這個距離、高度和機器人速度，砲台角度 95°～170° 都射不進（目標太近、太高，或機器人開太快）。改距離、出射高度或機器人速度。' : '這個距離和高度，砲台角度 95°～170° 都射不進（目標太近或太高）。改距離或出射高度。'}</p>
         ) : (
           <>
             <p className="small muted" style={{ marginTop: 0 }}>
-              同一個距離，仰角不同要的轉速也不同。每條線是一個仰角剛好打到目標中心的路線{move ? '（畫的是球對地的路線，已經加上機器人速度；標的度數是發射機構的仰角）' : ''}，點一條（或下面的按鈕）看它要幾 rps。
+              同一個距離，砲台角度不同要的轉速也不同。每條線是一個砲台角度剛好打到目標中心的路線{move ? '（畫的是球對地的路線，已經加上機器人速度；標的度數是發射機構的砲台角度）' : ''}，點一條（或下面的按鈕）看它要幾 rps。砲台角度：水平朝後（左邊）是 0°、正上方 90°、水平朝目標（右邊）是 180°。
             </p>
             {fine && !narrow && (
               <p className="small muted">
-                {move ? '機器人開得快，' : ''}能打進{noneOk ? '' : '、轉速又在上限內'}的仰角只剩 {deg(opts[0].angle)}°～{deg(opts[opts.length - 1].angle)}°，每 5° 找不到幾條，所以改成每 0.1° 找，從這個範圍平均挑 {opts.length} 條給你選。範圍越窄，仰角差一點就打不進。
+                {move ? '機器人開得快，' : ''}能打進{noneOk ? '' : '、轉速又在上限內'}的砲台角度只剩 {span(opts[0].angle, opts[opts.length - 1].angle)}，每 5° 找不到幾條，所以改成每 0.1° 找，從這個範圍平均挑 {opts.length} 條給你選。範圍越窄，角度差一點就打不進。
               </p>
             )}
             {noneOk && (
@@ -176,7 +179,8 @@ export function FlywheelAim({
             )}
             <AimView plan={plan} opts={opts} sel={sel} onPick={(o) => setPicked(deg(o.angle))} />
             <div className="fa-opts" role="group" aria-label="選軌跡">
-              {opts.map((o) => (
+              {/* 砲台角度由左往右變大 */}
+              {[...opts].reverse().map((o) => (
                 <button
                   key={o.angle}
                   type="button"
@@ -198,7 +202,7 @@ export function FlywheelAim({
                     目標轉速 <b>{f(sel.wheel / TAU, 1)} rps</b>
                   </span>
                   <span>
-                    仰角 <b>{deg(sel.angle)}°</b>
+                    砲台角度 <b>{deg(sel.angle)}°</b>
                   </span>
                   {move && (
                     <span>
@@ -241,7 +245,7 @@ export function FlywheelAim({
                 </button>
               </div>
             ) : (
-              <p className="small">點一條軌跡看它要的轉速和仰角。</p>
+              <p className="small">點一條軌跡看它要的轉速和砲台角度。</p>
             )}
             <p className="small muted" style={{ marginBottom: 0 }}>
               不計空氣阻力、假設球不打滑；{move ? '機器人速度用出射那一刻的，沒算程式算完到球射出去的延遲；' : ''}轉速是打到目標中心的值，實際要上機射幾發再微調。「超過上限」是要的轉速比轉速上限（{f(maxWheel / TAU, 0)} rps）還高，不能選；「±—」是轉速低一點球就沒辦法從上面掉進開口，容許誤差算不出來。
@@ -273,7 +277,7 @@ function MoveCode({ mech, plan, sel, maxWheel }: { mech: FlywheelMechanism; plan
           <b>拆成兩個方向</b>：算機器人到目標的距離和方向，把速度拆成「往目標方向的速度」和「側向速度」（就是第 3 步填的兩個數字）。
         </li>
         <li>
-          <b>算轉速和底盤偏角</b>：仰角固定，用二分法找剛好打到目標中心的球速，換成飛輪 rps；側向速度會把球帶歪，底盤往反方向偏一點。
+          <b>算轉速和底盤偏角</b>：砲台角度固定，用二分法找剛好打到目標中心的球速，換成飛輪 rps；側向速度會把球帶歪，底盤往反方向偏一點。
         </li>
         <li>
           <b>對準了才送球</b>：飛輪轉速到了、車頭轉到「正對目標 + 偏角」了，才把球送進飛輪。駕駛照常開，車頭方向交給程式。
@@ -290,7 +294,7 @@ function MoveCode({ mech, plan, sel, maxWheel }: { mech: FlywheelMechanism; plan
           <pre className="code">{MOVE_SHOT_USAGE}</pre>
         </>
       ) : (
-        <p className="small">先在上面選一條軌跡，這裡會照那條軌跡的仰角把程式的數字填好。</p>
+        <p className="small">先在上面選一條軌跡，這裡會照那條軌跡的砲台角度把程式的數字填好。</p>
       )}
       <ul className="small muted" style={{ marginBottom: 0 }}>
         <li>這只是算法和範例，不是完整的子系統：目標座標（紅藍方不同）、CAN ID、飛輪設定（見 3F「程式設定」）、車頭方向的 PID 都要照你們的機器人寫。</li>
@@ -310,8 +314,8 @@ function FixAdvice({ win, fixes, values, onApply }: { win: AimWindow | null; fix
   return (
     <div className="warn fa-fix">
       <p style={{ marginTop: 0 }}>
-        <b>{win ? `能打進的仰角只有 ${deg(win.lo)}°～${deg(win.hi)}°（${f(win.width * DEG, 1)}° 寬）` : '沒有仰角打得進'}</b>
-        ，至少要 {f(NARROW_WINDOW * DEG, 0)}° 寬才比較射得到（實際的仰角、轉速都會有誤差）。
+        <b>{win ? `能打進的砲台角度只有 ${span(win.lo, win.hi)}（${f(win.width * DEG, 1)}° 寬）` : '沒有砲台角度打得進'}</b>
+        ，至少要 {f(NARROW_WINDOW * DEG, 0)}° 寬才比較射得到（實際的角度、轉速都會有誤差）。
         {fixes.length ? '改下面其中一個就好：' : ''}
       </p>
       {fixes.length ? (
@@ -320,7 +324,7 @@ function FixAdvice({ win, fixes, values, onApply }: { win: AimWindow | null; fix
             <li key={x.param}>
               <span>
                 「{FIX_LABEL[x.param]}」{show(x.param, values[x.param])} → <b>{show(x.param, x.value)}</b>
-                <span className="small muted">（仰角 {deg(x.window.lo)}°～{deg(x.window.hi)}°）</span>
+                <span className="small muted">（砲台角度 {span(x.window.lo, x.window.hi)}）</span>
               </span>
               <button className="btn small" type="button" onClick={() => onApply(x)}>
                 套用
@@ -343,12 +347,12 @@ function limitHint(rps: number, freeSpeed: number): string {
   return '選軌跡只挑這個轉速以內的'
 }
 
-/** 跟站著不動射比：同一個仰角要幾 rps */
+/** 跟站著不動射比：同一個砲台角度要幾 rps */
 function stillText(mech: FlywheelMechanism, plan: ShotPlan, sel: TrajectoryOption): string {
   const w = wheelForGoal(exitRadius(mech), { ...plan, angle: sel.angle })
-  if (w === null) return '這個仰角站著射不進'
+  if (w === null) return '這個砲台角度站著射不進'
   const diff = (sel.wheel - w) / TAU
-  return `同一個仰角要 ${f(w / TAU, 1)} rps、底盤正對目標（邊移動邊射${diff >= 0 ? '多' : '少'} ${f(Math.abs(diff), 1)} rps）`
+  return `同一個砲台角度要 ${f(w / TAU, 1)} rps、底盤正對目標（邊移動邊射${diff >= 0 ? '多' : '少'} ${f(Math.abs(diff), 1)} rps）`
 }
 
 const W = 640

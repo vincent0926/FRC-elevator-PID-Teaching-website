@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { QuizDef } from '../../components/Quiz'
-import { dipFraction, exitRadius, exitSpeed, rangeAtWheel, type FlywheelFeedforward, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
+import { dipFraction, exitRadius, exitSpeed, rangeAtWheel, turretDeg, type FlywheelFeedforward, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
 
 /** 射球飛輪 1F 教學關卡：每關用你的機構算，最後一題檢核題 */
 
@@ -110,7 +110,7 @@ export const FLYWHEEL_LESSONS: FlywheelLesson[] = [
             {m.back === 'rollers'
               ? `0.5 × ${f(plan.target / TAU, 0)} rps × 2π × (${f(m.wheelRadius, 4)} + ${f(m.backRatio, 2)} × ${f(m.backRadius, 4)}) m`
               : `${f(plan.target / TAU, 0)} rps × 2π × ${f(m.wheelRadius, 4)} m × 0.5`}{' '}
-            ≈ <b>{f(v, 2)} m/s</b>。仰角 {f((plan.angle * 180) / Math.PI, 0)}°、離地 {f(plan.height, 2)} m 射出，不計空氣阻力，往下掉經過目標高度 {f(plan.goalHeight, 2)} m 的地方離出射點 <b>{Number.isFinite(r) ? `${f(r, 2)} m` : '（打不到那麼高）'}</b>（目標在 {f(plan.goalDistance, 2)} m）。
+            ≈ <b>{f(v, 2)} m/s</b>。砲台角度 {f(turretDeg(plan.angle), 0)}°、離地 {f(plan.height, 2)} m 射出，不計空氣阻力，往下掉經過目標高度 {f(plan.goalHeight, 2)} m 的地方離出射點 <b>{Number.isFinite(r) ? `${f(r, 2)} m` : '（打不到那麼高）'}</b>（目標在 {f(plan.goalDistance, 2)} m）。
           </p>
           <p>
             轉速少 5%，落點變成 {Number.isFinite(r95) ? `${f(r95, 2)} m，近了 ${f((r - r95) * 100, 0)} cm` : '打不到目標高度'}。射程大約跟球速的平方成正比（目標比出射點高的時候差得更多），所以轉速差一點，落點差一截。這就是為什麼要等轉速回來才射下一發。

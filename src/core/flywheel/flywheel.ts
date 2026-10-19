@@ -389,6 +389,17 @@ export function flywheelFailures(m: FlywheelMetrics, plan: ShotPlan, spec: Flywh
  * 球速與射程：拋體運動，不計空氣阻力、球的旋轉（近似模型）。
  * 球出去的速度 = EXIT_RATIO × ω × r，r 傳 exitRadius(mech)（對面有滾輪時會比輪子半徑大），跟模擬裡球帶走的角動量用同一個假設。
  */
+/**
+ * 砲台角度（畫面和 Java 用的度數，決策 130）：側視圖球往右飛向目標，水平朝後（左）是 0°、
+ * 正上方 90°、水平朝目標是 180°，往目標那邊轉角度變大。內部還是存仰角 rad（0 = 水平朝目標）。
+ */
+export function turretDeg(angle: number): number {
+  return 180 - (angle * 180) / Math.PI
+}
+export function angleFromTurret(deg: number): number {
+  return ((180 - deg) * Math.PI) / 180
+}
+
 export const GRAVITY = 9.81
 
 export function exitSpeed(w: number, r: number): number {
