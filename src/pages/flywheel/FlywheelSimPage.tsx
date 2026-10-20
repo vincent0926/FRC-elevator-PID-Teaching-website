@@ -32,7 +32,7 @@ import { PlaybackBar, usePlayback } from '../simulate/MiniShaft'
 import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText, moveMissText, yawText } from './flywheelTune'
 import { FlywheelView } from './FlywheelView'
 import { MoveView } from './MoveView'
-import { BallFields, distanceHint, FROM_LABEL, HubPreset, MechFields, TurretFields } from './FlywheelForms'
+import { BallFields, distanceHint, FROM_LABEL, GoalDistanceField, HubPreset, MechFields, TurretFields } from './FlywheelForms'
 import { loadFlywheelStyle, SHAPES, useFlywheelMechanism, useMoveSettings, usePersisted, useRpsLimit, useShotPlan, type MoveSettings } from './flywheelStore'
 import { t } from '../../core/lang'
 
@@ -283,7 +283,7 @@ function ShotSim({
           </div>
           <h3 style={{ marginTop: 14 }}>{t('目標', 'Target')}</h3>
           <div className="fields three">
-            <NumberField label={t('目標距離', 'Target distance')} value={plan.goalDistance} onChange={(v) => setP({ goalDistance: v })} min={0.2} max={20} step={0.1} unit="m" hint={distanceHint(plan, !!mv)} />
+            <GoalDistanceField plan={plan} setP={setP} fromTag={!mv} hint={distanceHint(plan, !!mv)} />
             <NumberField label={t('目標高度', 'Target height')} value={plan.goalHeight} onChange={(v) => setP({ goalHeight: v })} min={0} max={5} step={0.05} unit="m" hint={t('0 = 地面', '0 = floor')} />
             <NumberField label={t('開口寬度', 'Opening width')} value={plan.goalWidth} onChange={(v) => setP({ goalWidth: v })} min={0.05} max={3} step={0.05} unit="m" />
           </div>

@@ -5,6 +5,7 @@ import {
   turretDeg,
   GAME_PIECES_2026,
   HUB_2026,
+  HUB_TAG_TO_CENTER,
   computeFlywheelFeedforward,
   DEFAULT_FLYWHEEL,
   DEFAULT_FLYWHEEL_SPEC,
@@ -253,6 +254,14 @@ describe('2026 HUB', () => {
     expect(HUB_2026.goalHeight).toBeCloseTo(1.829, 3)
     expect(HUB_2026.goalWidth).toBeCloseTo(1.059, 3)
     expect(wheelForGoal(DEFAULT_FLYWHEEL.wheelRadius, { ...DEFAULT_PLAN, ...HUB_2026 })).not.toBeNull()
+  })
+
+  it('tag 到中心 23.5 in；從 tag 量的距離加上去，要的轉速比直接用 tag 距離高', () => {
+    expect(HUB_TAG_TO_CENTER).toBeCloseTo(0.597, 3)
+    const plan = { ...DEFAULT_PLAN, ...HUB_2026, goalDistance: 3 }
+    const toTag = wheelForGoal(DEFAULT_FLYWHEEL.wheelRadius, plan)!
+    const toCenter = wheelForGoal(DEFAULT_FLYWHEEL.wheelRadius, { ...plan, goalDistance: 3 + HUB_TAG_TO_CENTER })!
+    expect(toCenter).toBeGreaterThan(toTag)
   })
 })
 

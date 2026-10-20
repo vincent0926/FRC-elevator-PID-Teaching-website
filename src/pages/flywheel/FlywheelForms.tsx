@@ -1,7 +1,7 @@
 import { NumberField } from '../../components/NumberField'
 import { MOTOR_SPECS, type MotorId } from '../../core/motors'
-import { backSurfaceRatio, GAME_PIECES_2026, HUB_2026, releaseAhead, releaseHeight, turretDeg, type DistanceFrom, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
-import { SHAPES } from './flywheelStore'
+import { backSurfaceRatio, GAME_PIECES_2026, HUB_2026, HUB_TAG_TO_CENTER, releaseAhead, releaseHeight, turretDeg, type DistanceFrom, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
+import { SHAPES, useDistanceRef } from './flywheelStore'
 import { t } from '../../core/lang'
 
 /** 射球飛輪 1F 和 3F「算轉速和仰角」共用的表單：機構、球、2026 HUB */
@@ -195,6 +195,65 @@ export function TurretFields({ plan, setP, angle }: { plan: ShotPlan; setP: (p: 
             ` At a ${f(turretDeg(angle), 1)}° turret angle the release point is ${f(releaseHeight(plan, angle), 2)} m above the floor and ${f(plan.goalDistance - releaseAhead(plan, angle), 2)} m from the target.`,
           )}
       </p>
+    </>
+  )
+}
+
+/**
+ * 目標距離：目標那一端可以選量到 HUB 中心，或量到 HUB 前面的 AprilTag（Limelight 量到的）。
+ * 選 tag 時輸入框是到 tag 的距離，存進 plan 的還是到中心的距離（加上 tag 到中心的距離），計算都不用改。
+ * 邊移動邊射不給選（只用到中心的距離），fromTag = false 時就是原本的一格。
+ */
+export function GoalDistanceField({ plan, setP, hint, fromTag = true }: { plan: ShotPlan; setP: (p: Partial<ShotPlan>) => void; hint: string; fromTag?: boolean }) {
+  const [ref, setRef] = useDistanceRef()
+  const tag = fromTag && ref.ref === 'tag'
+  const from = FROM_LABEL[plan.distanceFrom]
+  return (
+    <>
+      {fromTag && (
+        <label className="f">
+          {t('量到 HUB 哪裡', 'Measured to which part of the HUB')}
+          <span className="inp">
+            <select value={ref.ref} onChange={(e) => setRef({ ...ref, ref: e.target.value === 'tag' ? 'tag' : 'center' })} aria-label={t('量到 HUB 哪裡', 'Measured to which part of the HUB')}>
+              <option value="center">{t('HUB 中心', 'HUB center')}</option>
+              <option value="tag">{t('前面的 tag', 'Front tag')}</option>
+            </select>
+          </span>
+          <span className="muted small">{tag ? t('HUB 前面的 AprilTag，Limelight 量到的是到它的距離', 'The AprilTag on the HUB face; Limelight reports the distance to it') : t('球要掉進開口中間', 'The ball should drop into the middle of the opening')}</span>
+        </label>
+      )}
+      {tag ? (
+        <>
+          <NumberField
+            label={t('到 tag 的距離', 'Distance to the tag')}
+            value={plan.goalDistance - ref.offset}
+            digits={2}
+            onChange={(x) => setP({ goalDistance: x + ref.offset })}
+            min={0.2}
+            max={20}
+            step={0.1}
+            unit="m"
+            hint={t(`${from}到 tag 的水平距離；算轉速用到 HUB 中心的 ${f(plan.goalDistance, 2)} m`, `Horizontal distance from the ${from.toLowerCase()} to the tag; the math uses ${f(plan.goalDistance, 2)} m to the HUB center`)}
+          />
+          <NumberField
+            label={t('tag 到 HUB 中心', 'Tag to HUB center')}
+            value={ref.offset}
+            digits={3}
+            onChange={(x) => {
+              // 到 tag 的距離不變，到中心的距離跟著改
+              setP({ goalDistance: plan.goalDistance - ref.offset + x })
+              setRef({ ...ref, offset: x })
+            }}
+            min={0}
+            max={2}
+            step={0.01}
+            unit="m"
+            hint={t(`預設 23.5 in（${f(HUB_TAG_TO_CENTER, 2)} m）：HUB 底座 47 in 見方的一半`, `Default 23.5 in (${f(HUB_TAG_TO_CENTER, 2)} m): half of the 47 in square HUB base`)}
+          />
+        </>
+      ) : (
+        <NumberField label={t('目標距離', 'Target distance')} value={plan.goalDistance} onChange={(x) => setP({ goalDistance: x })} min={0.2} max={20} step={0.1} unit="m" hint={hint} />
+      )}
     </>
   )
 }

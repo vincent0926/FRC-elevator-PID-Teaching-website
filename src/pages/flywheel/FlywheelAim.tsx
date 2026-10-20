@@ -24,7 +24,7 @@ import {
   type TrajectoryOption,
 } from '../../core/flywheel/flywheel'
 import { MOVE_SHOT_USAGE, moveShotJava } from '../../core/codegen/flywheel'
-import { BallFields, distanceHint, HubPreset, MechFields, TurretFields } from './FlywheelForms'
+import { BallFields, distanceHint, GoalDistanceField, HubPreset, MechFields, TurretFields } from './FlywheelForms'
 import { useRpsLimit, type MoveSettings } from './flywheelStore'
 import { yawText } from './flywheelTune'
 import { t } from '../../core/lang'
@@ -138,16 +138,7 @@ export function FlywheelAim({
           <span className="fa-step">2</span>{t('離目標多遠？', 'How far is the target?')}
         </h2>
         <div className="fields">
-          <NumberField
-            label={t('目標距離', 'Target distance')}
-            value={plan.goalDistance}
-            onChange={(x) => setP({ goalDistance: x })}
-            min={0.2}
-            max={20}
-            step={0.1}
-            unit="m"
-            hint={distanceHint(plan)}
-          />
+          <GoalDistanceField plan={plan} setP={setP} fromTag={!move} hint={distanceHint(plan)} />
         </div>
         <div style={{ marginTop: 12 }}>
           <TurretFields plan={plan} setP={setP} angle={sel?.angle} />

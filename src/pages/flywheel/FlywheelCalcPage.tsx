@@ -22,7 +22,7 @@ import {
   turretDeg,
 } from '../../core/flywheel/flywheel'
 import { FLYWHEEL_LESSONS } from './flywheelLessons'
-import { BallFields, distanceHint, HubPreset, MechFields, TurretFields } from './FlywheelForms'
+import { BallFields, distanceHint, GoalDistanceField, HubPreset, MechFields, TurretFields } from './FlywheelForms'
 import { FlywheelAim } from './FlywheelAim'
 import { loadFlywheelStyle, useFlywheelMechanism, useMoveSettings, usePersisted, useShotPlan } from './flywheelStore'
 import { t } from '../../core/lang'
@@ -149,7 +149,7 @@ function CustomCalc() {
               <NumberField label={t('砲台角度', 'Turret angle')} value={turretDeg(plan.angle)} digits={0} onChange={(x) => setP({ angle: angleFromTurret(x) })} min={5} max={85} step={1} unit="°" hint={t('正上方 0°，往目標倒角度變大', 'Straight up is 0°, grows as it tips toward the target')} />
             </div>
             <div className="fields three" style={{ marginTop: 12 }}>
-              <NumberField label={t('目標距離', 'Target distance')} value={plan.goalDistance} onChange={(x) => setP({ goalDistance: x })} min={0.2} max={20} step={0.1} unit="m" hint={distanceHint(plan)} />
+              <GoalDistanceField plan={plan} setP={setP} hint={distanceHint(plan)} />
               <NumberField label={t('目標高度', 'Target height')} value={plan.goalHeight} onChange={(x) => setP({ goalHeight: x })} min={0} max={5} step={0.05} unit="m" hint={t('0 = 地面', '0 = floor')} />
               <NumberField label={t('開口寬度', 'Opening width')} value={plan.goalWidth} onChange={(x) => setP({ goalWidth: x })} min={0.05} max={3} step={0.05} unit="m" />
             </div>
