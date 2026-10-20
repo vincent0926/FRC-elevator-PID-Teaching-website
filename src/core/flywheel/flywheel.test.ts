@@ -15,6 +15,9 @@ import {
   dipFraction,
   backSurfaceRatio,
   exitRadius,
+  releaseAhead,
+  releaseHeight,
+  releasePlan,
   impulseRadiusSq,
   exitSpeed,
   fastestSpinUp,
@@ -522,5 +525,49 @@ describe('砲台角度（決策 130）', () => {
     expect(turretDeg(0)).toBe(90)
     expect(angleFromTurret(40)).toBeCloseTo((50 * Math.PI) / 180, 12)
     expect(angleFromTurret(turretDeg(0.3))).toBeCloseTo(0.3, 12)
+  })
+})
+
+describe('砲台位置和目標距離的量法', () => {
+  const r = DEFAULT_FLYWHEEL.wheelRadius
+  const geo = { ...DEFAULT_PLAN, barrel: 0.3, distanceFrom: 'center' as const, pivotAhead: -0.2 }
+
+  it('出射點 = 轉軸 + 沿射出方向的 barrel', () => {
+    const a = DEFAULT_PLAN.angle
+    expect(releaseHeight(geo)).toBeCloseTo(0.5 + 0.3 * Math.sin(a), 12)
+    expect(releaseAhead(geo)).toBeCloseTo(-0.2 + 0.3 * Math.cos(a), 12)
+    const rel = releasePlan(geo)
+    expect(rel.goalDistance).toBeCloseTo(DEFAULT_PLAN.goalDistance - releaseAhead(geo), 12)
+    // 換過再換一次不會變
+    expect(releasePlan(rel)).toEqual(rel)
+  })
+
+  it('從砲台轉軸量時，pivotAhead 不算', () => {
+    expect(releaseAhead({ ...DEFAULT_PLAN, pivotAhead: 0.5 })).toBe(0)
+  })
+
+  it('預設（從轉軸量、barrel = 0）跟原本一樣', () => {
+    expect(releasePlan(DEFAULT_PLAN)).toEqual(DEFAULT_PLAN)
+  })
+
+  it('轉速照出射點算，落點從量距離那一點算', () => {
+    const w = wheelForGoal(r, geo)!
+    expect(w).toBeCloseTo(wheelForGoal(r, releasePlan(geo))!, 9)
+    expect(rangeAtWheel(w, r, geo)).toBeCloseTo(geo.goalDistance, 9)
+    // 轉軸在機器人中心前面 0.5 m：從中心量 4.6 m = 從轉軸量 4.1 m
+    const ahead = { ...DEFAULT_PLAN, distanceFrom: 'center' as const, pivotAhead: 0.5 }
+    expect(wheelForGoal(r, ahead)).toBeCloseTo(wheelForGoal(r, { ...DEFAULT_PLAN, goalDistance: 4.1 })!, 9)
+  })
+
+  it('候選軌跡每一條都從那個砲台角度的出射點打到目標中心', () => {
+    for (const o of trajectoryOptions(DEFAULT_FLYWHEEL, geo, Infinity)) {
+      const d = launchRange(o.exit, o.angle, releaseHeight(geo, o.angle), geo.goalHeight) + releaseAhead(geo, o.angle)
+      expect(d).toBeCloseTo(geo.goalDistance, 6)
+    }
+  })
+
+  it('邊移動邊射沒在動時跟站著射一樣', () => {
+    const s = solveMovingShot(exitRadius(DEFAULT_FLYWHEEL), geo, geo.angle, STILL)!
+    expect(s.wheel).toBeCloseTo(wheelForGoal(exitRadius(DEFAULT_FLYWHEEL), geo)!, 6)
   })
 })

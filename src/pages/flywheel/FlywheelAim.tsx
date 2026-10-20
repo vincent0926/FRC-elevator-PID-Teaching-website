@@ -12,6 +12,8 @@ import {
   wheelLimit,
   turretDeg,
   exitRadius,
+  releaseAhead,
+  releaseHeight,
   moveFixes,
   moveWindow,
   NARROW_WINDOW,
@@ -22,7 +24,7 @@ import {
   type TrajectoryOption,
 } from '../../core/flywheel/flywheel'
 import { MOVE_SHOT_USAGE, moveShotJava } from '../../core/codegen/flywheel'
-import { BallFields, HubPreset, MechFields } from './FlywheelForms'
+import { BallFields, distanceHint, HubPreset, MechFields, TurretFields } from './FlywheelForms'
 import { useRpsLimit, type MoveSettings } from './flywheelStore'
 import { yawText } from './flywheelTune'
 import { t } from '../../core/lang'
@@ -122,7 +124,6 @@ export function FlywheelAim({
           </h2>
           <div className="fields">
             <BallFields plan={plan} setP={setP} />
-            <NumberField label={t('出射高度', 'Release height')} value={plan.height} onChange={(x) => setP({ height: x })} min={0} max={2} step={0.05} unit="m" hint={t('離地多高', 'Height above the floor')} />
           </div>
           <div className="fields" style={{ marginTop: 12 }}>
             <NumberField label={t('目標高度', 'Target height')} value={plan.goalHeight} onChange={(x) => setP({ goalHeight: x })} min={0} max={5} step={0.05} unit="m" hint={t('0 = 地面', '0 = floor')} />
@@ -145,8 +146,11 @@ export function FlywheelAim({
             max={20}
             step={0.1}
             unit="m"
-            hint={move ? t('射的那一刻，出射點到目標中心的水平距離', 'Horizontal distance from the release point to the target center at the moment of the shot') : t('出射點到目標中心的水平距離', 'Horizontal distance from the release point to the target center')}
+            hint={distanceHint(plan)}
           />
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <TurretFields plan={plan} setP={setP} angle={sel?.angle} />
         </div>
       </div>
 
@@ -176,8 +180,8 @@ export function FlywheelAim({
         {opts.length === 0 ? (
           <p className="fail">
             {move
-              ? t('這個距離、高度和機器人速度，砲台角度 5°～80° 都射不進（目標太近、太高，或機器人開太快）。改距離、出射高度或機器人速度。', 'At this distance, height and robot speed, no turret angle from 5° to 80° goes in (target too close or too high, or the robot is too fast). Change the distance, release height or robot speed.')
-              : t('這個距離和高度，砲台角度 5°～80° 都射不進（目標太近或太高）。改距離或出射高度。', 'At this distance and height, no turret angle from 5° to 80° goes in (target too close or too high). Change the distance or release height.')}
+              ? t('這個距離、高度和機器人速度，砲台角度 5°～80° 都射不進（目標太近、太高，或機器人開太快）。改距離、砲台轉軸高度或機器人速度。', 'At this distance, height and robot speed, no turret angle from 5° to 80° goes in (target too close or too high, or the robot is too fast). Change the distance, turret pivot height or robot speed.')
+              : t('這個距離和高度，砲台角度 5°～80° 都射不進（目標太近或太高）。改距離或砲台轉軸高度。', 'At this distance and height, no turret angle from 5° to 80° goes in (target too close or too high). Change the distance or turret pivot height.')}
           </p>
         ) : (
           <>
@@ -383,13 +387,13 @@ function MoveCode({ mech, plan, sel, maxWheel }: { mech: FlywheelMechanism; plan
         {t(
           <>
             <li>這只是算法和範例，不是完整的子系統：目標座標（紅藍方不同）、CAN ID、飛輪設定（見 3F「程式設定」）、車頭方向的 PID 都要照你們的機器人寫。</li>
-            <li>距離用的是機器人中心；發射機構離中心很遠的話，要先把位置換成出射點。</li>
+            <li>範例的距離是用 odometry 的位置算的，也就是機器人中心。<code>RELEASE_AHEAD</code> 是照上面「目標距離從哪裡量」填的，選的不是機器人中心的話，要先把位置換成那一點，或回上面改選機器人中心。</li>
             <li>網站沒算程式算完到球射出去的延遲。機器人開很快時，可以先用「速度 × 延遲」把位置往前推再算，延遲要自己量。</li>
             <li>不計空氣阻力：上機先站著射，再慢慢開快，球一直偏近就把 MPS_PER_RPS 調小（轉速會變高），偏遠就調大。</li>
           </>,
           <>
             <li>This is only the math and an example, not a full subsystem: the target coordinates (different for red and blue), CAN IDs, flywheel config (see “Code settings” in 3F) and the heading PID all have to match your robot.</li>
-            <li>Distance is measured from the robot center; if the shooter is far from the center, convert the position to the release point first.</li>
+            <li>The example computes distance from the odometry pose, which is the robot center. <code>RELEASE_AHEAD</code> follows “Target distance measured from” above; if you didn’t pick the robot center, convert the position to that point first, or go back and pick the robot center.</li>
             <li>The site ignores the delay from the code finishing to the ball leaving. When the robot is fast, project the position forward by “velocity × delay” before computing; measure the delay yourself.</li>
             <li>Air drag is ignored: on the robot, shoot standing still first, then drive faster. If the ball keeps falling short, lower MPS_PER_RPS (the speed goes up); if it goes long, raise it.</li>
           </>,
@@ -436,7 +440,7 @@ function FixAdvice({ win, fixes, values, onApply }: { win: AimWindow | null; fix
           ))}
         </ul>
       ) : (
-        <p style={{ marginBottom: 0 }}>{t('速度在 ±5 m/s、距離 15 m 以內都找不到：改出射高度，或換機構試試。', 'Nothing found within ±5 m/s and 15 m: change the release height or try a different mechanism.')}</p>
+        <p style={{ marginBottom: 0 }}>{t('速度在 ±5 m/s、距離 15 m 以內都找不到：改砲台轉軸高度，或換機構試試。', 'Nothing found within ±5 m/s and 15 m: change the turret pivot height or try a different mechanism.')}</p>
       )}
     </div>
   )
@@ -469,18 +473,22 @@ const LX = 40
 function AimView({ plan, opts, sel, onPick }: { plan: ShotPlan; opts: TrajectoryOption[]; sel: TrajectoryOption | null; onPick: (o: TrajectoryOption) => void }) {
   const xMax = (plan.goalDistance + plan.goalWidth / 2) * 1.08
   const yMax = Math.max(plan.goalHeight, plan.height, ...opts.map((o) => o.apex)) * 1.1
+  // x = 0 是量距離的那一點；每條軌跡從那個砲台角度的出射點出發
+  const pivotX = plan.distanceFrom === 'pivot' ? 0 : plan.pivotAhead
   const s = Math.min((W - LX - 20) / xMax, (GROUND - 12) / yMax)
   // 軌跡比較高瘦時，畫面寬度跟著縮，手機上才不會只用到一半
   const vw = Math.max(H, LX + xMax * s + 20)
   const px = (x: number) => LX + x * s
-  const py = (y: number) => GROUND - (plan.height + y) * s
+  const py = (y: number) => GROUND - y * s
   const gy = GROUND - plan.goalHeight * s
   const path = (o: TrajectoryOption) => {
-    const T = flightTime(o.fieldExit, o.fieldAngle, plan.height, plan.goalHeight)
+    const x0 = releaseAhead(plan, o.angle)
+    const h0 = releaseHeight(plan, o.angle)
+    const T = flightTime(o.fieldExit, o.fieldAngle, h0, plan.goalHeight)
     const pts: string[] = []
     for (let i = 0; i <= 40; i++) {
       const p = ballAt(o.fieldExit, o.fieldAngle, (T * i) / 40)
-      pts.push(`${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`)
+      pts.push(`${px(x0 + p.x).toFixed(1)},${py(h0 + p.y).toFixed(1)}`)
     }
     return pts.join(' ')
   }
@@ -491,20 +499,20 @@ function AimView({ plan, opts, sel, onPick }: { plan: ShotPlan; opts: Trajectory
       <rect x={0} y={GROUND} width={vw} height={H - GROUND} className="ev-base" />
       <line x1={px(plan.goalDistance + plan.goalWidth / 2)} y1={gy} x2={px(plan.goalDistance + plan.goalWidth / 2)} y2={GROUND} className="fv-goal-post" />
       <line x1={px(plan.goalDistance - plan.goalWidth / 2)} y1={gy} x2={px(plan.goalDistance + plan.goalWidth / 2)} y2={gy} className="fv-goal" />
-      <line x1={LX} y1={GROUND} x2={LX} y2={py(0)} className="ev-frame" />
+      <line x1={px(pivotX)} y1={GROUND} x2={px(pivotX)} y2={py(plan.height)} className="ev-frame" />
       {order.map((o) => (
         <g key={o.angle} className={'fa-path' + (o === sel ? ' sel' : '') + (o.reachable ? '' : ' no')} onClick={() => o.reachable && onPick(o)}>
           <polyline points={path(o)} className="fa-line" />
           {/* 比較好點的透明粗線 */}
           <polyline points={path(o)} className="fa-hit" />
           {(o === sel || deg(o.angle) % 10 === 0 || o === opts[0] || o === opts[opts.length - 1]) && (
-            <text x={px(Math.min(xMax / 1.08, (o.fieldExit * o.fieldExit * Math.sin(2 * o.fieldAngle)) / (2 * GRAVITY)))} y={py(o.apex - plan.height) - 4} className="fa-label">
+            <text x={px(Math.min(xMax / 1.08, releaseAhead(plan, o.angle) + (o.fieldExit * o.fieldExit * Math.sin(2 * o.fieldAngle)) / (2 * GRAVITY)))} y={py(o.apex) - 4} className="fa-label">
               {deg(o.angle)}°
             </text>
           )}
         </g>
       ))}
-      <circle cx={LX} cy={py(0)} r={4} className="ch-pivot" />
+      <circle cx={px(pivotX)} cy={py(plan.height)} r={4} className="ch-pivot" />
     </svg>
   )
 }

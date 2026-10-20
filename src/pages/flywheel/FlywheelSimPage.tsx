@@ -32,7 +32,7 @@ import { PlaybackBar, usePlayback } from '../simulate/MiniShaft'
 import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText, moveMissText, yawText } from './flywheelTune'
 import { FlywheelView } from './FlywheelView'
 import { MoveView } from './MoveView'
-import { BallFields, HubPreset, MechFields } from './FlywheelForms'
+import { BallFields, distanceHint, FROM_LABEL, HubPreset, MechFields, TurretFields } from './FlywheelForms'
 import { loadFlywheelStyle, SHAPES, useFlywheelMechanism, useMoveSettings, usePersisted, useRpsLimit, useShotPlan, type MoveSettings } from './flywheelStore'
 import { t } from '../../core/lang'
 
@@ -280,15 +280,17 @@ function ShotSim({
             <NumberField label={t('第一發', 'First shot')} value={plan.firstShot} onChange={(v) => setP({ firstShot: v })} min={0.2} max={5} step={0.1} unit="s" hint={t('從靜止開始算', 'Counted from rest')} />
             <BallFields plan={plan} setP={setP} />
             <NumberField label={t('砲台角度', 'Turret angle')} value={turretDeg(plan.angle)} digits={1} onChange={(v) => setP({ angle: angleFromTurret(v) })} min={5} max={85} step={1} unit="°" hint={t('正上方 0°，往目標倒角度變大', 'Straight up is 0°, grows as it tips toward the target')} />
-            <NumberField label={t('出射高度', 'Release height')} value={plan.height} onChange={(v) => setP({ height: v })} min={0} max={2} step={0.05} unit="m" hint={t('離地多高', 'Height above the floor')} />
           </div>
           <h3 style={{ marginTop: 14 }}>{t('目標', 'Target')}</h3>
           <div className="fields three">
-            <NumberField label={t('目標距離', 'Target distance')} value={plan.goalDistance} onChange={(v) => setP({ goalDistance: v })} min={0.2} max={20} step={0.1} unit="m" hint={mv ? t('第一發時離目標多遠', 'Distance to the target at the first shot') : t('離出射點的水平距離', 'Horizontal distance from the release point')} />
+            <NumberField label={t('目標距離', 'Target distance')} value={plan.goalDistance} onChange={(v) => setP({ goalDistance: v })} min={0.2} max={20} step={0.1} unit="m" hint={distanceHint(plan, !!mv)} />
             <NumberField label={t('目標高度', 'Target height')} value={plan.goalHeight} onChange={(v) => setP({ goalHeight: v })} min={0} max={5} step={0.05} unit="m" hint={t('0 = 地面', '0 = floor')} />
             <NumberField label={t('開口寬度', 'Opening width')} value={plan.goalWidth} onChange={(v) => setP({ goalWidth: v })} min={0.05} max={3} step={0.05} unit="m" />
           </div>
           <HubPreset setP={setP} />
+          <div style={{ marginTop: 12 }}>
+            <TurretFields plan={plan} setP={setP} angle={plan.angle} />
+          </div>
           {!mv && <p className="small" style={{ margin: '8px 0 0' }}>
             {goalW === null ? (
               <span className="fail">{t('這個砲台角度射不進：目標太近或太高。改砲台角度或目標。', 'Doesn’t go in at this turret angle: the target is too close or too high. Change the turret angle or target.')}</span>
@@ -536,7 +538,7 @@ function ShotSim({
         <p className="small muted" style={{ margin: '6px 0 0' }}>
           {mv
             ? t(`看球往下掉經過目標高度（${f(plan.goalHeight, 2)} m）的地方，離目標中心在開口一半（${f((plan.goalWidth / 2) * 100, 0)} cm）以內算進（開口當成圓的）。`, `Looks at where the ball falls through the target height (${f(plan.goalHeight, 2)} m); within half the opening (${f((plan.goalWidth / 2) * 100, 0)} cm) of the target center counts as in (the opening is treated as round). `)
-            : t(`落點是球往下掉經過目標高度（${f(plan.goalHeight, 2)} m）時離出射點多遠，離目標距離在開口一半（±${f((plan.goalWidth / 2) * 100, 0)} cm）以內算進。`, `The landing point is how far from the release point the ball falls through the target height (${f(plan.goalHeight, 2)} m); within half the opening (±${f((plan.goalWidth / 2) * 100, 0)} cm) of the target distance counts as in. `)}
+            : t(`落點是球往下掉經過目標高度（${f(plan.goalHeight, 2)} m）時離${FROM_LABEL[plan.distanceFrom]}多遠，離目標距離在開口一半（±${f((plan.goalWidth / 2) * 100, 0)} cm）以內算進。`, `The landing point is how far from the ${FROM_LABEL[plan.distanceFrom].toLowerCase()} the ball falls through the target height (${f(plan.goalHeight, 2)} m); within half the opening (±${f((plan.goalWidth / 2) * 100, 0)} cm) of the target distance counts as in. `)}
           {t(
             <>
             轉速差一點，落點就差一截。

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { MOTOR_SPECS } from '../../core/motors'
-import { DEFAULT_FLYWHEEL, DEFAULT_PLAN, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
+import { DEFAULT_FLYWHEEL, DEFAULT_PLAN, DISTANCE_FROM, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
 import { loadJson, loadSession, saveJson, saveSession } from '../../storage/local'
 import { t } from '../../core/lang'
 
@@ -53,7 +53,7 @@ function migratePlan() {
 export function useShotPlan() {
   // 要在 usePersisted 讀存檔之前改好
   useState(migratePlan)
-  return usePersisted<ShotPlan>('flywheel:plan', DEFAULT_PLAN)
+  return usePersisted<ShotPlan>('flywheel:plan', DEFAULT_PLAN, (p) => DISTANCE_FROM.includes(p.distanceFrom) && p.barrel >= 0)
 }
 
 /**

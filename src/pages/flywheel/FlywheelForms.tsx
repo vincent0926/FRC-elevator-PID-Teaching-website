@@ -1,6 +1,6 @@
 import { NumberField } from '../../components/NumberField'
 import { MOTOR_SPECS, type MotorId } from '../../core/motors'
-import { backSurfaceRatio, GAME_PIECES_2026, HUB_2026, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
+import { backSurfaceRatio, GAME_PIECES_2026, HUB_2026, releaseAhead, releaseHeight, turretDeg, type DistanceFrom, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
 import { SHAPES } from './flywheelStore'
 import { t } from '../../core/lang'
 
@@ -122,5 +122,79 @@ export function HubPreset({ setP }: { setP: (p: Partial<ShotPlan>) => void }) {
         )}
       </span>
     </div>
+  )
+}
+
+/** 目標距離從機器人哪裡量（下拉選單和「目標距離」的說明共用） */
+export const FROM_LABEL: Record<DistanceFrom, string> = {
+  pivot: t('砲台轉軸', 'Turret pivot'),
+  center: t('機器人中心', 'Robot center'),
+  bumper: t('保險桿前緣', 'Bumper front edge'),
+}
+
+/** 「目標距離」欄位的說明：從哪裡量到目標中心 */
+export function distanceHint(plan: ShotPlan, moving = false) {
+  const from = FROM_LABEL[plan.distanceFrom]
+  return moving
+    ? t(`第一發時，${from}到目標中心的水平距離`, `Horizontal distance from the ${from.toLowerCase()} to the target center at the first shot`)
+    : t(`${from}到目標中心的水平距離`, `Horizontal distance from the ${from.toLowerCase()} to the target center`)
+}
+
+/**
+ * 砲台的位置：轉軸高度、轉軸到出射點，和目標距離從機器人哪裡量。
+ * 給 angle 時顯示那個砲台角度下出射點的高度和離目標多遠。
+ */
+export function TurretFields({ plan, setP, angle }: { plan: ShotPlan; setP: (p: Partial<ShotPlan>) => void; angle?: number }) {
+  const from = plan.distanceFrom
+  // 保險桿前緣在轉軸前面，填「轉軸在後面多少」比較直覺，存的時候變負的
+  const behind = from === 'bumper'
+  return (
+    <>
+      <div className="fields three">
+        <NumberField label={t('砲台轉軸高度', 'Turret pivot height')} value={plan.height} onChange={(x) => setP({ height: x })} min={0} max={2} step={0.01} unit="m" hint={t('砲台轉動的那根軸離地多高', 'How high the turret’s pivot axle is above the floor')} />
+        <NumberField label={t('轉軸到出射點', 'Pivot to release point')} value={plan.barrel} onChange={(x) => setP({ barrel: Math.max(0, x) })} min={0} max={1} step={0.01} unit="m" hint={t('球離開輪子的地方離轉軸多遠；0 = 當成從轉軸出去', 'How far from the pivot the ball leaves the wheel; 0 = treat it as leaving from the pivot')} />
+        <label className="f">
+          {t('目標距離從哪裡量', 'Target distance measured from')}
+          <span className="inp">
+            <select value={from} onChange={(e) => setP({ distanceFrom: e.target.value as DistanceFrom })} aria-label={t('目標距離從哪裡量', 'Target distance measured from')}>
+              {(Object.keys(FROM_LABEL) as DistanceFrom[]).map((k) => (
+                <option key={k} value={k}>
+                  {FROM_LABEL[k]}
+                </option>
+              ))}
+            </select>
+          </span>
+        </label>
+      </div>
+      {from !== 'pivot' && (
+        <div className="fields three" style={{ marginTop: 12 }}>
+          <NumberField
+            label={behind ? t('轉軸在保險桿前緣後面', 'Pivot behind the bumper front') : t('轉軸在機器人中心前面', 'Pivot ahead of the robot center')}
+            value={behind ? -plan.pivotAhead : plan.pivotAhead}
+            onChange={(x) => setP({ pivotAhead: behind ? -x : x })}
+            min={behind ? 0 : -1}
+            max={1}
+            step={0.01}
+            unit="m"
+            hint={behind ? t('水平距離，朝目標那一側的保險桿', 'Horizontal distance, from the bumper on the side facing the target') : t('朝目標的方向為正，在中心後面填負的', 'Positive toward the target; negative if behind the center')}
+          />
+        </div>
+      )}
+      <p className="small muted" style={{ margin: '8px 0 0' }}>
+        {t(
+          <>
+            先確認你填的目標距離是從機器人哪裡量的。用里程計（odometry）的位置算距離時，通常是<b>機器人中心</b>；拿捲尺量時，常常是從<b>保險桿</b>量。量的點不一樣，差的那段距離會直接變成落點的誤差。
+          </>,
+          <>
+            First check where on the robot your target distance is measured from. If it comes from the odometry pose, it’s usually the <b>robot center</b>; with a tape measure it’s often from the <b>bumper</b>. If the point is different, that gap goes straight into where the ball lands.
+          </>,
+        )}
+        {angle !== undefined &&
+          t(
+            ` 砲台角度 ${f(turretDeg(angle), 1)}° 時，出射點離地 ${f(releaseHeight(plan, angle), 2)} m，離目標 ${f(plan.goalDistance - releaseAhead(plan, angle), 2)} m。`,
+            ` At a ${f(turretDeg(angle), 1)}° turret angle the release point is ${f(releaseHeight(plan, angle), 2)} m above the floor and ${f(plan.goalDistance - releaseAhead(plan, angle), 2)} m from the target.`,
+          )}
+      </p>
+    </>
   )
 }

@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import {
   apexHeight,
   ballAt,
+  releaseAhead,
+  releaseHeight,
   CONTACT,
   flightTime,
   launchRange,
@@ -62,11 +64,14 @@ export function FlywheelView({
   const idealV = exitSpeed(plan.target, exitRadius(mech))
   // 比例尺：所有路線和目標都放得下
   const speeds = [idealV, ...shots.map((s) => s.exit)]
-  const xMax = Math.max(1, plan.goalDistance + plan.goalWidth / 2, ...speeds.map((v) => launchRange(v, plan.angle, plan.height))) * 1.06
-  const yMax = Math.max(0.5, plan.goalHeight, ...speeds.map((v) => apexHeight(v, plan.angle, plan.height))) * 1.12
+  // 出射點在量距離那一點前面 ahead、離地 rh；畫面從出射點開始，px 吃的是從量距離那一點算的距離
+  const ahead = releaseAhead(plan)
+  const rh = releaseHeight(plan)
+  const xMax = Math.max(1, plan.goalDistance - ahead + plan.goalWidth / 2, ...speeds.map((v) => launchRange(v, plan.angle, rh))) * 1.06
+  const yMax = Math.max(0.5, plan.goalHeight, ...speeds.map((v) => apexHeight(v, plan.angle, rh))) * 1.12
   const s = Math.min((W - LX - 24) / xMax, (GROUND - 18) / yMax)
-  const ly = GROUND - plan.height * s
-  const px = (x: number) => LX + x * s
+  const ly = GROUND - rh * s
+  const px = (x: number) => LX + (x - ahead) * s
   const py = (y: number) => ly - y * s
   // 目標：開口是一條橫線，遠的那一邊有支柱到地面
   const gy = GROUND - plan.goalHeight * s
@@ -78,12 +83,12 @@ export function FlywheelView({
   const cy = ly + R * Math.cos(plan.angle)
 
   const path = (v: number, upTo: number) => {
-    const T = Math.min(upTo, flightTime(v, plan.angle, plan.height))
+    const T = Math.min(upTo, flightTime(v, plan.angle, rh))
     const n = 36
     const pts: string[] = []
     for (let i = 0; i <= n; i++) {
       const p = ballAt(v, plan.angle, (T * i) / n)
-      pts.push(`${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`)
+      pts.push(`${px(ahead + p.x).toFixed(1)},${py(p.y).toFixed(1)}`)
     }
     return pts.join(' ')
   }
@@ -108,14 +113,14 @@ export function FlywheelView({
         {shots.map((sh, i) => {
           if (sh.release > now && idx !== null) return null
           const tau = idx === null ? Infinity : now - sh.release
-          const T = flightTime(sh.exit, plan.angle, plan.height)
-          const Tg = flightTime(sh.exit, plan.angle, plan.height, plan.goalHeight)
+          const T = flightTime(sh.exit, plan.angle, rh)
+          const Tg = flightTime(sh.exit, plan.angle, rh, plan.goalHeight)
           const p = ballAt(sh.exit, plan.angle, Math.min(tau, T))
           return (
             <g key={i}>
               <polyline points={path(sh.exit, tau)} className="fv-path" />
               {Number.isFinite(Tg) && tau >= Tg && <circle cx={px(sh.range)} cy={gy} r={4} className={sh.hit ? 'fv-hit' : 'fv-miss'} />}
-              {idx !== null && tau < T && <circle cx={px(p.x)} cy={py(p.y)} r={BALL} className="fv-ball" />}
+              {idx !== null && tau < T && <circle cx={px(ahead + p.x)} cy={py(p.y)} r={BALL} className="fv-ball" />}
             </g>
           )
         })}

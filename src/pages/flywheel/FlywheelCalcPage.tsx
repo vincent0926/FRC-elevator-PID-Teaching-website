@@ -11,7 +11,8 @@ import {
   apexHeight,
   EXIT_RATIO,
   fastestSpinUp,
-  launchRange,
+  rangeAtWheel,
+  releaseHeight,
   wheelForGoal,
   START_KP,
   type FlywheelKnobs,
@@ -21,7 +22,7 @@ import {
   turretDeg,
 } from '../../core/flywheel/flywheel'
 import { FLYWHEEL_LESSONS } from './flywheelLessons'
-import { BallFields, HubPreset, MechFields } from './FlywheelForms'
+import { BallFields, distanceHint, HubPreset, MechFields, TurretFields } from './FlywheelForms'
 import { FlywheelAim } from './FlywheelAim'
 import { loadFlywheelStyle, useFlywheelMechanism, useMoveSettings, usePersisted, useShotPlan } from './flywheelStore'
 import { t } from '../../core/lang'
@@ -101,7 +102,7 @@ function CustomCalc() {
   const setP = (p: Partial<ShotPlan>) => setPlan({ ...plan, ...p })
 
   const v = exitSpeed(plan.target, exitRadius(mech))
-  const range = launchRange(v, plan.angle, plan.height, plan.goalHeight)
+  const range = rangeAtWheel(plan.target, exitRadius(mech), plan)
   const miss = range - plan.goalDistance
   const hit = Math.abs(miss) <= plan.goalWidth / 2
   // 反推：要進目標 → 要幾 rps
@@ -146,14 +147,16 @@ function CustomCalc() {
               <NumberField label={t('目標轉速', 'Target speed')} value={plan.target} display={1 / TAU} digits={1} onChange={(x) => setP({ target: x })} min={1} max={150} step={1} unit="rps" />
               <BallFields plan={plan} setP={setP} />
               <NumberField label={t('砲台角度', 'Turret angle')} value={turretDeg(plan.angle)} digits={0} onChange={(x) => setP({ angle: angleFromTurret(x) })} min={5} max={85} step={1} unit="°" hint={t('正上方 0°，往目標倒角度變大', 'Straight up is 0°, grows as it tips toward the target')} />
-              <NumberField label={t('出射高度', 'Release height')} value={plan.height} onChange={(x) => setP({ height: x })} min={0} max={2} step={0.05} unit="m" hint={t('離地多高', 'Height above the floor')} />
             </div>
             <div className="fields three" style={{ marginTop: 12 }}>
-              <NumberField label={t('目標距離', 'Target distance')} value={plan.goalDistance} onChange={(x) => setP({ goalDistance: x })} min={0.2} max={20} step={0.1} unit="m" hint={t('離出射點的水平距離', 'Horizontal distance from the release point')} />
+              <NumberField label={t('目標距離', 'Target distance')} value={plan.goalDistance} onChange={(x) => setP({ goalDistance: x })} min={0.2} max={20} step={0.1} unit="m" hint={distanceHint(plan)} />
               <NumberField label={t('目標高度', 'Target height')} value={plan.goalHeight} onChange={(x) => setP({ goalHeight: x })} min={0} max={5} step={0.05} unit="m" hint={t('0 = 地面', '0 = floor')} />
               <NumberField label={t('開口寬度', 'Opening width')} value={plan.goalWidth} onChange={(x) => setP({ goalWidth: x })} min={0.05} max={3} step={0.05} unit="m" />
             </div>
             <HubPreset setP={setP} />
+            <div style={{ marginTop: 12 }}>
+              <TurretFields plan={plan} setP={setP} angle={plan.angle} />
+            </div>
             <dl className="fw-derived">
               <dt>{t('輪緣速度', 'Wheel surface speed')}</dt>
               <dd>{f(plan.target * mech.wheelRadius, 2)} m/s</dd>
@@ -164,7 +167,7 @@ function CustomCalc() {
                   : t(`${f(v, 2)} m/s（輪緣的 ${EXIT_RATIO}）`, `${f(v, 2)} m/s (${EXIT_RATIO} × surface speed)`)}
               </dd>
               <dt>{t('最高點', 'Apex')}</dt>
-              <dd>{t(`離地 ${f(apexHeight(v, plan.angle, plan.height), 2)} m`, `${f(apexHeight(v, plan.angle, plan.height), 2)} m above the floor`)}</dd>
+              <dd>{t(`離地 ${f(apexHeight(v, plan.angle, releaseHeight(plan)), 2)} m`, `${f(apexHeight(v, plan.angle, releaseHeight(plan)), 2)} m above the floor`)}</dd>
               <dt>{t('落點', 'Landing')}</dt>
               <dd>
                 {Number.isFinite(range) ? (

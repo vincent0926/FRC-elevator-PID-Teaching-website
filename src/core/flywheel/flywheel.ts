@@ -134,14 +134,52 @@ export interface ShotPlan {
   ballMass: number
   /** 出射仰角 rad（0 = 水平） */
   angle: number
-  /** 出射點離地高度 m */
+  /** 砲台轉軸離地高度 m（barrel = 0 時就是出射點的高度） */
   height: number
-  /** 目標離出射點的水平距離 m */
+  /** 轉軸到出射點的距離 m，沿著球射出去的方向；0 = 球從轉軸那裡出去 */
+  barrel: number
+  /** 目標距離從機器人哪裡量：砲台轉軸、機器人中心、保險桿前緣（見 releasePlan） */
+  distanceFrom: DistanceFrom
+  /** 量距離的那一點到砲台轉軸的水平距離 m，往目標為正（轉軸在那一點後面是負的）；distanceFrom = 'pivot' 時不用 */
+  pivotAhead: number
+  /** 目標離量距離那一點的水平距離 m */
   goalDistance: number
   /** 目標高度 m（球往下掉經過這個高度的地方算落點；0 = 地面） */
   goalHeight: number
   /** 目標開口寬度 m：落點離目標距離在一半以內算進 */
   goalWidth: number
+}
+
+export type DistanceFrom = 'pivot' | 'center' | 'bumper'
+export const DISTANCE_FROM: DistanceFrom[] = ['pivot', 'center', 'bumper']
+
+/**
+ * 出射點相對「量距離那一點」往目標多遠 m（仰角 angle 時）：
+ * 那一點 → 轉軸（pivotAhead）→ 出射點（barrel 沿射出方向的水平分量）。
+ */
+export function releaseAhead(plan: ShotPlan, angle = plan.angle): number {
+  return (plan.distanceFrom === 'pivot' ? 0 : plan.pivotAhead) + plan.barrel * Math.cos(angle)
+}
+
+/** 出射點離地高度 m（仰角 angle 時）= 轉軸高度 + barrel 沿射出方向的垂直分量 */
+export function releaseHeight(plan: ShotPlan, angle = plan.angle): number {
+  return Math.max(0, plan.height + plan.barrel * Math.sin(angle))
+}
+
+/**
+ * 把使用者填的砲台幾何換成「從出射點算」的 plan：height = 出射點高度、goalDistance = 出射點到目標，
+ * 彈道公式都用這個。換過的再換一次不會變（barrel、pivotAhead 歸零）。
+ */
+export function releasePlan(plan: ShotPlan, angle = plan.angle): ShotPlan {
+  return {
+    ...plan,
+    angle,
+    height: releaseHeight(plan, angle),
+    goalDistance: plan.goalDistance - releaseAhead(plan, angle),
+    barrel: 0,
+    distanceFrom: 'pivot',
+    pivotAhead: 0,
+  }
 }
 
 export const DEFAULT_PLAN: ShotPlan = {
@@ -153,6 +191,9 @@ export const DEFAULT_PLAN: ShotPlan = {
   ballMass: 0.235,
   angle: (50 * Math.PI) / 180,
   height: 0.5,
+  barrel: 0,
+  distanceFrom: 'pivot',
+  pivotAhead: 0,
   goalDistance: 4.6,
   goalHeight: 2,
   goalWidth: 0.6,
@@ -448,14 +489,15 @@ export function speedForRange(range: number, angle: number, height: number, goal
 }
 
 /** 要進目標（距離、高度）需要的輪子轉速 rad/s；這個仰角做不到是 null */
-export function wheelForGoal(r: number, plan: ShotPlan): number | null {
+export function wheelForGoal(r: number, input: ShotPlan): number | null {
+  const plan = releasePlan(input)
   const v = speedForRange(plan.goalDistance, plan.angle, plan.height, plan.goalHeight)
   return v === null ? null : v / (EXIT_RATIO * r)
 }
 
-/** 輪子轉速 rad/s → 到目標高度時的水平距離 m（打不到那麼高是 NaN） */
+/** 輪子轉速 rad/s → 到目標高度時離量距離那一點的水平距離 m（打不到那麼高是 NaN） */
 export function rangeAtWheel(w: number, r: number, plan: ShotPlan): number {
-  return launchRange(exitSpeed(w, r), plan.angle, plan.height, plan.goalHeight)
+  return launchRange(exitSpeed(w, r), plan.angle, releaseHeight(plan), plan.goalHeight) + releaseAhead(plan)
 }
 
 /**
@@ -475,7 +517,7 @@ export interface ShotOutcome {
   exit: number
   /** 離開輪子的時間 s */
   release: number
-  /** 往下掉經過目標高度時的水平距離 m；打不到那麼高是 NaN */
+  /** 往下掉經過目標高度時離量距離那一點的水平距離 m；打不到那麼高是 NaN */
   range: number
   /** 落點減目標距離 m（負的是近了；打不到那麼高是 NaN） */
   miss: number
@@ -488,7 +530,7 @@ export function shotOutcomes(res: FlywheelSimResult, mech: FlywheelMechanism, pl
     const k = Math.min(res.vel.length - 1, Math.round(at / CONTROL_DT))
     const wheel = res.vel[k]
     const exit = exitSpeed(wheel, exitRadius(mech))
-    const range = launchRange(exit, plan.angle, plan.height, plan.goalHeight)
+    const range = rangeAtWheel(wheel, exitRadius(mech), plan)
     const miss = range - plan.goalDistance
     return { at, wheel, exit, release: at + CONTACT, range, miss, hit: Math.abs(miss) <= plan.goalWidth / 2 }
   })
@@ -593,14 +635,15 @@ function optionsAt(mech: FlywheelMechanism, plan: ShotPlan, maxWheel: number, an
     const near = solve(angle, plan.goalDistance - plan.goalWidth / 2)
     const far = solve(angle, plan.goalDistance + plan.goalWidth / 2)
     const tolerance = near === null || far === null ? null : Math.min(s.wheel - near.wheel, far.wheel - s.wheel) / s.wheel
-    const T = flightTime(s.fieldExit, s.fieldAngle, plan.height, plan.goalHeight)
+    const h = releaseHeight(plan, angle)
+    const T = flightTime(s.fieldExit, s.fieldAngle, h, plan.goalHeight)
     const vy = s.fieldExit * Math.sin(s.fieldAngle) - GRAVITY * T
     out.push({
       angle,
       ...s,
       tolerance,
       entry: Math.atan2(-vy, s.fieldExit * Math.cos(s.fieldAngle)),
-      apex: apexHeight(s.fieldExit, s.fieldAngle, plan.height),
+      apex: apexHeight(s.fieldExit, s.fieldAngle, h),
       reachable: s.wheel <= maxWheel,
     })
   }
@@ -647,7 +690,10 @@ function stillShot(rx: number, plan: ShotPlan): MovingShot | null {
  * 往目標 H = √((vs·cos pitch)² − side²) + toward，往上 vz = vs·sin(pitch)。
  * 射程 H·T(vz) 隨 vs 變大，用二分法找剛好等於 distance 的 vs。
  */
-export function solveMovingShot(rx: number, plan: ShotPlan, pitch: number, motion: RobotMotion, distance = plan.goalDistance): MovingShot | null {
+export function solveMovingShot(rx: number, input: ShotPlan, pitch: number, motion: RobotMotion, distance = input.goalDistance): MovingShot | null {
+  // 距離、高度換成從出射點算（出射點偏移沿著往目標的方向，側向速度造成的小偏角不計）
+  const plan = releasePlan({ ...input, goalDistance: distance }, pitch)
+  distance = plan.goalDistance
   const c = Math.cos(pitch)
   const sn = Math.sin(pitch)
   if (distance <= 0 || c <= 1e-6 || sn <= 1e-6) return null
@@ -838,15 +884,17 @@ export function moveOutcomes(res: FlywheelSimResult, mech: FlywheelMechanism, pl
     const exit = exitSpeed(wheel, exitRadius(mech))
     const { pose, yaw } = aims[i]
     const d = pose.distance
+    // 出射點在量距離那一點往目標方向前面 ahead；a 從量距離那一點算
+    const ahead = releaseAhead(plan)
     const ux = d > 0 ? -pose.x / d : 1
     const uy = d > 0 ? -pose.y / d : 0
     // 球對地的水平速度：發射機構（往目標轉 yaw）+ 機器人
     const along = exit * c * Math.cos(yaw) + pose.motion.toward
     const left = exit * c * Math.sin(yaw) + pose.motion.side
     const vz = exit * sn
-    const disc = vz * vz - 2 * GRAVITY * (plan.goalHeight - Math.max(0, plan.height))
+    const disc = vz * vz - 2 * GRAVITY * (plan.goalHeight - releaseHeight(plan))
     const T = disc < 0 ? NaN : (vz + Math.sqrt(disc)) / GRAVITY
-    const a = along * T
+    const a = along * T + ahead
     const l = left * T
     const landX = pose.x + a * ux - l * uy
     const landY = pose.y + a * uy + l * ux
