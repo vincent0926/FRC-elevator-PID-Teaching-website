@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { t } from '../core/lang'
 
 /**
  * 檢核題。答錯給提示，最多三層，越後面越接近答案；答對才算完成關卡。
@@ -28,7 +29,7 @@ export function Quiz({ quiz, done, onCorrect }: { quiz: QuizDef; done?: boolean;
 
   return (
     <div className="quiz">
-      <b className="small">檢核題</b>
+      <b className="small">{t('檢核題', 'Check question')}</b>
       <p style={{ margin: '4px 0 0' }}>{quiz.question}</p>
       <ul>
         {quiz.options.map((o, i) => (
@@ -45,10 +46,10 @@ export function Quiz({ quiz, done, onCorrect }: { quiz: QuizDef; done?: boolean;
         ))}
       </ul>
       <div aria-live="polite">
-        {correct && <div className="ok">答對了。{quiz.explain}</div>}
+        {correct && <div className="ok">{t('答對了。', 'Correct. ')}{quiz.explain}</div>}
         {!correct && wrong > 0 && (
           <div className="note">
-            提示 {Math.min(wrong, quiz.hints.length)}：{quiz.hints[Math.min(wrong, quiz.hints.length) - 1]}
+            {t('提示', 'Hint')} {Math.min(wrong, quiz.hints.length)}{t('：', ': ')}{quiz.hints[Math.min(wrong, quiz.hints.length) - 1]}
           </div>
         )}
       </div>
@@ -77,7 +78,7 @@ export function QuizSet({ quizzes, done, onDone }: { quizzes: QuizDef[]; done?: 
       ))}
       {!done && quizzes.length > 1 && (
         <p className="small muted" style={{ margin: '8px 0 0' }}>
-          已答對 {n} / {quizzes.length} 題，全部答對才算完成這個單元。
+          {t(`已答對 ${n} / ${quizzes.length} 題，全部答對才算完成這個單元。`, `${n} / ${quizzes.length} answered correctly. Get them all right to finish this unit.`)}
         </p>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
+import { t } from '../core/lang'
 
 /**
  * uPlot 包一層。顏色用 CSS 變數名稱，主題切換時重畫。
@@ -54,7 +55,7 @@ function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'
 }
 
-export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, xLabel = 's', xName = '時間', note, cursorX = null }: ChartProps) {
+export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, xLabel = 's', xName = t('時間', 'Time'), note, cursorX = null }: ChartProps) {
   const box = useRef<HTMLDivElement>(null)
   const plot = useRef<uPlot | null>(null)
   // 目前的播放時間：重畫（換主題）之後要把時間線放回去

@@ -17,6 +17,7 @@ import { LogCharts } from './LogCharts'
 import { SCENARIOS } from './sampleScenarios'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
+import { t } from '../../core/lang'
 
 /**
  * 2F 調參建議。
@@ -55,7 +56,7 @@ export function TuningPage() {
     setProgress(0)
     try {
       const s = await scanLog(blob, setProgress)
-      if (!s.entries.length) throw new Error('這個檔案裡沒有任何欄位。')
+      if (!s.entries.length) throw new Error(t('這個檔案裡沒有任何欄位。', 'This file has no fields at all.'))
       setScan(s)
       const m = suggestMapping(s.entries, fieldMapping)
       setMapping(m)
@@ -63,7 +64,7 @@ export function TuningPage() {
       // 欄位都自動對到了就直接讀，不用多按一次
       if (!missingRequired(m).length && Object.keys(fieldMapping).length) await read(blob, m, name)
     } catch (e) {
-      setError(`讀不了 ${name}：${e instanceof Error ? e.message : String(e)}（確認是 .wpilog，而不是 .hoot 或 .rlog）`)
+      setError(t(`讀不了 ${name}：${e instanceof Error ? e.message : String(e)}（確認是 .wpilog，而不是 .hoot 或 .rlog）`, `Can’t read ${name}: ${e instanceof Error ? e.message : String(e)} (make sure it’s a .wpilog, not a .hoot or .rlog)`))
       setStage('idle')
     }
   }
@@ -134,8 +135,11 @@ export function TuningPage() {
     <section aria-labelledby="t-tune">
       <div className="head">
         <div>
-          <h1 id="t-tune">調參建議</h1>
-          <p className="lead">匯入實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。 <HelpLink section={GUIDE_ANCHOR.tune} /></p>
+          <h1 id="t-tune">{t('調參建議', 'Tuning advice')}</h1>
+          <p className="lead">
+            {t('匯入實機日誌，先檢查資料能不能用，再看問題出在哪。一次只處理一個問題，改完再測。', 'Import a log from the robot, check the data is usable, then see where the problem is. Fix one problem at a time and test again after each change.')}{' '}
+            <HelpLink section={GUIDE_ANCHOR.tune} />
+          </p>
         </div>
       </div>
 
@@ -157,11 +161,11 @@ export function TuningPage() {
               if (f && !busy) void open(f, f.name)
             }}
           >
-            <b>把 .wpilog 拖到這裡</b>
+            <b>{t('把 .wpilog 拖到這裡', 'Drop a .wpilog here')}</b>
             <br />
-            <span className="muted">或</span>{' '}
+            <span className="muted">{t('或', 'or')}</span>{' '}
             <label className="btn" style={{ marginTop: 6 }}>
-              選擇檔案
+              {t('選擇檔案', 'Choose a file')}
               <input
                 type="file"
                 accept=".wpilog"
@@ -175,13 +179,13 @@ export function TuningPage() {
               />
             </label>
             <br />
-            <span className="muted small">檔案只在這台電腦的瀏覽器裡解析，不會上傳。第一次匯入要設定欄位對應，之後自動套用。</span>
+            <span className="muted small">{t('檔案只在這台電腦的瀏覽器裡解析，不會上傳。第一次匯入要設定欄位對應，之後自動套用。', 'The file is parsed only in this browser and never uploaded. The first import needs a field mapping; after that it’s applied automatically.')}</span>
             {busy && (
               <>
                 <div className="progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
                   <div style={{ width: `${progress * 100}%` }} />
                 </div>
-                <span className="small muted">{stage === 'scanning' ? '掃描欄位中…' : '讀取資料中…'}</span>
+                <span className="small muted">{stage === 'scanning' ? t('掃描欄位中…', 'Scanning fields…') : t('讀取資料中…', 'Reading data…')}</span>
               </>
             )}
           </div>
@@ -190,30 +194,38 @@ export function TuningPage() {
 
           {file?.sim && (
             <div className="note">
-              這份是 <b>3F 模擬</b>出來的資料，不是實機日誌。拿來練習讀圖、看調參建議，數字以上機實測為準。診斷會直接用模擬時的參數當「機器人上當時的參數」。
-              按「套用」後回 3F 選「調參建議值」，同樣的目標再跑一次，看問題有沒有消失。
+              {t(
+                <>
+                這份是 <b>3F 模擬</b>出來的資料，不是實機日誌。拿來練習讀圖、看調參建議，數字以上機實測為準。診斷會直接用模擬時的參數當「機器人上當時的參數」。
+                按「套用」後回 3F 選「調參建議值」，同樣的目標再跑一次，看問題有沒有消失。
+                </>,
+                <>
+                  This came from the <b>3F sim</b>, not a robot log. Use it to practice reading charts and the tuning advice; real numbers come from testing on the robot. The diagnosis uses the sim’s gains as “the gains on the robot at the time”.{' '}
+                  After pressing “Apply”, go back to 3F, pick “Tuning suggestion” and run the same target again to see whether the problem is gone.
+                </>,
+              )}
             </div>
           )}
 
           {mapping && scan && file && stage !== 'idle' && (
             <div className="panel">
               <div className="row" style={{ justifyContent: 'space-between' }}>
-                <h2 style={{ margin: 0 }}>欄位對應</h2>
+                <h2 style={{ margin: 0 }}>{t('欄位對應', 'Field mapping')}</h2>
                 <span className="small muted">
-                  {file.name}・{(scan.bytes / 1024 / 1024).toFixed(1)} MB・{scan.entries.length} 個欄位
-                  {scan.trailingBytes > 0 && '・檔案結尾不完整（可能斷電）'}
+                  {file.name}・{(scan.bytes / 1024 / 1024).toFixed(1)} MB・{t(`${scan.entries.length} 個欄位`, `${scan.entries.length} fields`)}
+                  {scan.trailingBytes > 0 && t('・檔案結尾不完整（可能斷電）', '・the end of the file is incomplete (maybe a power loss)')}
                 </span>
               </div>
               {/* 讀取完成後把對應表收起來：11 列的表一直攤開，下面的圖要捲很久才看得到。檢查沒過時保持展開（多半要改欄位或倍率）；open 跟著狀態變，使用者自己展開不會被蓋掉 */}
               <details className="map-done" open={stage !== 'done' || report?.ok === false}>
-                <summary className="small">{stage !== 'done' ? '對應表（自動猜的，讀取前確認一下）' : report?.ok === false ? '資料檢查沒過：先確認欄位和倍率有沒有選錯' : '資料已讀取。要改欄位或倍率再展開'}</summary>
+                <summary className="small">{stage !== 'done' ? t('對應表（自動猜的，讀取前確認一下）', 'Mapping table (auto-guessed; check it before reading)') : report?.ok === false ? t('資料檢查沒過：先確認欄位和倍率有沒有選錯', 'Data checks failed: first check the fields and scale factors') : t('資料已讀取。要改欄位或倍率再展開', 'Data loaded. Expand to change fields or scale factors')}</summary>
                 <FieldMappingTable entries={scan.entries} mapping={mapping} onChange={setMapping} mechanism={mechanism} />
                 <div className="row" style={{ marginTop: 12 }}>
                   <button className="btn primary" type="button" disabled={busy || !file.blob || missingRequired(mapping).length > 0} onClick={() => file.blob && void read(file.blob, mapping, file.name)}>
-                    {stage === 'done' ? '重新讀取並檢查' : '讀取並檢查'}
+                    {stage === 'done' ? t('重新讀取並檢查', 'Re-read and check') : t('讀取並檢查', 'Read and check')}
                   </button>
                   {missingRequired(mapping).length > 0 && (
-                    <span className="small fail">還缺：{missingRequired(mapping).map((r) => r.label).join('、')}</span>
+                    <span className="small fail">{t('還缺：', 'Still missing: ')}{missingRequired(mapping).map((r) => r.label).join(t('、', ', '))}</span>
                   )}
                 </div>
               </details>
@@ -226,8 +238,8 @@ export function TuningPage() {
         <div className="stack">
           {report && (
             <div className="panel" id="tune-step-0">
-              <h2>步驟 0：資料檢查</h2>
-              <p className="small muted">Enable 時間 {report.enabledSeconds.toFixed(1)} 秒。任何一項 ✕ 都不能拿來分析，先解決再重錄。</p>
+              <h2>{t('步驟 0：資料檢查', 'Step 0: data checks')}</h2>
+              <p className="small muted">{t(`Enable 時間 ${report.enabledSeconds.toFixed(1)} 秒。任何一項 ✕ 都不能拿來分析，先解決再重錄。`, `Enabled for ${report.enabledSeconds.toFixed(1)} s. Any ✕ means the log can’t be analyzed; fix it and record again.`)}</p>
               <ul className="checks">
                 {report.items.map((it) => (
                   <li key={it.key}>
@@ -242,7 +254,7 @@ export function TuningPage() {
                             setDiagBands(null)
                             setHighlight(highlight === it.key ? null : it.key)
                           }}>
-                          {highlight === it.key ? '取消標示' : `在圖上標示（${it.spans.length} 段）`}
+                          {highlight === it.key ? t('取消標示', 'Clear highlight') : t(`在圖上標示（${it.spans.length} 段）`, `Highlight on chart (${it.spans.length} spans)`)}
                         </button>
                       )}
                     </div>
@@ -250,14 +262,14 @@ export function TuningPage() {
                 ))}
               </ul>
               <div className={report.ok ? 'ok' : 'warn'}>
-                {report.ok ? '資料可以用。' : '資料檢查沒過，這份日誌不能拿來算建議，照上面說明處理後重錄。'}
+                {report.ok ? t('資料可以用。', 'The data is usable.') : t('資料檢查沒過，這份日誌不能拿來算建議，照上面說明處理後重錄。', 'Data checks failed, so this log can’t be used for advice. Fix what’s described above and record again.')}
               </div>
               {refusalOsc && (
                 <div className="note">
-                  <b>但是：</b>
-                  {refusalOsc.summary}（{refusalOsc.evidence[0]}）
+                  <b>{t('但是：', 'However: ')}</b>
+                  {refusalOsc.summary}{t('（', ' (')}{refusalOsc.evidence[0]}{t('）', ') ')}
                   {refusalOsc.change?.kind === 'gain'
-                    ? `建議先把 ${refusalOsc.change.param} 從 ${refusalOsc.change.from} 降到 ${refusalOsc.change.to} 左右。`
+                    ? t(`建議先把 ${refusalOsc.change.param} 從 ${refusalOsc.change.from} 降到 ${refusalOsc.change.to} 左右。`, `First lower ${refusalOsc.change.param} from ${refusalOsc.change.from} to about ${refusalOsc.change.to}.`)
                     : refusalOsc.evidence[refusalOsc.evidence.length - 1]}
                 </div>
               )}
@@ -269,7 +281,7 @@ export function TuningPage() {
           {report && scenario && (
             <details className="panel">
               <summary className="small" style={{ cursor: 'pointer' }}>
-                練習用：這份範例日誌是「{scenario.label}」（先自己判斷再打開）
+                {t(`練習用：這份範例日誌是「${scenario.label}」（先自己判斷再打開）`, `Practice: this sample log is “${scenario.label}” (decide for yourself before opening)`)}
               </summary>
               <p className="small" style={{ marginBottom: 0 }}>
                 {scenario.lookFor}
@@ -278,11 +290,11 @@ export function TuningPage() {
           )}
 
           <div className="panel">
-            <h2>沒有日誌？</h2>
-            <p className="small">用模擬器產生一份跟範例機器人程式欄位相同的日誌（50 Hz），拿來練習匯入和讀圖。</p>
+            <h2>{t('沒有日誌？', 'No log?')}</h2>
+            <p className="small">{t('用模擬器產生一份跟範例機器人程式欄位相同的日誌（50 Hz），拿來練習匯入和讀圖。', 'Generate a log from the simulator with the same fields as the example robot code (50 Hz) to practice importing and reading charts.')}</p>
             <div className="row">
               <label className="f" style={{ flex: '1 1 160px' }}>
-                情境
+                {t('情境', 'Scenario')}
                 <span className="inp">
                   <select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
                     {SCENARIOS.map((s) => (
@@ -304,7 +316,7 @@ export function TuningPage() {
                   void open(s.blob, s.name, s.sc.id)
                 }}
               >
-                產生並匯入
+                {t('產生並匯入', 'Generate and import')}
               </button>
               <button
                 className="btn"
@@ -314,7 +326,7 @@ export function TuningPage() {
                   downloadBlob(s.name, s.blob)
                 }}
               >
-                下載 .wpilog
+                {t('下載 .wpilog', 'Download .wpilog')}
               </button>
             </div>
           </div>

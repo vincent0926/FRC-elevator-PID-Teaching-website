@@ -16,6 +16,7 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
 ## 結構
 
 - `src/core/`：純 TypeScript，**不可 import React 或 DOM**，Web Worker 與測試都直接用
+  - `lang.ts` 介面語言：`t('中文', 'English')`，預設中文；`app/langInit.ts` 決定語言、`app/LangToggle.tsx` 右上角中／EN（換語言重新載入，決策 132）
   - `units.ts` SI ↔ Phoenix 6 轉數制；`motors.ts` 馬達常數；`feedforward.ts` kG、kV、kA、等效質量
   - `profile.ts` Motion Magic 梯形軌跡；`controller/slot0.ts` Slot0 控制公式（含積分防飽和教學選項）
   - `physics/` 受控體（控制輸入 u 以電壓 [V] 表示，不是「電壓是力」）與 RK4 閉迴路模擬、達標標準 `spec.ts`、穩健性測試 `robustness.ts`、模型校正 `calibrate.ts`
@@ -44,7 +45,8 @@ npm run build      # 輸出到 dist/，GitHub Actions 自動部署到 Pages
 - 達標標準是教學用的，不可寫成 FRC 標準；模擬結果、診斷正確率要標明是模擬／合成資料
 - 版本只以 package.json 為準，README「目前進度」要一起改（`test/version.test.ts` 會檢查）
 - 網站不連線機器人、不寫馬達參數，急停一律用 Driver Station
-- 介面文字用繁體中文，語氣直接，對象是高中生隊員
+- 介面文字用繁體中文，語氣直接，對象是高中生隊員；每段畫面文字都要用 `t('中文', 'English')` 附英文（使用說明英文版在 `guide/guideContentEn.ts`，畫面的按鈕名稱改了要一起改）。函式裡有叫 `t` 的區域變數（時間）要改名，不然會蓋掉 `t()`
+- 瀏覽器測試用 `locale: 'zh-TW'` 看中文版；英文版設 `localStorage['elevator-tuner:lang'] = '"en"'`
 - 顏色只用 `src/app/theme.css` 的 CSS 變數，深淺色都要能看
 - 動畫只用 CSS（`theme.css` 最後的動畫段落），要有用途；`prefers-reduced-motion: reduce` 時全部關掉（決策 103–106）
 - 不用 SharedArrayBuffer（GitHub Pages 無法設 COOP/COEP）

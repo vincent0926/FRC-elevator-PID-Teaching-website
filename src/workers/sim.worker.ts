@@ -4,10 +4,13 @@ import { runRobustness, type RobustRanges, type RobustResult } from '../core/phy
 import { simulate, type SimInput, type SimResult } from '../core/physics/simulate'
 import type { Spec } from '../core/physics/spec'
 import type { ElevatorMechanism } from '../schema/parameterSet'
+import { setLang, type Lang } from '../core/lang'
 
-export type SimRequest =
+/** lang：Worker 是另一個執行環境，介面語言要跟著請求傳過來（錯誤訊息用） */
+export type SimRequest = { lang: Lang } & (
   | { id: number; kind: 'sim'; input: SimInput }
   | { id: number; kind: 'robust'; base: SimInput; mechanism: ElevatorMechanism; ff: FeedforwardResult; ranges: RobustRanges; spec?: Spec }
+)
 
 export type SimResponse =
   | { id: number; ok: true; result: SimResult }
@@ -23,6 +26,7 @@ const buffers = (r: SimResult) =>
 
 ctx.onmessage = (ev: MessageEvent<SimRequest>) => {
   const req = ev.data
+  setLang(req.lang)
   try {
     if (req.kind === 'robust') {
       const robust = runRobustness(req.base, req.mechanism, req.ff, req.ranges, req.spec)

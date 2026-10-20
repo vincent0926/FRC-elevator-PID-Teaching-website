@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { setLang } from '../../core/lang'
 import { PAGES } from '../../app/store'
 import { GUIDE_ANCHOR, guideContent, type GuideContent } from './guideContent'
 
@@ -52,6 +53,28 @@ describe.each(TRACKS)('使用說明（%s）', (track) => {
     const src = uiSource()
     const quoted = new Set<string>()
     for (const t of texts(c)) for (const m of t.matchAll(/「([^」]+)」/g)) quoted.add(m[1])
+    expect(quoted.size).toBeGreaterThan(10)
+    const missing = [...quoted].filter((q) => !src.includes(q))
+    expect(missing).toEqual([])
+  })
+})
+
+describe.each(TRACKS)('英文使用說明（%s）', (track) => {
+  afterEach(() => setLang('zh'))
+
+  it('結構跟中文一樣，“…” 提到的按鈕與標題英文畫面裡找得到', () => {
+    const zh = guideContent(track)
+    setLang('en')
+    const en = guideContent(track)
+    expect(en.sections.map((s) => s.id)).toEqual(zh.sections.map((s) => s.id))
+    expect(en.start.length).toBe(zh.start.length)
+    expect(en.terms.length).toBe(zh.terms.length)
+    expect(en.faq.length).toBe(zh.faq.length)
+    const all = texts(en).join('\n')
+    expect(all).not.toMatch(/[\u4e00-\u9fff]/)
+    const src = uiSource()
+    const quoted = new Set<string>()
+    for (const t of texts(en)) for (const m of t.matchAll(/“([^”]+)”/g)) quoted.add(m[1])
     expect(quoted.size).toBeGreaterThan(10)
     const missing = [...quoted].filter((q) => !src.includes(q))
     expect(missing).toEqual([])

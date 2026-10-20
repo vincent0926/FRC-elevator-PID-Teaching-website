@@ -1,6 +1,7 @@
 import { motorModel } from './motors'
 import { GRAVITY } from './units'
 import type { ElevatorMechanism, Stage } from '../schema/parameterSet'
+import { t } from './lang'
 
 /**
  * 電梯前饋理論值。座標為鼓輪線位移 x（第一級），單位 SI。
@@ -84,12 +85,12 @@ export function computeFeedforward(m: ElevatorMechanism): FeedforwardResult {
   const maxAccelUp = Math.min(accelByCurrent, accelByVoltage)
 
   const warnings: string[] = []
-  if (kG > m.calcVoltage * 0.5) warnings.push('kG 超過計算用電壓的一半：機構太重或齒比不夠，剩下能拿來加速和跑速度的電壓很少。')
-  if (kG < 0) warnings.push('配重力大於重力，kG 是負的：電梯沒通電時會自己往上跑。')
-  if (!(maxVelocity > 0)) warnings.push(kS > 0 ? '計算用電壓扣掉 kG 和 kS 後沒有剩，電梯動不了。' : '計算用電壓扣掉 kG 後沒有剩，電梯動不了。')
-  if (!(accelByCurrent > 0)) warnings.push('電流限制給的力撐不住電梯（加上摩擦），往上加速不起來：提高 Stator 電流限制或加大齒比。')
-  if (!(accelByVoltage > 0)) warnings.push('計算用電壓扣掉 kG 和 kS 後沒有剩，往上加速不起來：這是電壓不夠，不是電流限制。')
-  if (m.motor === 'neo') warnings.push('NEO 屬於 REV，第一版只支援 Phoenix 6 輸出，數字可以參考但不能產生程式碼。')
+  if (kG > m.calcVoltage * 0.5) warnings.push(t('kG 超過計算用電壓的一半：機構太重或齒比不夠，剩下能拿來加速和跑速度的電壓很少。', 'kG is over half the calculation voltage: the mechanism is too heavy or the gear ratio too low, leaving little voltage for accelerating and speed.'))
+  if (kG < 0) warnings.push(t('配重力大於重力，kG 是負的：電梯沒通電時會自己往上跑。', 'The counterweight force is more than gravity, so kG is negative: the elevator will rise by itself when unpowered.'))
+  if (!(maxVelocity > 0)) warnings.push(kS > 0 ? t('計算用電壓扣掉 kG 和 kS 後沒有剩，電梯動不了。', 'Nothing is left of the calculation voltage after kG and kS, so the elevator can’t move.') : t('計算用電壓扣掉 kG 後沒有剩，電梯動不了。', 'Nothing is left of the calculation voltage after kG, so the elevator can’t move.'))
+  if (!(accelByCurrent > 0)) warnings.push(t('電流限制給的力撐不住電梯（加上摩擦），往上加速不起來：提高 Stator 電流限制或加大齒比。', 'The current limit’s force can’t hold the elevator (plus friction), so it can’t accelerate upward: raise the stator current limit or the gear ratio.'))
+  if (!(accelByVoltage > 0)) warnings.push(t('計算用電壓扣掉 kG 和 kS 後沒有剩，往上加速不起來：這是電壓不夠，不是電流限制。', 'Nothing is left of the calculation voltage after kG and kS, so it can’t accelerate upward: this is not enough voltage, not the current limit.'))
+  if (m.motor === 'neo') warnings.push(t('NEO 屬於 REV，第一版只支援 Phoenix 6 輸出，數字可以參考但不能產生程式碼。', 'NEO is a REV motor; the first version only outputs Phoenix 6, so the numbers are for reference and can’t generate code.'))
 
   return {
     kG,

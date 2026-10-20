@@ -1,5 +1,6 @@
 import { NumberField } from '../../components/NumberField'
 import type { ParameterSet } from '../../schema/parameterSet'
+import { t } from '../../core/lang'
 
 /**
  * 3F「自訂」參數：往下 Slot 1、基準參數（步驟 8）。
@@ -34,7 +35,7 @@ export function CustomEditor({
         {(['kS', 'kG', 'kV', 'kA'] as const).map((k) => (
           <NumberField
             key={k}
-            label={slots && (k === 'kS' || k === 'kG') ? `${k}（沒用到）` : k}
+            label={slots && (k === 'kS' || k === 'kG') ? t(`${k}（沒用到）`, `${k} (unused)`) : k}
             value={custom.feedforward[k]}
             onChange={(v) => edit((p) => ({ ...p, feedforward: { ...p.feedforward, [k]: v } }))}
             unit={k === 'kS' || k === 'kG' ? 'V' : k === 'kV' ? 'V/(m/s)' : 'V/(m/s²)'}
@@ -52,14 +53,14 @@ export function CustomEditor({
         ))}
         <span />
         <NumberField
-          label="巡航速度"
+          label={t('巡航速度', 'Cruise velocity')}
           value={custom.motionMagic.cruiseVelocity}
           min={0.01}
           onChange={(v) => edit((p) => ({ ...p, motionMagic: { ...p.motionMagic, cruiseVelocity: v } }))}
           unit="m/s"
         />
         <NumberField
-          label="加速度"
+          label={t('加速度', 'Acceleration')}
           value={custom.motionMagic.acceleration}
           min={0.01}
           onChange={(v) => edit((p) => ({ ...p, motionMagic: { ...p.motionMagic, acceleration: v } }))}
@@ -80,36 +81,46 @@ export function CustomEditor({
             })
           }
         />
-        往下用 Slot 1（摩擦不對稱時，往上、往下各自設 kS、kG）
+        {t(
+          <>
+          往下用 Slot 1（摩擦不對稱時，往上、往下各自設 kS、kG）
+          </>,
+          <>
+            Use Slot 1 going down (set kS and kG separately for up and down when friction is asymmetric)
+          </>,
+        )}
       </label>
       {slots && (
         <div className="gains" style={{ marginTop: 10 }}>
-          <NumberField label="往上 kS（Slot 0）" value={slots.up.kS} onChange={(v) => setSlot('up', 'kS', v)} unit="V" />
-          <NumberField label="往上 kG（Slot 0）" value={slots.up.kG} onChange={(v) => setSlot('up', 'kG', v)} unit="V" />
-          <NumberField label="往下 kS（Slot 1）" value={slots.down.kS} onChange={(v) => setSlot('down', 'kS', v)} unit="V" />
-          <NumberField label="往下 kG（Slot 1）" value={slots.down.kG} onChange={(v) => setSlot('down', 'kG', v)} unit="V" />
+          <NumberField label={t('往上 kS（Slot 0）', 'Up kS (Slot 0)')} value={slots.up.kS} onChange={(v) => setSlot('up', 'kS', v)} unit="V" />
+          <NumberField label={t('往上 kG（Slot 0）', 'Up kG (Slot 0)')} value={slots.up.kG} onChange={(v) => setSlot('up', 'kG', v)} unit="V" />
+          <NumberField label={t('往下 kS（Slot 1）', 'Down kS (Slot 1)')} value={slots.down.kS} onChange={(v) => setSlot('down', 'kS', v)} unit="V" />
+          <NumberField label={t('往下 kG（Slot 1）', 'Down kG (Slot 1)')} value={slots.down.kG} onChange={(v) => setSlot('down', 'kG', v)} unit="V" />
         </div>
       )}
 
       <div className="row" style={{ marginTop: 12 }}>
         <button className="btn small" type="button" onClick={() => setBaseline(custom)}>
-          設為基準
+          {t('設為基準', 'Set as baseline')}
         </button>
-        <button className="btn small" type="button" disabled={!baseline} onClick={resetBaseline} title={baseline ? undefined : '還沒設基準'}>
-          重置為基準
+        <button className="btn small" type="button" disabled={!baseline} onClick={resetBaseline} title={baseline ? undefined : t('還沒設基準', 'No baseline set yet')}>
+          {t('重置為基準', 'Reset to baseline')}
         </button>
         {locked && (
           <button className="btn small" type="button" onClick={resetTheory}>
-            重置為理論值
+            {t('重置為理論值', 'Reset to theory')}
           </button>
         )}
       </div>
       <p className="small muted" style={{ margin: '6px 0 0' }}>
         {baseline && !locked
-          ? `基準：${baseline.note ?? '自訂'}（${new Date(baseline.createdAt).toLocaleString('zh-TW', { hour12: false })}）。亂調之後按「重置為基準」就回來了。`
-          : '找到一組還不錯的參數時先「設為基準」，之後亂調也能一鍵回來。'}
+          ? t(
+              `基準：${baseline.note ?? '自訂'}（${new Date(baseline.createdAt).toLocaleString('zh-TW', { hour12: false })}）。亂調之後按「重置為基準」就回來了。`,
+              `Baseline: ${baseline.note ?? 'Custom'} (${new Date(baseline.createdAt).toLocaleString('en-US', { hour12: false })}). After experimenting, press “Reset to baseline” to get back.`,
+            )
+          : t('找到一組還不錯的參數時先「設為基準」，之後亂調也能一鍵回來。', 'When you find a decent set of gains, “Set as baseline” first; then you can experiment and get back with one click.')}
       </p>
-      {custom.note && <p className="small muted">來源：{custom.note}</p>}
+      {custom.note && <p className="small muted">{t('來源：', 'Source: ')}{custom.note}</p>}
     </>
   )
 }

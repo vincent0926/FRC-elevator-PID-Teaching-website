@@ -1,3 +1,4 @@
+import { t } from './lang'
 /**
  * 馬達常數，數值與 WPILib DCMotor 相同（單顆馬達）。
  * 由四個規格推出直流馬達模型：
@@ -28,10 +29,10 @@ export interface MotorModel extends MotorSpec {
 
 export const MOTOR_SPECS: Record<MotorId, MotorSpec> = {
   krakenX60: { id: 'krakenX60', label: 'Kraken X60', vendor: 'CTRE', nominalVoltage: 12, stallTorque: 7.09, stallCurrent: 366, freeCurrent: 2, freeSpeedRpm: 6000 },
-  krakenX60Foc: { id: 'krakenX60Foc', label: 'Kraken X60（FOC）', vendor: 'CTRE', nominalVoltage: 12, stallTorque: 9.37, stallCurrent: 483, freeCurrent: 2, freeSpeedRpm: 5800 },
+  krakenX60Foc: { id: 'krakenX60Foc', label: t('Kraken X60（FOC）', 'Kraken X60 (FOC)'), vendor: 'CTRE', nominalVoltage: 12, stallTorque: 9.37, stallCurrent: 483, freeCurrent: 2, freeSpeedRpm: 5800 },
   falcon500: { id: 'falcon500', label: 'Falcon 500', vendor: 'CTRE', nominalVoltage: 12, stallTorque: 4.69, stallCurrent: 257, freeCurrent: 1.5, freeSpeedRpm: 6380 },
-  falcon500Foc: { id: 'falcon500Foc', label: 'Falcon 500（FOC）', vendor: 'CTRE', nominalVoltage: 12, stallTorque: 5.84, stallCurrent: 304, freeCurrent: 1.5, freeSpeedRpm: 6080 },
-  neo: { id: 'neo', label: 'NEO（REV，第一版不支援輸出）', vendor: 'REV', nominalVoltage: 12, stallTorque: 2.6, stallCurrent: 105, freeCurrent: 1.8, freeSpeedRpm: 5676 },
+  falcon500Foc: { id: 'falcon500Foc', label: t('Falcon 500（FOC）', 'Falcon 500 (FOC)'), vendor: 'CTRE', nominalVoltage: 12, stallTorque: 5.84, stallCurrent: 304, freeCurrent: 1.5, freeSpeedRpm: 6080 },
+  neo: { id: 'neo', label: t('NEO（REV，第一版不支援輸出）', 'NEO (REV, no code output in the first version)'), vendor: 'REV', nominalVoltage: 12, stallTorque: 2.6, stallCurrent: 105, freeCurrent: 1.8, freeSpeedRpm: 5676 },
 }
 
 export function motorModel(id: MotorId): MotorModel {

@@ -1,3 +1,4 @@
+import { t } from '../lang'
 /**
  * 產生 .wpilog。用途：
  * - 單元測試（組出已知內容的日誌驗證解析器）
@@ -117,7 +118,7 @@ export class WpilogWriter {
       case 'float': return this.appendFloat(id, timestampUs, value)
       case 'int64': return this.appendInt64(id, timestampUs, value)
       case 'boolean': return this.appendBoolean(id, timestampUs, value !== 0)
-      default: throw new Error(`entry ${id} 不是數值型別`)
+      default: throw new Error(t(`entry ${id} 不是數值型別`, `entry ${id} is not a numeric type`))
     }
   }
 

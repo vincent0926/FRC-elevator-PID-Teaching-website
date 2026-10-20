@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { t } from '../core/lang'
 
 /**
  * 填空練習：先自己算，答對（或放棄）才顯示後面的公式與解說。
@@ -48,16 +49,16 @@ export function Exercise({
     if (checked[i] !== false) return null
     const f = fields[i]
     const v = Number(values[i])
-    if (values[i].trim() === '' || !Number.isFinite(v)) return '先填一個數字。'
+    if (values[i].trim() === '' || !Number.isFinite(v)) return t('先填一個數字。', 'Enter a number first.')
     const m = f.mistakes?.find((x) => close(v, x.value, f.tol ?? 0.02))
-    return m ? m.msg : '不對，再算一次。'
+    return m ? m.msg : t('不對，再算一次。', 'Not quite. Try the calculation again.')
   }
 
   return (
     <div className="exercise">
-      <b className="small">先自己算</b>
+      <b className="small">{t('先自己算', 'Work it out first')}</b>
       <div style={{ margin: '4px 0 8px' }}>{prompt}</div>
-      {solvedAlready && <div className="ok">已完成。答案：{fields.map((f) => `${f.label} = ${f.answer} ${f.unit}`).join('、')}。</div>}
+      {solvedAlready && <div className="ok">{t('已完成。答案：', 'Done. Answer: ')}{fields.map((f) => `${f.label} = ${f.answer} ${f.unit}`).join(t('、', ', '))}{t('。', '.')}</div>}
       {!solvedAlready && (
         <>
           <div className="fields">
@@ -79,7 +80,7 @@ export function Exercise({
                   />
                   <em>{f.unit}</em>
                 </span>
-                {checked[i] === true && <span className="small pass">✓ 對了</span>}
+                {checked[i] === true && <span className="small pass">{t('✓ 對了', '✓ Correct')}</span>}
                 {feedback(i) && <span className="small fail">{feedback(i)}</span>}
               </label>
             ))}
@@ -87,16 +88,20 @@ export function Exercise({
           {!revealed && (
             <div className="row" style={{ marginTop: 10 }}>
               <button className="btn small primary" type="button" onClick={check}>
-                檢查
+                {t('檢查', 'Check')}
               </button>
               <button className="linkbtn small" type="button" onClick={() => setGaveUp(true)}>
-                算不出來，直接看答案
+                {t('算不出來，直接看答案', 'I’m stuck, show the answer')}
               </button>
             </div>
           )}
-          {solved && <div className="ok">都對了。下面是公式和你自己機構的數字。</div>}
+          {solved && <div className="ok">{t('都對了。下面是公式和你自己機構的數字。', 'All correct. Below are the formula and the numbers for your own mechanism.')}</div>}
           {gaveUp && !solved && (
-            <div className="note">答案：{fields.map((f) => `${f.label} = ${f.answer} ${f.unit}`).join('、')}。看完下面的說明，再回頭算一次。</div>
+            <div className="note">
+              {t('答案：', 'Answer: ')}
+              {fields.map((f) => `${f.label} = ${f.answer} ${f.unit}`).join(t('、', ', '))}
+              {t('。看完下面的說明，再回頭算一次。', '. Read the explanation below, then go back and try the calculation again.')}
+            </div>
           )}
         </>
       )}

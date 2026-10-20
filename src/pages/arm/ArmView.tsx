@@ -1,5 +1,6 @@
 import type { SimResult } from '../../core/physics/simulate'
 import type { ArmMechanism } from '../../schema/armParameterSet'
+import { t } from '../../core/lang'
 
 /**
  * 手臂側視圖：轉軸、水平參考線、角度範圍、目前角度（實線）與軌跡目標（虛線）。
@@ -31,7 +32,7 @@ export function ArmView({ result, arm, goal, idx, zeroOffset = 0 }: { result: Si
     return `M ${x0} ${y0} A ${r} ${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 0 ${x1} ${y1}`
   }
   return (
-    <div className="elev-view arm-view" aria-label="手臂側視圖" role="img">
+    <div className="elev-view arm-view" aria-label={t('手臂側視圖', 'Arm side view')} role="img">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
         <line x1={10} y1={CY} x2={W - 6} y2={CY} className="av-horizon" />
         <path d={arc(arm.minAngle + zeroOffset, arm.maxAngle + zeroOffset, 34)} className="av-range" />
@@ -45,16 +46,16 @@ export function ArmView({ result, arm, goal, idx, zeroOffset = 0 }: { result: Si
       </svg>
       <div className="ev-read">
         <span>
-          角度 <b>{(th * R2D).toFixed(1)}°</b>
-          {zeroOffset !== 0 && <em>（真正的角度 {(real * R2D).toFixed(1)}°）</em>}
+          {t('角度', 'Angle')} <b>{(th * R2D).toFixed(1)}°</b>
+          {zeroOffset !== 0 && <em>{t(`（真正的角度 ${(real * R2D).toFixed(1)}°）`, ` (real angle ${(real * R2D).toFixed(1)}°)`)}</em>}
         </span>
         <span>
-          目標 <b>{(ref * R2D).toFixed(1)}°</b>
+          {t('目標', 'Target')} <b>{(ref * R2D).toFixed(1)}°</b>
         </span>
         <span>
-          重力要的電壓 <b>kG × {Math.cos(real).toFixed(2).replace(/^-0\.00$/, '0.00')}</b>
+          {t('重力要的電壓', 'Voltage for gravity')} <b>kG × {Math.cos(real).toFixed(2).replace(/^-0\.00$/, '0.00')}</b>
         </span>
-        <span className="muted">黃色：手臂　虛線：軌跡目標　圓點：重心</span>
+        <span className="muted">{t('黃色：手臂　虛線：軌跡目標　圓點：重心', 'Yellow: arm · Dashed: profile target · Dot: center of mass')}</span>
       </div>
     </div>
   )

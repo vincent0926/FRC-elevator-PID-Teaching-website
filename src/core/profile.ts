@@ -1,3 +1,4 @@
+import { t } from './lang'
 /**
  * Motion Magic 梯形軌跡（Jerk = 0）。
  * 從 start 移到 goal，速度上限 vMax、加速度上限 aMax，起訖速度皆為 0。
@@ -24,7 +25,7 @@ export interface TrapezoidProfile {
 }
 
 export function trapezoidProfile(start: number, goal: number, vMax: number, aMax: number): TrapezoidProfile {
-  if (!(vMax > 0) || !(aMax > 0)) throw new RangeError('巡航速度與加速度必須大於 0')
+  if (!(vMax > 0) || !(aMax > 0)) throw new RangeError(t('巡航速度與加速度必須大於 0', 'Cruise velocity and acceleration must be greater than 0'))
   const dir = Math.sign(goal - start) || 1
   const dist = Math.abs(goal - start)
 

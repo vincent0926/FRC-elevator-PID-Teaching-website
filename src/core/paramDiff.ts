@@ -1,4 +1,5 @@
 import type { ParameterSet } from '../schema/parameterSet'
+import { t } from './lang'
 
 /**
  * 兩組參數逐項比較（參數庫「跟目前的比」用）。
@@ -20,9 +21,9 @@ export const PARAM_FIELDS: ParamField[] = [
   { key: 'kP', label: 'kP', unit: 'V/m', get: (p) => p.feedback.kP },
   { key: 'kI', label: 'kI', unit: 'V/(m·s)', get: (p) => p.feedback.kI },
   { key: 'kD', label: 'kD', unit: 'V/(m/s)', get: (p) => p.feedback.kD },
-  { key: 'cruise', label: '巡航速度', unit: 'm/s', get: (p) => p.motionMagic.cruiseVelocity },
-  { key: 'accel', label: '加速度', unit: 'm/s²', get: (p) => p.motionMagic.acceleration },
-  { key: 'kGDown', label: 'kG（往下 Slot 1）', unit: 'V', get: (p) => p.slotByDirection?.down.kG },
+  { key: 'cruise', label: t('巡航速度', 'Cruise velocity'), unit: 'm/s', get: (p) => p.motionMagic.cruiseVelocity },
+  { key: 'accel', label: t('加速度', 'Acceleration'), unit: 'm/s²', get: (p) => p.motionMagic.acceleration },
+  { key: 'kGDown', label: t('kG（往下 Slot 1）', 'kG (down, Slot 1)'), unit: 'V', get: (p) => p.slotByDirection?.down.kG },
 ]
 
 export interface ParamDiffRow {

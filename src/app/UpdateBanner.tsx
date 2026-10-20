@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { t } from '../core/lang'
 
 /**
  * 兩種更新提示：
@@ -38,10 +39,12 @@ export function UpdateBanner() {
     return (
       <div className="banner" role="status">
         <span>
-          有新版本{latest ? `：${__APP_VERSION__} → ${latest}` : ''}。
+          {t('有新版本', 'New version available')}
+          {latest ? `${t('：', ': ')}${__APP_VERSION__} → ${latest}` : ''}
+          {t('。', '.')}
         </span>
         <button className="btn small" type="button" onClick={() => (update ? update(true) : location.reload())}>
-          重新整理
+          {t('重新整理', 'Refresh')}
         </button>
       </div>
     )
@@ -49,9 +52,9 @@ export function UpdateBanner() {
   if (offlineReady) {
     return (
       <div className="banner" role="status">
-        <span>已存到這台裝置，之後沒有網路也能用。</span>
+        <span>{t('已存到這台裝置，之後沒有網路也能用。', 'Saved to this device, so it works offline from now on.')}</span>
         <button className="btn small" type="button" onClick={() => setOfflineReady(false)}>
-          知道了
+          {t('知道了', 'Got it')}
         </button>
       </div>
     )

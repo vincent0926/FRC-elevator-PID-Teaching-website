@@ -1,4 +1,5 @@
 import type { AlignedLog } from '../log/fieldMap'
+import { t } from '../lang'
 
 /**
  * 步驟 1 的切段：依「參考」速度與加速度把每一筆資料分成
@@ -9,13 +10,13 @@ import type { AlignedLog } from '../log/fieldMap'
 export const PHASES = ['off', 'hold', 'accel', 'cruise', 'decel', 'settle', 'transition'] as const
 export type Phase = (typeof PHASES)[number]
 export const PHASE_LABEL: Record<Phase, string> = {
-  off: '未 Enable',
-  hold: '靜止保持',
-  accel: '加速',
-  cruise: '等速',
-  decel: '減速',
-  settle: '到位穩定',
-  transition: '交界',
+  off: t('未 Enable', 'Not enabled'),
+  hold: t('靜止保持', 'Holding'),
+  accel: t('加速', 'Accelerating'),
+  cruise: t('等速', 'Cruising'),
+  decel: t('減速', 'Decelerating'),
+  settle: t('到位穩定', 'Settling'),
+  transition: t('交界', 'Transition'),
 }
 const P = Object.fromEntries(PHASES.map((p, i) => [p, i])) as Record<Phase, number>
 
@@ -72,13 +73,13 @@ export function phaseIs(seg: Segments, i: number, ...ps: Phase[]): boolean {
 }
 
 export function segment(log: AlignedLog, opt: SegmentOptions = {}): Segments {
-  const { t, cols } = log
-  const n = t.length
+  const { t: time, cols } = log
+  const n = time.length
   const settleWindow = opt.settleWindow ?? 0.5
   const ref = cols.reference
-  if (!ref) throw new Error('缺少目標位置欄位，無法切段')
-  const vref = cols.referenceSlope ? Float64Array.from(cols.referenceSlope, (v) => (Number.isFinite(v) ? v : 0)) : derivative(t, ref)
-  const aref = derivative(t, vref)
+  if (!ref) throw new Error(t('缺少目標位置欄位，無法切段', 'Missing the target position field, so it can’t be segmented'))
+  const vref = cols.referenceSlope ? Float64Array.from(cols.referenceSlope, (v) => (Number.isFinite(v) ? v : 0)) : derivative(time, ref)
+  const aref = derivative(time, vref)
   const vScale = percentileAbs(vref, 0.98)
   // 只在移動中找加速度量級，靜止時的 0 會把百分位拉低
   const movingAref = Float64Array.from(aref.filter((_, i) => Math.abs(vref[i]) > 0.05 * vScale))
@@ -119,13 +120,13 @@ export function segment(log: AlignedLog, opt: SegmentOptions = {}): Segments {
     while (i < n && raw[i] !== P.hold && raw[i] !== P.off && dir[i] === d) i++
     const profileEndIdx = Math.min(n - 1, i)
     let endIdx = profileEndIdx
-    while (endIdx + 1 < n && raw[endIdx + 1] === P.hold && t[endIdx + 1] - t[profileEndIdx] <= settleWindow) endIdx++
+    while (endIdx + 1 < n && raw[endIdx + 1] === P.hold && time[endIdx + 1] - time[profileEndIdx] <= settleWindow) endIdx++
     for (let k = profileEndIdx; k <= endIdx; k++) if (raw[k] === P.hold) phase[k] = P.settle
     moves.push({
       dir: d,
-      start: t[startIdx],
-      profileEnd: t[profileEndIdx],
-      end: t[endIdx],
+      start: time[startIdx],
+      profileEnd: time[profileEndIdx],
+      end: time[endIdx],
       startIdx,
       profileEndIdx,
       endIdx,

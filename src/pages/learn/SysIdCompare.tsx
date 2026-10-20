@@ -3,6 +3,7 @@ import { useStore } from '../../app/store'
 import { NumberField } from '../../components/NumberField'
 import { compareSysId, measuredParameterSet, sysIdToSi, type FfGains, type SysIdUnits } from '../../core/analysis/sysid'
 import { metersPerRotation } from '../../core/units'
+import { t } from '../../core/lang'
 
 /** 單元二最後一步：填入 SysId 結果，跟 1F 理論值並排比較。 */
 
@@ -13,7 +14,7 @@ const UNIT: Record<keyof FfGains, Record<SysIdUnits, string>> = {
   kA: { meters: 'V/(m/s²)', rotations: 'V/(rps/s)' },
 }
 
-const LEVEL_TEXT = { ok: '正常', warn: '差有點多', bad: '差很多' } as const
+const LEVEL_TEXT = t({ ok: '正常', warn: '差有點多', bad: '差很多' }, { ok: 'Normal', warn: 'Somewhat off', bad: 'Far off' })
 
 export function SysIdCompare() {
   const { mechanism, ff, theory, setCustom, setSimSource, go } = useStore()
@@ -29,16 +30,23 @@ export function SysIdCompare() {
 
   return (
     <div className="quiz" style={{ background: 'var(--panel)' }}>
-      <b className="small">SysId 結果 vs 理論值</b>
+      <b className="small">{t('SysId 結果 vs 理論值', 'SysId results vs theory')}</b>
       <p className="small muted" style={{ margin: '4px 0 10px' }}>
-        SysId 分析時用的位置欄位是什麼單位，這裡就選什麼。用範例程式的 <code>/Elevator/PositionMeters</code> 選公尺；用 SignalLogger 的 TalonFX 位置選轉。
+        {t(
+          <>
+          SysId 分析時用的位置欄位是什麼單位，這裡就選什麼。用範例程式的 <code>/Elevator/PositionMeters</code> 選公尺；用 SignalLogger 的 TalonFX 位置選轉。
+          </>,
+          <>
+            Pick the units of the position field you used in the SysId analysis. With the example code’s <code>/Elevator/PositionMeters</code> pick meters; with the SignalLogger TalonFX position pick rotations.
+          </>,
+        )}
       </p>
-      <div className="seg" role="group" aria-label="SysId 單位">
+      <div className="seg" role="group" aria-label={t('SysId 單位', 'SysId units')}>
         <button type="button" aria-pressed={units === 'meters'} onClick={() => setUnits('meters')}>
-          公尺（AdvantageKit）
+          {t('公尺（AdvantageKit）', 'Meters (AdvantageKit)')}
         </button>
         <button type="button" aria-pressed={units === 'rotations'} onClick={() => setUnits('rotations')}>
-          轉（SignalLogger）
+          {t('轉（SignalLogger）', 'Rotations (SignalLogger)')}
         </button>
       </div>
       <div className="gains" style={{ marginTop: 12 }}>
@@ -53,23 +61,23 @@ export function SysIdCompare() {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>參數</th>
-                  <th className="num">理論值</th>
+                  <th>{t('參數', 'Gain')}</th>
+                  <th className="num">{t('理論值', 'Theory')}</th>
                   <th className="num">SysId</th>
-                  <th className="num">差異</th>
-                  <th>判斷</th>
+                  <th className="num">{t('差異', 'Difference')}</th>
+                  <th>{t('判斷', 'Verdict')}</th>
                 </tr>
               </thead>
               <tbody>
                 {cmp.rows.map((r) => (
                   <tr key={r.key}>
                     <th>{r.key}</th>
-                    <td className="num">{r.key === 'kS' ? '沒算' : Number(shown(r.key, r.theory).toPrecision(4))}</td>
+                    <td className="num">{r.key === 'kS' ? t('沒算', 'not calculated') : Number(shown(r.key, r.theory).toPrecision(4))}</td>
                     <td className="num">{Number(raw[r.key].toPrecision(4))}</td>
                     <td className="num">{r.ratio === null ? '—' : `${r.ratio >= 1 ? '+' : ''}${((r.ratio - 1) * 100).toFixed(0)}%`}</td>
                     <td>
                       <span className={r.level === 'ok' ? 'pass' : r.level === 'warn' ? 'amber' : 'fail'}>{LEVEL_TEXT[r.level]}</span>
-                      <span className="small muted">　{r.hint}</span>
+                      <span className="small muted"> {r.hint}</span>
                     </td>
                   </tr>
                 ))}
@@ -86,14 +94,14 @@ export function SysIdCompare() {
               className="btn small"
               type="button"
               onClick={() => {
-                setCustom(measuredParameterSet(theory, si, 'SysId 量測'))
+                setCustom(measuredParameterSet(theory, si, t('SysId 量測', 'SysId measurement')))
                 setSimSource('custom')
                 go('sim')
               }}
             >
-              用 SysId 前饋到 3F 模擬
+              {t('用 SysId 前饋到 3F 模擬', 'Use SysId feedforward in the 3F sim')}
             </button>
-            <span className="small muted">會換掉目前的「自訂」參數；kP、Motion Magic 沿用理論值。</span>
+            <span className="small muted">{t('會換掉目前的「自訂」參數；kP、Motion Magic 沿用理論值。', 'Replaces your current “Custom” gains; kP and Motion Magic stay at theory.')}</span>
           </div>
         </>
       )}

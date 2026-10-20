@@ -1,3 +1,4 @@
+import { t } from '../lang'
 /**
  * WPILib DataLog（.wpilog）串流解析。
  * 規格：https://github.com/wpilibsuite/allwpilib/blob/main/wpiutil/doc/datalog.adoc
@@ -64,10 +65,10 @@ export class WpilogStreamParser {
     if (!this.headerDone) {
       if (buf.length < 12) return 0
       for (let i = 0; i < 6; i++) {
-        if (buf[i] !== MAGIC[i]) throw new WpilogFormatError('不是 .wpilog 檔（檔頭不是 WPILOG）')
+        if (buf[i] !== MAGIC[i]) throw new WpilogFormatError(t('不是 .wpilog 檔（檔頭不是 WPILOG）', 'Not a .wpilog file (the header isn’t WPILOG)'))
       }
       this.version = view.getUint16(6, true)
-      if (this.version >> 8 !== 1) throw new WpilogFormatError(`不支援的 wpilog 版本 0x${this.version.toString(16)}`)
+      if (this.version >> 8 !== 1) throw new WpilogFormatError(t(`不支援的 wpilog 版本 0x${this.version.toString(16)}`, `Unsupported wpilog version 0x${this.version.toString(16)}`))
       const extraLen = view.getUint32(8, true)
       if (buf.length < 12 + extraLen) return 0
       this.extraHeader = textDecoder.decode(buf.subarray(12, 12 + extraLen))
@@ -124,10 +125,10 @@ export class WpilogStreamParser {
     if (kind === 0) {
       let q = p + 5
       const readStr = () => {
-        if (q + 4 > end) throw new RangeError('控制紀錄字串長度欄位超出紀錄範圍')
+        if (q + 4 > end) throw new RangeError(t('控制紀錄字串長度欄位超出紀錄範圍', 'Control record string length field is out of record range'))
         const n = view.getUint32(q, true)
         q += 4
-        if (q + n > end) throw new RangeError('控制紀錄字串超出紀錄範圍')
+        if (q + n > end) throw new RangeError(t('控制紀錄字串超出紀錄範圍', 'Control record string is out of record range'))
         const s = textDecoder.decode(buf.subarray(q, q + n))
         q += n
         return s
@@ -139,9 +140,9 @@ export class WpilogStreamParser {
     }
     if (kind === 1) return () => v.onFinish?.(id, ts)
     if (kind === 2) {
-      if (p + 9 > end) throw new RangeError('控制紀錄 metadata 長度欄位超出紀錄範圍')
+      if (p + 9 > end) throw new RangeError(t('控制紀錄 metadata 長度欄位超出紀錄範圍', 'Control record metadata length field is out of record range'))
       const n = view.getUint32(p + 5, true)
-      if (p + 9 + n > end) throw new RangeError('控制紀錄 metadata 超出紀錄範圍')
+      if (p + 9 + n > end) throw new RangeError(t('控制紀錄 metadata 超出紀錄範圍', 'Control record metadata is out of record range'))
       const meta = textDecoder.decode(buf.subarray(p + 9, p + 9 + n))
       return () => v.onSetMetadata?.(id, meta, ts)
     }

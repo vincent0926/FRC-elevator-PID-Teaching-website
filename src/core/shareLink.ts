@@ -1,4 +1,5 @@
 import { ElevatorMechanismSchema, type ElevatorMechanism } from '../schema/parameterSet'
+import { t } from './lang'
 
 /**
  * 分享機構資料的連結：機構資料 JSON → UTF-8 → base64url，放在網址的 ?m= 後面。
@@ -28,10 +29,10 @@ export function decodeMechanism(s: string): { ok: true; value: ElevatorMechanism
   try {
     data = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(fromBase64Url(s)))
   } catch {
-    return { ok: false, error: '連結裡的資料壞掉了（可能複製時少了一段）' }
+    return { ok: false, error: t('連結裡的資料壞掉了（可能複製時少了一段）', 'The data in the link is broken (part may have been lost when copying)') }
   }
   const r = ElevatorMechanismSchema.safeParse(data)
-  return r.success ? { ok: true, value: r.data } : { ok: false, error: '連結裡的機構資料格式不對（可能是舊版網站產生的）' }
+  return r.success ? { ok: true, value: r.data } : { ok: false, error: t('連結裡的機構資料格式不對（可能是舊版網站產生的）', 'The mechanism data in the link has the wrong format (maybe made by an older version of the site)') }
 }
 
 /** 產生分享網址：保留原本的路徑，換掉查詢字串，頁面固定到 1F */

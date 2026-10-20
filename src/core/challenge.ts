@@ -1,3 +1,4 @@
+import { t } from './lang'
 /**
  * 3F 挑戰模式（步驟 8）：系統隨機產生一台「看不到參數」的電梯，
  * 隊員在有限次數內調整自訂參數，讓兩次移動都達標。
@@ -19,8 +20,8 @@ export interface HiddenPlant {
 export const CHALLENGE_ATTEMPTS: Record<ChallengeLevel, number> = { easy: 10, hard: 8 }
 
 export const LEVEL_LABEL: Record<ChallengeLevel, string> = {
-  easy: '入門：只有重量和摩擦跟理論不一樣',
-  hard: '進階：重量、慣性、kV、摩擦（往上往下不同）都可能不一樣',
+  easy: t('入門：只有重量和摩擦跟理論不一樣', 'Beginner: only weight and friction differ from theory'),
+  hard: t('進階：重量、慣性、kV、摩擦（往上往下不同）都可能不一樣', 'Advanced: weight, inertia, kV and friction (different up and down) may all differ'),
 }
 
 function uniformRng(seed: number): () => number {

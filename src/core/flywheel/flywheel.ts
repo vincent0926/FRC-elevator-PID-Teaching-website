@@ -1,4 +1,5 @@
 import { motorModel, type MotorId } from '../motors'
+import { t } from '../lang'
 
 /**
  * 射球飛輪：速度控制（Phoenix 6 VelocityVoltage／MotionMagicVelocityVoltage）。
@@ -167,9 +168,9 @@ export const HUB_2026 = { goalHeight: 72 * 0.0254, goalWidth: 41.7 * 0.0254 }
 const lbToKg = (lb: number) => Math.round(lb * 453.59237) / 1000
 /** FRC 2026 REBUILT 的得分物件 FUEL（2026 Game Manual）：直徑 5.91 in 的泡棉球，0.448～0.500 lb */
 export const GAME_PIECES_2026 = [
-  { id: 'fuel', label: 'FUEL 中間值', mass: lbToKg((0.448 + 0.5) / 2) },
-  { id: 'fuel-light', label: 'FUEL 最輕', mass: lbToKg(0.448) },
-  { id: 'fuel-heavy', label: 'FUEL 最重', mass: lbToKg(0.5) },
+  { id: 'fuel', label: t('FUEL 中間值', 'FUEL typical'), mass: lbToKg((0.448 + 0.5) / 2) },
+  { id: 'fuel-light', label: t('FUEL 最輕', 'FUEL lightest'), mass: lbToKg(0.448) },
+  { id: 'fuel-heavy', label: t('FUEL 最重', 'FUEL heaviest'), mass: lbToKg(0.5) },
 ]
 
 /** 球出去的速度 ≈ 輪緣速度的一半（單邊飛輪、另一邊是固定的導板） */

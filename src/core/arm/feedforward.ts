@@ -1,6 +1,7 @@
 import { motorModel } from '../motors'
 import { GRAVITY } from '../units'
 import type { ArmMechanism } from '../../schema/armParameterSet'
+import { t } from '../lang'
 
 /**
  * 單關節手臂的前饋理論值。座標是手臂角度 θ（rad），0 = 水平、往上為正。
@@ -69,12 +70,12 @@ export function computeArmFeedforward(m: ArmMechanism): ArmFeedforwardResult {
   const maxAccelUp = Math.min(accelByCurrent, accelByVoltage)
 
   const warnings: string[] = []
-  if (m.maxAngle <= m.minAngle) warnings.push('最大角度要比最小角度大。')
-  if (m.cgDistance > m.armLength) warnings.push('重心距離比手臂還長：檢查是不是把直徑當半徑、或單位填錯。')
-  if (kG > m.calcVoltage * 0.5) warnings.push('kG 超過計算用電壓的一半：手臂太重或齒比不夠，水平時剩下能拿來加速的電壓很少。')
-  if (!(accelByCurrent > 0)) warnings.push('電流限制給的力矩撐不住水平的手臂（加上摩擦）：提高 Stator 電流限制或加大齒比。')
-  if (!(accelByVoltage > 0)) warnings.push('計算用電壓扣掉 kG 和 kS 後沒有剩，水平時抬不起來：這是電壓不夠，不是電流限制。')
-  if (m.motor === 'neo') warnings.push('NEO 屬於 REV，程式輸出只支援 Phoenix 6，數字可以參考。')
+  if (m.maxAngle <= m.minAngle) warnings.push(t('最大角度要比最小角度大。', 'The max angle must be greater than the min angle.'))
+  if (m.cgDistance > m.armLength) warnings.push(t('重心距離比手臂還長：檢查是不是把直徑當半徑、或單位填錯。', 'The center-of-mass distance is longer than the arm: check whether you used a diameter as a radius, or the wrong units.'))
+  if (kG > m.calcVoltage * 0.5) warnings.push(t('kG 超過計算用電壓的一半：手臂太重或齒比不夠，水平時剩下能拿來加速的電壓很少。', 'kG is over half the calculation voltage: the arm is too heavy or the gear ratio too low, leaving little voltage to accelerate when horizontal.'))
+  if (!(accelByCurrent > 0)) warnings.push(t('電流限制給的力矩撐不住水平的手臂（加上摩擦）：提高 Stator 電流限制或加大齒比。', 'The current limit’s torque can’t hold the arm horizontal (plus friction): raise the stator current limit or the gear ratio.'))
+  if (!(accelByVoltage > 0)) warnings.push(t('計算用電壓扣掉 kG 和 kS 後沒有剩，水平時抬不起來：這是電壓不夠，不是電流限制。', 'Nothing is left of the calculation voltage after kG and kS, so it can’t lift from horizontal: this is not enough voltage, not the current limit.'))
+  if (m.motor === 'neo') warnings.push(t('NEO 屬於 REV，程式輸出只支援 Phoenix 6，數字可以參考。', 'NEO is a REV motor; code output only supports Phoenix 6, so the numbers are for reference.'))
 
   return {
     kG,

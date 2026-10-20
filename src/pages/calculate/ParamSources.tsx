@@ -1,5 +1,6 @@
 import { Workflow } from '../../components/Workflow'
 import { INPUT_ROWS, KIND_INFO, PARAM_ROWS, type SourceKind, type SourceRow } from './paramSources'
+import { t } from '../../core/lang'
 
 /** 1F「哪些參數可以算、哪些一定要量」對照表 */
 
@@ -21,10 +22,10 @@ function Table({ rows, first }: { rows: SourceRow[]; first: string }) {
         <thead>
           <tr>
             <th>{first}</th>
-            <th>類型</th>
-            <th>怎麼來</th>
-            <th>要量的話用什麼</th>
-            <th>網站哪裡</th>
+            <th>{t('類型', 'Type')}</th>
+            <th>{t('怎麼來', 'Where it comes from')}</th>
+            <th>{t('要量的話用什麼', 'How to measure it')}</th>
+            <th>{t('網站哪裡', 'Where on the site')}</th>
           </tr>
         </thead>
         <tbody>
@@ -48,9 +49,16 @@ function Table({ rows, first }: { rows: SourceRow[]; first: string }) {
 export function ParamSources() {
   return (
     <div className="panel" id="param-sources">
-      <h2>哪些參數可以算、哪些一定要量</h2>
+      <h2>{t('哪些參數可以算、哪些一定要量', 'Which gains can be calculated and which must be measured')}</h2>
       <p className="small" style={{ marginTop: 0 }}>
-        1F 算出來的是起點，不是答案。每個數字屬於下面五種之一，決定上機後該相信、重新量，還是自己調。
+        {t(
+          <>
+          1F 算出來的是起點，不是答案。每個數字屬於下面五種之一，決定上機後該相信、重新量，還是自己調。
+          </>,
+          <>
+            What 1F calculates is a starting point, not the answer. Every number falls into one of the five types below, which decides whether to trust it, re-measure it or tune it yourself on the robot.
+          </>,
+        )}
       </p>
       <Workflow />
       <ul className="src-kinds">
@@ -61,15 +69,29 @@ export function ParamSources() {
           </li>
         ))}
       </ul>
-      <h3>參數卡上的參數</h3>
-      <Table rows={PARAM_ROWS} first="參數" />
-      <h3>要填的機構資料</h3>
+      <h3>{t('參數卡上的參數', 'Gains on the parameter card')}</h3>
+      <Table rows={PARAM_ROWS} first={t('參數', 'Gain')} />
+      <h3>{t('要填的機構資料', 'Mechanism data you enter')}</h3>
       <p className="small muted" style={{ marginTop: 0 }}>
-        參數算得準不準，取決於這些資料填得準不準。「算得準」的 kV 也只有在齒比、半徑填對時才準。
+        {t(
+          <>
+          參數算得準不準，取決於這些資料填得準不準。「算得準」的 kV 也只有在齒比、半徑填對時才準。
+          </>,
+          <>
+            How accurate the gains are depends on how accurately these are filled in. Even the “model gets it right” kV is only right when the gear ratio and radius are right.
+          </>,
+        )}
       </p>
-      <Table rows={INPUT_ROWS} first="資料" />
+      <Table rows={INPUT_ROWS} first={t('資料', 'Data')} />
       <div className="note">
-        一句話：<b>kV 相信公式、kG 和 kA 先算再量、kS 一定要量、kP／kI／kD 在真的機器上調、Motion Magic 是你設的限制</b>。質量一定要秤，不要估。
+        {t(
+          <>
+          一句話：<b>kV 相信公式、kG 和 kA 先算再量、kS 一定要量、kP／kI／kD 在真的機器上調、Motion Magic 是你設的限制</b>。質量一定要秤，不要估。
+          </>,
+          <>
+            In one line: <b>trust the formula for kV, calculate then measure kG and kA, always measure kS, tune kP/kI/kD on the real robot, and Motion Magic is a limit you choose</b>. Always weigh the masses; don’t guess.
+          </>,
+        )}
       </div>
     </div>
   )
