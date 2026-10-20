@@ -10,8 +10,13 @@ import { moveShotJava } from '../src/core/codegen/flywheel'
 
 const TAU = 2 * Math.PI
 
-describe('邊移動邊射的 Java 和網站一致', () => {
-  const plan = { ...DEFAULT_PLAN, angle: (45.3 * Math.PI) / 180, goalDistance: 3 }
+const PLANS = [
+  { name: '從砲台轉軸量', plan: { ...DEFAULT_PLAN, angle: (45.3 * Math.PI) / 180, goalDistance: 3 } },
+  // 轉軸在機器人中心後面 0.2 m、出射點離轉軸 0.3 m：Java 要自己扣掉出射點的偏移
+  { name: '從機器人中心量、有轉軸到出射點的距離', plan: { ...DEFAULT_PLAN, angle: (45.3 * Math.PI) / 180, goalDistance: 3, barrel: 0.3, distanceFrom: 'center' as const, pivotAhead: -0.2 } },
+]
+
+describe.each(PLANS)('邊移動邊射的 Java 和網站一致（$name）', ({ plan }) => {
   const java = moveShotJava(DEFAULT_FLYWHEEL, plan, 90 * TAU, 0.04)
 
   // 有 javac 才跑：編譯產生的程式，結果要跟網站的 solveMovingShot 一樣

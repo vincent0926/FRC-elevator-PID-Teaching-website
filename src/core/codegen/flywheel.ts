@@ -1,4 +1,4 @@
-import { EXIT_RATIO, exitRadius, turretDeg, type FlywheelGains, type FlywheelKnobs, type FlywheelMechanism, type ShotPlan } from '../flywheel/flywheel'
+import { EXIT_RATIO, exitRadius, releaseAhead, releaseHeight, turretDeg, type FlywheelGains, type FlywheelKnobs, type FlywheelMechanism, type ShotPlan } from '../flywheel/flywheel'
 import { jd } from './index'
 import { t } from '../lang'
 
@@ -55,6 +55,13 @@ export function flywheelJava(g: FlywheelGains, mech: FlywheelMechanism, knobs: F
   return lines.join('\n')
 }
 
+const FROM: Record<ShotPlan['distanceFrom'], [string, string]> = {
+  pivot: ['砲台轉軸', 'turret pivot'],
+  center: ['機器人中心', 'robot center'],
+  bumper: ['保險桿前緣', 'bumper front edge'],
+}
+const fromLabel = (plan: ShotPlan, en = false) => FROM[plan.distanceFrom][en ? 1 : 0]
+
 /**
  * 邊移動邊射（決策 129）：把 core/flywheel 的 solveMovingShot 翻成 Java，常數用 1F 選好的那條軌跡。
  * 解法和網站一樣（二分法找球速，不計空氣阻力），單位：距離 m、速度 m/s、轉速是飛輪 rps、角度 rad。
@@ -72,8 +79,10 @@ public final class ShootOnTheMove {
   public static final double TURRET_ANGLE = ${jd(turret)};
   /** ${t('換成仰角（水平朝目標 0°、往上為正），下面的公式用這個', 'Converted to elevation (0° horizontal toward the target, up is positive); the formulas below use this')} */
   public static final double PITCH = Math.toRadians(90.0 - TURRET_ANGLE);
-  /** ${t('出射點離地高度 m', 'Release point height above the floor, m')} */
-  public static final double SHOOTER_HEIGHT = ${jd(Math.max(0, plan.height))};
+  /** ${t(`出射點離地高度 m（砲台轉軸 ${jd(plan.height)} m，轉軸到出射點 ${jd(plan.barrel)} m，用這個砲台角度算）`, `Release point height above the floor, m (pivot ${jd(plan.height)} m, pivot to release point ${jd(plan.barrel)} m, at this turret angle)`)} */
+  public static final double SHOOTER_HEIGHT = ${jd(releaseHeight(plan))};
+  /** ${t(`出射點在${fromLabel(plan)}往目標方向前面多少 m（後面是負的）`, `How far the release point is ahead of the ${fromLabel(plan, true)} toward the target, m (negative if behind)`)} */
+  public static final double RELEASE_AHEAD = ${jd(releaseAhead(plan))};
   /** ${t('目標高度 m、開口寬度 m', 'Target height m, opening width m')} */
   public static final double GOAL_HEIGHT = ${jd(plan.goalHeight)};
   public static final double GOAL_WIDTH = ${jd(plan.goalWidth)};
@@ -89,12 +98,13 @@ public final class ShootOnTheMove {
   public record Shot(double rps, double yaw) {}
 
   /**
-   * ${t('distance：出射點到目標中心的水平距離 m', 'distance: horizontal distance from the release point to the target center, m')}
+   * ${t(`distance：${fromLabel(plan)}到目標中心的水平距離 m（odometry 的位置是機器人中心，跟網站選的不一樣要先換算）`, `distance: horizontal distance from the ${fromLabel(plan, true)} to the target center, m (the odometry pose is the robot center; convert first if that’s not what you picked on the site)`)}
    * ${t('toward：機器人往目標方向的速度 m/s（靠近是正的）', 'toward: robot speed toward the target, m/s (approaching is positive)')}
    * ${t('side：側向速度 m/s（面向目標時往左是正的）', 'side: sideways speed, m/s (left is positive when facing the target)')}
    * ${t('打不進（太近、太遠、開太快、轉速超過上限）回傳 null', 'Returns null if it can’t go in (too close, too far, too fast, or over the speed limit)')}
    */
   public static Shot solve(double distance, double toward, double side) {
+    distance -= RELEASE_AHEAD; // ${t('換成出射點到目標', 'now from the release point to the target')}
     double c = Math.cos(PITCH);
     double s = Math.sin(PITCH);
     if (distance <= 0 || c <= 1e-6 || s <= 1e-6) return null;

@@ -1,4 +1,4 @@
-import { flightTime, movePose, type FlywheelSimResult, type MoveAim, type MoveOutcome, type RobotMotion, type ShotPlan } from '../../core/flywheel/flywheel'
+import { flightTime, movePose, releaseHeight, type FlywheelSimResult, type MoveAim, type MoveOutcome, type RobotMotion, type ShotPlan } from '../../core/flywheel/flywheel'
 import { moveMissText } from './flywheelTune'
 import { t } from '../../core/lang'
 
@@ -79,7 +79,7 @@ export function MoveView({
         {/* 每一發：出射位置 → 落點 */}
         {shots.map((sh, i) => {
           if (sh.release > now && idx !== null) return null
-          const T = flightTime(sh.exit, plan.angle, plan.height, plan.goalHeight)
+          const T = flightTime(sh.exit, plan.angle, releaseHeight(plan), plan.goalHeight)
           const frac = idx === null || !Number.isFinite(T) ? 1 : Math.min(1, (now - sh.release) / T)
           if (!Number.isFinite(sh.landX)) return <circle key={i} cx={px(sh.pose.x)} cy={py(sh.pose.y)} r={3} className="fv-miss" />
           const bx = sh.pose.x + (sh.landX - sh.pose.x) * frac
