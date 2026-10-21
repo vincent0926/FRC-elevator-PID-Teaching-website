@@ -338,3 +338,8 @@
 |---|---|---|
 | 133 | 射球的位置分成三個量：`ShotPlan.height` 改成砲台轉軸離地高度；`barrel` 是轉軸到出射點的距離，沿著射出方向，出射點 = 轉軸 + barrel·(cos 仰角, sin 仰角)，所以會跟著砲台角度移動；`distanceFrom`（`pivot`／`center`／`bumper`）加 `pivotAhead`（那一點到轉軸的水平距離，往目標為正）說明目標距離從機器人哪裡量。公式一律先用 `releasePlan` 換成從出射點算，`rangeAtWheel`、`ShotOutcome.range`、`moveOutcomes` 的落點從量距離那一點算，跟使用者填的距離同一個基準。邊移動邊射的出射點偏移當成沿著往目標的方向（底盤偏角造成的差不計）。`ShootOnTheMove.java` 多 `RELEASE_AHEAD`，`solve` 先扣掉；範例的距離是 odometry 位置，所以說明選的不是機器人中心時要自己換算。預設從轉軸量、barrel 0，結果跟 v0.35 一樣，舊的存檔不用遷移 | 使用者指出砲台模擬要有砲台起始高度，而且要讓使用者確認距離是從機器人哪個位置量的：用 odometry 算的是機器人中心、拿捲尺常從保險桿量，差的那段會直接變成落點誤差。把量的點放進表單，而不是假設，不同隊的習慣都能對上 |
 
+## v0.37 實作時新增的決策
+
+| # | 決策 | 理由 |
+|---|---|---|
+| 134 | 目標那一端的量測點：射球飛輪的目標距離可選量到「HUB 中心」或「前面的 tag」（欄位「量到 HUB 哪裡」）（`flywheelStore.ts` 的 `useDistanceRef`，存 localStorage，1F、3F 共用；跟決策 133 機器人那一端的 `distanceFrom` 分開）。計算一律用到 HUB 中心的 `plan.goalDistance`，選 tag 時輸入框顯示、輸入的是到 tag 的距離 = 中心距離 − offset；改 offset 時到 tag 的距離不變。offset 預設 `HUB_TAG_TO_CENTER` = 23.5 in（HUB 底座 47 in 見方的一半），可改 0～2 m。1F 彈道、客製化、3F 連射模擬有；邊移動邊射不給選（使用者沒選），照舊用到中心 | 使用者要能選以 HUB 中心或前面 tag 為準：Limelight 量到的是到 tag 的距離，直接填會少算一段、球打不到中心。只換輸入框，core 的彈道計算都不用改 |

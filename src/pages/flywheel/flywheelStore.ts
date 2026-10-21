@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { MOTOR_SPECS } from '../../core/motors'
-import { DEFAULT_FLYWHEEL, DEFAULT_PLAN, DISTANCE_FROM, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
+import { DEFAULT_FLYWHEEL, DEFAULT_PLAN, DISTANCE_FROM, HUB_TAG_TO_CENTER, type FlywheelMechanism, type ShotPlan } from '../../core/flywheel/flywheel'
 import { loadJson, loadSession, saveJson, saveSession } from '../../storage/local'
 import { t } from '../../core/lang'
 
@@ -81,6 +81,17 @@ export interface MoveSettings {
 export const DEFAULT_MOVE: MoveSettings = { toward: 0, side: 1.5, compensate: true, shots: 8, interval: 0.25 }
 /** 轉速上限 rps（0 = 沒填，用馬達空載轉速的 90%）；彈道、邊移動邊射選軌跡，和 3F 邊開邊射都用它 */
 export const useRpsLimit = () => usePersisted<{ rps: number }>('flywheel:rpsLimit', { rps: 0 }, (r) => r.rps >= 0)
+/**
+ * 目標那一端的量測點：量到 HUB 中心，或 HUB 前面的 AprilTag（Limelight 量到的）。機器人那一端是 ShotPlan.distanceFrom。
+ * 計算一律用到中心的距離（plan.goalDistance）；選 tag 時畫面顯示、輸入的是到 tag 的距離 = 中心距離 − offset。
+ */
+export interface DistanceRef {
+  ref: 'center' | 'tag'
+  /** tag 到 HUB 中心的水平距離 m */
+  offset: number
+}
+export const DEFAULT_DISTANCE_REF: DistanceRef = { ref: 'center', offset: HUB_TAG_TO_CENTER }
+export const useDistanceRef = () => usePersisted<DistanceRef>('flywheel:distanceRef', DEFAULT_DISTANCE_REF, (d) => (d.ref === 'center' || d.ref === 'tag') && d.offset >= 0 && d.offset <= 2)
 export const useMoveSettings = () => usePersisted<MoveSettings>('flywheel:move', DEFAULT_MOVE, (m) => m.shots >= 1 && m.interval > 0)
 
 export const SHAPES = [

@@ -205,6 +205,12 @@ export const DEFAULT_PLAN: ShotPlan = {
  */
 export const HUB_2026 = { goalHeight: 72 * 0.0254, goalWidth: 41.7 * 0.0254 }
 
+/**
+ * HUB 前面的 AprilTag 到 HUB 中心的水平距離 m：HUB 底座 47 in 見方，tag 貼在側面，取一半 23.5 in。
+ * 用 Limelight 量到的是到 tag 的距離，算轉速要用到中心的距離（球要掉進開口中間），所以要加上這段。
+ */
+export const HUB_TAG_TO_CENTER = 23.5 * 0.0254
+
 /** lb → kg，取到 g（輸入框才不會出現一長串小數） */
 const lbToKg = (lb: number) => Math.round(lb * 453.59237) / 1000
 /** FRC 2026 REBUILT 的得分物件 FUEL（2026 Game Manual）：直徑 5.91 in 的泡棉球，0.448～0.500 lb */
