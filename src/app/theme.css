@@ -514,8 +514,12 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .track-btn { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; color: inherit; padding: 2px 8px; font-size: 12px; cursor: pointer }
 /* 進站畫面：隊伍照片當背景（決策 139）。字在照片上，不管哪種風格、深淺色都用白字加深色遮罩，所以變數只在這裡定義 */
 .splash { --photo-ink: #FFFFFF; --photo-ink-2: rgba(255, 255, 255, .88); --photo-scrim: rgba(8, 11, 15, .55); --photo-scrim-2: rgba(8, 11, 15, .82); --photo-shadow: rgba(0, 0, 0, .6); --photo-fallback: #2A3441; --photo-fallback-2: #0E1318 }
-.splash { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; text-align: center; color: var(--photo-ink); background: linear-gradient(180deg, var(--photo-scrim), var(--photo-scrim-2)), var(--splash-photo, none) center / cover no-repeat, radial-gradient(900px 480px at 50% 30%, var(--photo-fallback), var(--photo-fallback-2)) }
-.splash-in { max-width: 720px }
+.splash { position: relative; overflow: hidden; min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; text-align: center; color: var(--photo-ink); background: radial-gradient(900px 480px at 50% 30%, var(--photo-fallback), var(--photo-fallback-2)) }
+.splash-bg, .splash-bg > span { position: absolute; inset: 0 }
+.splash-bg > span { background: center / cover no-repeat; opacity: 0 }
+.splash-bg > span:first-child { opacity: 1 }
+.splash-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, var(--photo-scrim), var(--photo-scrim-2)) }
+.splash-in { position: relative; max-width: 720px }
 .splash-team { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .25em; color: var(--mark) }
 .splash h1 { margin: 10px 0 12px; font-size: clamp(32px, 7vw, 56px); line-height: 1.15; text-shadow: 0 2px 16px var(--photo-shadow) }
 .splash-lead { margin: 0 0 28px; font-size: 18px; color: var(--photo-ink-2); text-shadow: 0 1px 8px var(--photo-shadow) }
@@ -634,6 +638,9 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 
 /* 進站選機構：滑過時電梯升起、手臂轉一下、飛輪轉起來 */
 .splash-in { animation: rise-in .5s cubic-bezier(.2, .7, .3, 1) both }
+/* 進站照片輪播：5 張 × 6 秒，交接時淡入淡出 1.2 秒（減少動態效果時停在第一張） */
+@keyframes splash-fade { 0% { opacity: 0 } 4% { opacity: 1 } 20% { opacity: 1 } 24% { opacity: 0 } 100% { opacity: 0 } }
+.splash-bg > span { animation: splash-fade 30s linear infinite both }
 .chooser-cards > * { animation: rise-in .35s cubic-bezier(.2, .7, .3, 1) both }
 .chooser-cards > :nth-child(2) { animation-delay: .08s }
 .chooser-cards > :nth-child(3) { animation-delay: .16s }

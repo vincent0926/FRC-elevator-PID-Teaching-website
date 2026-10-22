@@ -3,12 +3,13 @@ import { saveSession } from '../storage/local'
 import { t } from '../core/lang'
 
 /**
- * 進站第一個畫面：網站名稱，背景是隊伍照片（`public/team9427.jpg`），按「開始」才到選機構（決策 139）。
- * 照片還沒放的話只會看到深色漸層，不會壞。看過就記在這個分頁（sessionStorage `splashSeen`，App.tsx 讀），重新整理、「換機構」都不會再出現。
+ * 進站第一個畫面：網站名稱，背景是隊伍照片（`public/splash/`）輪流淡入淡出，按「開始」才到選機構（決策 139）。
+ * 照片載不到只會看到深色漸層，不會壞；減少動態效果時只顯示第一張（隊伍合照）。看過就記在這個分頁（sessionStorage `splashSeen`，App.tsx 讀），重新整理、「換機構」都不會再出現。
  */
 
-/** 背景照片放 `public/` 底下的檔名；換照片直接覆蓋這個檔 */
-const SPLASH_PHOTO = 'team9427.jpg'
+/** 背景照片（`public/splash/` 底下），照這個順序輪播；增減張數要一起改 theme.css 的 `splash-fade` 時間。
+ *  每張 6 秒；延遲先減 1.2 秒（淡入的時間），第一張一進站就是全亮 */
+const SPLASH_PHOTOS = ['team.jpg', 'robot-blue.jpg', 'robot-red-1.jpg', 'robot-red-2.jpg', 'robot-red-3.jpg']
 
 export function Splash({ onStart }: { onStart: () => void }) {
   const start = useRef<HTMLButtonElement>(null)
@@ -17,10 +18,13 @@ export function Splash({ onStart }: { onStart: () => void }) {
     saveSession('splashSeen', '1')
     onStart()
   }
-  // CSS 變數裡的相對網址會照 theme.css 的位置（assets/）解析，所以先換成完整網址
-  const photo = new URL(import.meta.env.BASE_URL + SPLASH_PHOTO, document.baseURI).href
   return (
-    <div className="splash" style={{ ['--splash-photo' as string]: `url("${photo}")` }}>
+    <div className="splash">
+      <div className="splash-bg" aria-hidden="true">
+        {SPLASH_PHOTOS.map((f, i) => (
+          <span key={f} style={{ backgroundImage: `url("${import.meta.env.BASE_URL}splash/${f}")`, animationDelay: `${i * 6 - 1.2}s` }} />
+        ))}
+      </div>
       <div className="splash-in">
         <p className="splash-team">{t('前饋與 PID 學習', 'Feedforward & PID')}</p>
         <h1>{t('FRC 9427 調整參數網站', 'FRC 9427 Tuning Website')}</h1>
