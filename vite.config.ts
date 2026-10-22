@@ -40,7 +40,7 @@ export default defineConfig({
         icons: [{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,woff2,jpg}'],
         // version.json 永遠走網路，才比得出新版本
         navigateFallbackDenylist: [/version\.json$/],
         runtimeCaching: [
