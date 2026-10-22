@@ -56,6 +56,12 @@ const PAIRS: [string, string][] = [
   ['--yellow-ink', '--yellow'], ['--blue', '--bg'], ['--blue', '--panel'], ['--blue', '--blue-soft'],
   ['--red', '--red-soft'], ['--green', '--green-soft'], ['--amber', '--amber-soft'], ['--ink', '--amber-soft'],
   ['--shaft-ink-2', '--shaft'], ['--shaft-ink-2', '--shaft-2'], ['--shaft-ink-strong', '--shaft'],
+  ['--ink-3', '--amber-soft'], ['--mark-ink', '--mark'],
+]
+
+/** 不是字的組合：面板要跟背景分得開、輸入框邊線要看得到（不要求 4.5:1，要求不糊在一起） */
+const SURFACES: [string, string, number][] = [
+  ['--panel', '--bg', 1.08], ['--line', '--panel', 1.35], ['--line', '--panel-2', 1.25],
 ]
 
 describe('配色風格', () => {
@@ -90,6 +96,13 @@ describe('配色風格', () => {
     const bad = PAIRS.map(([fg, bg]) => [fg, bg, contrast(v[fg], v[bg])] as const)
       .filter(([, , c]) => c < 4.5)
       .map(([fg, bg, c]) => `${fg} 在 ${bg} 上 ${c.toFixed(2)}`)
+    expect(bad).toEqual([])
+  })
+
+  it.each(themes())('%s：面板、邊線分得出來', (_name, v) => {
+    const bad = SURFACES.map(([a, b, min]) => [a, b, contrast(v[a], v[b]), min] as const)
+      .filter(([, , c, min]) => c < min)
+      .map(([a, b, c, min]) => `${a} 對 ${b} ${c.toFixed(2)}（至少 ${min}）`)
     expect(bad).toEqual([])
   })
 })
