@@ -84,9 +84,9 @@ export function HomePage() {
       </div>
 
       <div className="paths">
-        <button className="path-card" type="button" onClick={() => go('calc')}>
+        <button className="path-card" type="button" onClick={() => go('lessons')}>
           <h2>{t('第一次調電梯', 'Tuning an elevator for the first time')}</h2>
-          <p>{t('從計算參數的五個關卡開始，一步一步推出 kG、kV、kA 和 PID 起始值，再到模擬裡試跑。', 'Start with the five lessons in Calculate gains, working out kG, kV, kA and starting PID values step by step, then try them in the sim.')}</p>
+          <p>{t('從五個教學關卡開始，一步一步推出 kG、kV、kA 和 PID 起始值，再到模擬裡試跑。', 'Start with the five lessons, working out kG, kV, kA and starting PID values step by step, then try them in the sim.')}</p>
           <p className="small muted" style={{ marginTop: 10 }}>
             {t(`教學關卡 ${lessonCount} / ${LESSONS.length}`, `Lessons ${lessonCount} / ${LESSONS.length}`)}
           </p>

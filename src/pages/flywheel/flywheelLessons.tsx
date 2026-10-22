@@ -4,7 +4,7 @@ import { dipFraction, exitRadius, exitSpeed, rangeAtWheel, releaseHeight, turret
 import { t } from '../../core/lang'
 import { FROM_LABEL } from './FlywheelForms'
 
-/** 射球飛輪 1F 教學關卡：每關用你的機構算，最後一題檢核題 */
+/** 射球飛輪教學關卡（pages/lessons 那一頁）：每關用你的機構算，最後一題檢核題 */
 
 export interface FlywheelLessonCtx {
   m: FlywheelMechanism

@@ -16,8 +16,8 @@ import { t } from '../core/lang'
  *   custom  使用者自己改的
  */
 
-export type PageId = 'home' | 'calc' | 'tune' | 'sim' | 'learn' | 'guide'
-export const PAGES: PageId[] = ['home', 'calc', 'tune', 'sim', 'learn', 'guide']
+export type PageId = 'home' | 'calc' | 'tune' | 'sim' | 'learn' | 'guide' | 'lessons'
+export const PAGES: PageId[] = ['home', 'calc', 'tune', 'sim', 'learn', 'guide', 'lessons']
 export type SimSource = 'theory' | 'tuning' | 'custom'
 /** 網站的三條線：電梯、手臂、射球飛輪（只有 3F 模擬）。null = 還沒選（每次進站都要選，同一個分頁重新整理不用重選） */
 export type Track = 'elevator' | 'arm' | 'flywheel'

@@ -19,8 +19,15 @@ export function guideContentEn(track: Track): GuideContent {
         floor: '1F',
         page: 'calc',
         text: arm
-          ? 'Enter the arm’s mechanism data and look at the parameter card on the right; do the first two lessons to understand why kG is multiplied by cos θ.'
-          : 'Enter the elevator’s mechanism data and look at the parameter card on the right; do the first two lessons to understand how kG and kV are calculated.',
+          ? 'Enter the arm’s mechanism data and look at the theory values on the parameter card on the right.'
+          : 'Enter the elevator’s mechanism data and look at the theory values on the parameter card on the right.',
+      },
+      {
+        floor: '★',
+        page: 'lessons',
+        text: arm
+          ? 'Open “Lessons” and do the first two to understand why kG is multiplied by cos θ.'
+          : 'Open “Lessons” and do the first two to understand how kG and kV are calculated.',
       },
       {
         floor: '3F',
@@ -56,14 +63,14 @@ export function guideContentEn(track: Track): GuideContent {
               'On the left, enter the arm’s mechanism data: mass, length, center-of-mass position, end load, gear ratio, angle range, and whether the angle sensor is the TalonFX built-in encoder or a CANcoder.',
               'Change a number and the parameter card on the right recalculates immediately. The small tag next to each gain says where it comes from: calc, calc + measure, measure, tune, limit.',
               'kS defaults to 0; once you measure it with the 4F two-point method, you can enter it here.',
-              'Work through the five lessons below: each has a goal, a fill-in exercise and a check question. Finishing all of them unlocks expert mode in 2F.',
+              'To see where the numbers come from, work through “Lessons” step by step (a separate page that uses the mechanism data you enter here).',
               'Press “Send to sim” to take the theory values to 3F; to change things freely, press “Copy as custom and simulate”.',
             ]
           : [
               'On the left, enter the elevator’s mechanism data: motors, gear ratio, drum, travel and each stage’s mass.',
               'Change a number and the parameter card on the right recalculates immediately. The small tag next to each gain says where it comes from: calc, calc + measure, measure, tune, limit.',
               'kS defaults to 0; once you measure it with the 4F two-point method, you can enter it here.',
-              'Work through the five lessons below: each has a goal, a fill-in exercise and a check question. Finishing all of them unlocks expert mode in 2F.',
+              'To see where the numbers come from, work through “Lessons” step by step (a separate page that uses the mechanism data you enter here).',
               'Press “Send to sim” to take the theory values to 3F; to change things freely, press “Copy as custom and simulate”.',
               'Optional: “Choosing a gear ratio” compares how long a full move takes with different ratios; “Share this elevator” turns the mechanism data into a link for teammates.',
             ],
@@ -79,9 +86,27 @@ export function guideContentEn(track: Track): GuideContent {
               'Position is drum rope displacement, not the top stage height.',
             ],
         stuck: [
-          ['I don’t get where the numbers come from', 'Follow the lessons. Wrong answers in the fill-in exercises tell you what went wrong, so don’t worry.'],
+          ['I don’t get where the numbers come from', 'Do “Lessons” one at a time. Wrong answers in the fill-in exercises tell you what went wrong, so don’t worry.'],
           ['Theory is far from the real robot', arm ? 'Re-measure the mass, center-of-mass position and gear ratio; theory is only as accurate as its inputs.' : 'Re-measure each stage’s mass, the gear ratio and the drum diameter; theory is only as accurate as its inputs.'],
         ],
+      },
+      {
+        id: GUIDE_ANCHOR.lessons,
+        page: 'lessons',
+        floor: '★',
+        title: 'Lessons',
+        what: `Five lessons work out your ${thing}’s kG, kV, kA and starting PID values step by step. It isn’t a floor; come back whenever you want to review.`,
+        steps: [
+          '“Lessons” in the left menu opens this page; the first unfinished lesson opens by default.',
+          'Each lesson has a goal, fill-in exercises and a check question. Wrong answers get hints that get closer to the answer; it only counts as done when you get it right.',
+          `Once you answer correctly it redoes the numbers with the ${thing} you entered in 1F. To change the mechanism data, press “Edit the mechanism data in 1F”.`,
+          'Finishing all five unlocks expert mode in 2F.',
+        ],
+        look: [
+          'The exercises use a fixed practice mechanism, not yours: work it out yourself first, then compare with your numbers.',
+          'The “Done” count next to the title is how many you have finished, saved in this computer’s browser.',
+        ],
+        stuck: [['I keep getting the fill-in wrong', 'Read what the hint says went wrong: the most common slips are forgetting the speed ratio or forgetting to square.']],
       },
       {
         id: GUIDE_ANCHOR.sim,
@@ -120,7 +145,7 @@ export function guideContentEn(track: Track): GuideContent {
           'Get data: drop in a .wpilog from the robot (recorded with AdvantageKit); without a log, generate a sample in “No log?” on the right, or press “Send to 2F tuning advice” in 3F.',
           'The first import needs the field mapping confirmed (the site guesses first); press “Read and check”. After that the same fields are applied automatically.',
           'Step 0 data checks: any ✕ means the log can’t be analyzed; fix it as described and record again. ! is a warning and you can continue.',
-          'Step 1 find the problem: look at the charts, pick the top-priority problem yourself and write a reason (wrong picks get hints). After finishing the 1F lessons you can turn on “Expert mode” to see the result directly.',
+          'Step 1 find the problem: look at the charts, pick the top-priority problem yourself and write a reason (wrong picks get hints). After finishing the lessons you can turn on “Expert mode” to see the result directly.',
           `Step 2 fix one problem: press “Apply” to save the suggestion as “${slot}”, then press “Preview in sim” to see the change in 3F.`,
           'Step 3 verify on the robot: put that one gain into the robot code, record another log doing the same motion, import it and see whether the problem is gone.',
           'The step bar at the top (from “Import & check” to “Verify on the robot”) is clickable and scrolls to that step; if the step isn’t there yet, it tells you what to do first.',

@@ -1,26 +1,21 @@
-import { useState } from 'react'
 import { useStore } from '../../app/store'
-import { Quiz } from '../../components/Quiz'
 import { ArmForm } from './ArmForm'
 import { ArmParamCard } from './ArmParamCard'
 import { KIND_INFO, PARAM_ROWS } from '../calculate/paramSources'
-import { ARM_LESSONS } from './armLessons'
 import { useArm } from './armStore'
 import { UnsavedNote } from './UnsavedNote'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
 import { t } from '../../core/lang'
 
-/** 手臂 1F：機構資料 → 理論參數，加上五個教學關卡 */
+/** 手臂 1F：機構資料 → 理論參數（教學關卡在另一頁 pages/lessons） */
 
 const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 const R2D = 180 / Math.PI
 
 export function ArmCalcPage() {
-  const { lessonsDone, markLesson, go } = useStore()
+  const { go } = useStore()
   const { arm, setArm, voltsPerDeg, setVoltsPerDeg, ff, theory, setCustom, setSource } = useArm()
-  const [open, setOpen] = useState<string | null>(() => ARM_LESSONS.find((l) => !lessonsDone[l.id])?.id ?? null)
-  const done = ARM_LESSONS.filter((l) => lessonsDone[l.id]).length
 
   const toSim = (asCustom: boolean) => {
     if (asCustom) {
@@ -36,45 +31,16 @@ export function ArmCalcPage() {
         <div>
           <h1 id="t-arm-calc">{t('手臂・計算參數', 'Arm · Calculate gains')}</h1>
           <p className="lead">
-            {t('填入手臂的機構資料，右邊的參數卡會即時更新。數字怎麼來的，跟著下方五個關卡一步一步看。', 'Enter the arm’s mechanism data and the parameter card on the right updates immediately. To see where each number comes from, follow the five lessons below step by step.')}{' '}
+            {t('填入手臂的機構資料，右邊的參數卡會即時更新。數字怎麼來的，到「教學關卡」一步一步看。', 'Enter the arm’s mechanism data and the parameter card on the right updates immediately. To see where each number comes from, work through the “Lessons” page step by step.')}{' '}
             <HelpLink section={GUIDE_ANCHOR.calc} />
           </p>
         </div>
-        <span className="phase">
-          {t(`教學關卡 ${done} / ${ARM_LESSONS.length}`, `Lessons ${done} / ${ARM_LESSONS.length}`)}
-        </span>
       </div>
 
       <UnsavedNote />
       <div className="grid2">
         <div className="stack">
           <ArmForm m={arm} onChange={setArm} voltsPerDeg={voltsPerDeg} onVoltsPerDeg={setVoltsPerDeg} />
-
-          <div className="panel">
-            <h2>{t('教學關卡', 'Lessons')}</h2>
-            <ol className="lessons">
-              {ARM_LESSONS.map((l) => {
-                const isOpen = open === l.id
-                return (
-                  <li key={l.id} className={'lesson' + (lessonsDone[l.id] ? ' done' : '')}>
-                    <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.id)}>
-                      <span>
-                        {l.title}
-                        <small>{l.sub}</small>
-                      </span>
-                    </button>
-                    {isOpen && (
-                      <div className="body">
-                        <div className="goal">{t('學習目標：', 'Goal: ')}{l.goal}</div>
-                        <l.Body m={arm} ff={ff} kP={theory.feedback.kP} done={lessonsDone[l.id]} />
-                        <Quiz key={l.id} quiz={l.quiz} done={lessonsDone[l.id]} onCorrect={() => markLesson(l.id)} />
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
-            </ol>
-          </div>
         </div>
 
         <aside className="panel card-param" aria-live="polite">

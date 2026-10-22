@@ -6,7 +6,7 @@ import { compareMoves, kiCases, pidVsFfCases } from './lessons'
 const m = DEFAULT_MECHANISM
 const ff = computeFeedforward(m)
 
-describe('1F 教學關卡的比較模擬（圖上要真的看得到說明的現象）', () => {
+describe('教學關卡的比較模擬（圖上要真的看得到說明的現象）', () => {
   it('純 PID 一路落後、停不準；前饋 + PID 跟得上', () => {
     const { metrics: [pid, pid4, ffPid] } = compareMoves(m, ff, pidVsFfCases(ff, 50))
     expect(pid.maxFollowingError).toBeGreaterThan(0.1)

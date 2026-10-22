@@ -1,8 +1,5 @@
-import { useState } from 'react'
 import { useStore } from '../../app/store'
 import { ParamCard } from '../../components/ParamCard'
-import { Quiz } from '../../components/Quiz'
-import { LESSONS } from './lessons'
 import { MechanismForm } from './MechanismForm'
 import { PARAM_ROWS, KIND_INFO } from './paramSources'
 import { ParamSources } from './ParamSources'
@@ -14,9 +11,7 @@ import { t } from '../../core/lang'
 const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
 export function CalcPage() {
-  const { mechanism, setMechanism, voltsPerCm, setVoltsPerCm, ff, theory, lessonsDone, markLesson, setCustom, setSimSource, go, shared, dismissShared } = useStore()
-  const [open, setOpen] = useState<string | null>(() => LESSONS.find((l) => !lessonsDone[l.id])?.id ?? null)
-  const done = LESSONS.filter((l) => lessonsDone[l.id]).length
+  const { mechanism, setMechanism, voltsPerCm, setVoltsPerCm, ff, theory, setCustom, setSimSource, go, shared, dismissShared } = useStore()
 
   const toSim = (asCustom: boolean) => {
     if (asCustom) {
@@ -32,13 +27,10 @@ export function CalcPage() {
         <div>
           <h1 id="t-calc">{t('計算參數', 'Calculate gains')}</h1>
           <p className="lead">
-            {t('填入機構資料，右邊的參數卡會即時更新。數字怎麼來的，跟著下方五個關卡一步一步看。', 'Enter your mechanism data and the parameter card on the right updates immediately. To see where each number comes from, follow the five lessons below step by step.')}{' '}
+            {t('填入機構資料，右邊的參數卡會即時更新。數字怎麼來的，到「教學關卡」一步一步看。', 'Enter your mechanism data and the parameter card on the right updates immediately. To see where each number comes from, work through the “Lessons” page step by step.')}{' '}
             <HelpLink section={GUIDE_ANCHOR.calc} />
           </p>
         </div>
-        <span className="phase">
-          {t(`教學關卡 ${done} / ${LESSONS.length}`, `Lessons ${done} / ${LESSONS.length}`)}
-        </span>
       </div>
 
       {shared && (
@@ -61,32 +53,6 @@ export function CalcPage() {
       <div className="grid2">
         <div className="stack">
           <MechanismForm m={mechanism} onChange={setMechanism} voltsPerCm={voltsPerCm} onVoltsPerCm={setVoltsPerCm} />
-
-          <div className="panel">
-            <h2>{t('教學關卡', 'Lessons')}</h2>
-            <ol className="lessons">
-              {LESSONS.map((l) => {
-                const isOpen = open === l.id
-                return (
-                  <li key={l.id} className={'lesson' + (lessonsDone[l.id] ? ' done' : '')}>
-                    <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.id)}>
-                      <span>
-                        {l.title}
-                        <small>{l.sub}</small>
-                      </span>
-                    </button>
-                    {isOpen && (
-                      <div className="body">
-                        <div className="goal">{t('學習目標：', 'Goal: ')}{l.goal}</div>
-                        <l.Body m={mechanism} ff={ff} kP={theory.feedback.kP} done={lessonsDone[l.id]} />
-                        <Quiz key={l.id} quiz={l.quiz} done={lessonsDone[l.id]} onCorrect={() => markLesson(l.id)} />
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
-            </ol>
-          </div>
         </div>
 
         <aside className="panel card-param" aria-live="polite">

@@ -17,8 +17,8 @@ const FLOORS: { id: PageId; lv: string; name: string; short: string }[] = [
   { id: 'home', lv: 'G', name: t('總覽', 'Overview'), short: t('總覽', 'Home') },
 ]
 
-/** 射球飛輪有的樓層 */
-const FLYWHEEL_PAGES: PageId[] = ['sim', 'calc']
+/** 射球飛輪有的樓層（教學關卡不是樓層，另外放） */
+const FLYWHEEL_PAGES: PageId[] = ['sim', 'calc', 'lessons']
 
 type Theme = 'light' | 'dark' | null
 
@@ -29,7 +29,7 @@ function isDark(t: Theme) {
 export function Shell({ children }: { children: ReactNode }) {
   const { page: storePage, go, track, setTrack, courseChapter, pendingSection, clearPendingSection } = useStore()
   const trackName = track === 'arm' ? t('手臂', 'Arm') : track === 'flywheel' ? t('射球飛輪', 'Flywheel shooter') : t('電梯', 'Elevator')
-  // 射球飛輪只有 1F 計算和 3F 模擬，其他樓層和使用說明都不顯示
+  // 射球飛輪只有 1F 計算、3F 模擬和教學關卡，其他樓層和使用說明都不顯示
   const flywheel = track === 'flywheel'
   const floors = flywheel ? FLOORS.filter((f) => FLYWHEEL_PAGES.includes(f.id)) : FLOORS
   const page = flywheel && !FLYWHEEL_PAGES.includes(storePage) ? 'calc' : storePage
@@ -75,8 +75,8 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="floors">
             <div className="rail" aria-hidden="true" />
             {/* 樓層固定高 58px、靠下對齊，車廂從底部算第幾層就好，不必量 DOM */}
-            <div className="car" aria-hidden="true" style={{ transform: `translateY(${-(floors.length - 1 - (page === 'guide' ? -1 : floors.findIndex((f) => f.id === page))) * 58}px)` }} />
-            {/* 使用說明放在最上面一格：樓層是靠下對齊，加在上面不會動到原本的樓層位置；車廂從 G 往上數剛好停在這一格 */}
+            <div className="car" aria-hidden="true" style={{ transform: `translateY(${-(floors.length - 1 - (page === 'guide' ? -2 : page === 'lessons' ? -1 : floors.findIndex((f) => f.id === page))) * 58}px)` }} />
+            {/* 使用說明、教學關卡放在最上面兩格：樓層是靠下對齊，加在上面不會動到原本的樓層位置；車廂從 G 往上數剛好停在這兩格 */}
             {!flywheel && (
               <button type="button" className="floor" data-floor="guide" aria-current={page === 'guide' ? 'page' : undefined} onClick={() => go('guide')}>
                 <span className="lv">{t('？', '?')}</span>
@@ -84,6 +84,11 @@ export function Shell({ children }: { children: ReactNode }) {
                 <span className="nm-short">{t('說明', 'Guide')}</span>
               </button>
             )}
+            <button type="button" className="floor" data-floor="lessons" aria-current={page === 'lessons' ? 'page' : undefined} onClick={() => go('lessons')}>
+              <span className="lv">★</span>
+              <span className="nm">{t('教學關卡', 'Lessons')}</span>
+              <span className="nm-short">{t('關卡', 'Lessons')}</span>
+            </button>
             {floors.map((f) => (
               <button
                 key={f.id}

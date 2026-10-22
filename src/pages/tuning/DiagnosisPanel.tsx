@@ -185,9 +185,9 @@ export function DiagnosisPanel({ log, report, logName, onHighlight, sim }: Diagn
       <div className="panel" id="tune-step-1">
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>{t('步驟 1：找出問題', 'Step 1: find the problem')}</h2>
-          <label className="check" title={expertUnlocked ? '' : t('1F 的教學關卡全部完成才開放', 'Unlocks after finishing all the 1F lessons')}>
+          <label className="check" title={expertUnlocked ? '' : t('教學關卡全部完成才開放', 'Unlocks after finishing all the lessons')}>
             <input type="checkbox" checked={expert} disabled={!expertUnlocked} onChange={(e) => setExpert(e.target.checked)} />
-            {t('專家模式', 'Expert mode')}{!expertUnlocked && t('（完成 1F 教學關卡後開放）', ' (unlocks after the 1F lessons)')}
+            {t('專家模式', 'Expert mode')}{!expertUnlocked && t('（完成教學關卡後開放）', ' (unlocks after the lessons)')}
           </label>
         </div>
 

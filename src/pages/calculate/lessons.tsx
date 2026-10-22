@@ -13,7 +13,7 @@ import type { ElevatorMechanism } from '../../schema/parameterSet'
 import { t } from '../../core/lang'
 
 /**
- * 1F 的五個教學關卡。每關有學習目標、用目前機構代入的數字、一題檢核題。
+ * 五個教學關卡（pages/lessons 那一頁，從 1F 拆出來）。每關有學習目標、用目前機構代入的數字、一題檢核題。
  * 數字跟著左邊表單即時變，讓隊員看到「自己的電梯」而不是課本例子。
  */
 

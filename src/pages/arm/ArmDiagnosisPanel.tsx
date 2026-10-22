@@ -166,9 +166,9 @@ export function ArmDiagnosisPanel({ log, report, logName, onHighlight, sim }: Ar
       <div className="panel" id="arm-tune-step-1">
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0 }}>{t('步驟 1：找出問題', 'Step 1: find the problem')}</h2>
-          <label className="check" title={expertUnlocked ? '' : t('手臂 1F 的教學關卡全部完成才開放', 'Unlocks after finishing all the arm 1F lessons')}>
+          <label className="check" title={expertUnlocked ? '' : t('手臂的教學關卡全部完成才開放', 'Unlocks after finishing all the arm lessons')}>
             <input type="checkbox" checked={expert} disabled={!expertUnlocked} onChange={(e) => setExpert(e.target.checked)} />
-            {t('專家模式', 'Expert mode')}{!expertUnlocked && t('（完成手臂 1F 教學關卡後開放）', ' (unlocks after the arm 1F lessons)')}
+            {t('專家模式', 'Expert mode')}{!expertUnlocked && t('（完成手臂的教學關卡後開放）', ' (unlocks after the arm lessons)')}
           </label>
         </div>
 
