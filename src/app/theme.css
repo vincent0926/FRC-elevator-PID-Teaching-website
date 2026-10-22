@@ -1,9 +1,9 @@
 :root {
-  --bg: #EEF1F5; --bg-glow: rgba(47, 111, 222, .07); --panel: #FFFFFF; --panel-2: #F5F7FA; --ink: #17202B; --ink-2: #475262; --ink-3: #697586;
+  --bg: #EEF1F5; --bg-glow: rgba(47, 111, 222, .07); --panel: #FFFFFF; --panel-2: #F5F7FA; --ink: #17202B; --ink-2: #475262; --ink-3: #5E6A7A;
   --line: #D3DAE2; --line-2: #E6EAF0; --steel: #7D8896; --shaft: #1E2733; --shaft-2: #151C25;
   --shaft-ink: #DDE3EA; --shaft-ink-2: #93A0AE; --shaft-line: rgba(255, 255, 255, .08); --shaft-hover: rgba(255, 255, 255, .05); --shaft-active: rgba(242, 183, 5, .12);
-  --yellow: #F2B705; --yellow-2: #E3A500; --yellow-ink: #3A2C00; --blue: #2F6FDE; --blue-soft: #E1EAFB; --red: #C0392F; --red-soft: #FBE6E5;
-  --green: #2A7F50; --green-soft: #E0F2E7; --amber: #9A6A00; --amber-soft: #FCF2D8; --violet: #7A4FC9;
+  --yellow: #F2B705; --yellow-2: #E3A500; --yellow-ink: #3A2C00; --blue: #2A63CC; --blue-soft: #E1EAFB; --red: #C0392F; --red-soft: #FBE6E5;
+  --green: #23704A; --green-soft: #E0F2E7; --amber: #855B00; --amber-soft: #FCF2D8; --violet: #7A4FC9;
   --flash: rgba(242, 183, 5, .38); --lift-shadow: 0 10px 28px -8px rgba(23, 32, 43, .18), 0 2px 6px rgba(23, 32, 43, .06);
   --shadow: 0 1px 2px rgba(23, 32, 43, .05), 0 2px 8px -2px rgba(23, 32, 43, .06); --ring: 0 0 0 3px rgba(47, 111, 222, .18);
   --radius: 12px; --radius-sm: 8px; --font: "IBM Plex Sans", "Noto Sans TC", system-ui, sans-serif; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -52,10 +52,10 @@ a { color: var(--blue); text-underline-offset: 3px; text-decoration-thickness: 1
 .car { position: absolute; left: 25px; width: 20px; height: 44px; border-radius: 5px; background: linear-gradient(180deg, var(--yellow), var(--yellow-2)); box-shadow: 0 0 0 3px rgba(242, 183, 5, .16), 0 0 18px rgba(242, 183, 5, .35); transition: transform .45s cubic-bezier(.45, .05, .25, 1); bottom: 13px; z-index: 1 }
 .floor { position: relative; display: flex; align-items: center; gap: 14px; width: calc(100% - 20px); margin-left: 10px; height: 58px; padding: 0 12px 0 50px; background: none; border: 0; border-radius: 10px; text-align: left; cursor: pointer; color: var(--shaft-ink-2) }
 .floor:hover { color: #fff; background: var(--shaft-hover) }
-.floor .lv { font-variant-numeric: tabular-nums; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: var(--shaft-ink-2); opacity: .8; width: 22px }
+.floor .lv { font-variant-numeric: tabular-nums; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: var(--shaft-ink-2); width: 22px }
 .floor .nm { font-size: 14.5px }
 .floor[aria-current="page"] { color: #fff; background: var(--shaft-active); font-weight: 600 }
-.floor[aria-current="page"] .lv { color: var(--yellow); opacity: 1 }
+.floor[aria-current="page"] .lv { color: var(--yellow) }
 .shaft-foot { padding: 14px 20px 0; border-top: 1px solid var(--shaft-line); font-size: 12px; color: var(--shaft-ink-2); display: flex; justify-content: space-between; align-items: center; gap: 8px }
 .theme-btn { background: var(--shaft-hover); border: 1px solid var(--shaft-line); color: var(--shaft-ink); border-radius: 8px; padding: 3px 11px; cursor: pointer; font-size: 12px; transition: background-color .15s ease, border-color .15s ease }
 .theme-btn:hover { background: var(--shaft-line); border-color: rgba(255, 255, 255, .16) }
@@ -138,7 +138,7 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .warn { background: var(--red-soft); color: var(--red); border-color: color-mix(in srgb, var(--red) 22%, transparent) }
 .ok { background: var(--green-soft); color: var(--green); border-color: color-mix(in srgb, var(--green) 22%, transparent) }
 .note { background: var(--amber-soft); color: var(--ink); border-color: color-mix(in srgb, var(--amber) 22%, transparent) }
-.chip { display: inline-block; font-size: 12px; border-radius: 999px; padding: 1px 10px; background: var(--blue-soft); color: var(--blue); font-weight: 500; vertical-align: 2px }
+.chip { display: inline-block; font-size: 12px; border-radius: 999px; padding: 2px 10px; background: var(--blue-soft); color: var(--blue); font-weight: 500; vertical-align: 2px }
 
 /* 教學關卡 */
 .lessons { list-style: none; margin: 0; padding: 0; counter-reset: l }
@@ -222,7 +222,13 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .tune-ref { grid-area: ref; display: flex; flex-wrap: wrap; gap: 0 8px; font-variant-numeric: tabular-nums }
 .tune-ref em { font-style: normal; color: var(--ink-2) }
 .tune-row.changed .tune-label b { color: var(--amber) }
-.scen > summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline }
+.scen > summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; list-style: none }
+.scen > summary::-webkit-details-marker { display: none }
+/* 可以展開的卡片：前面一個箭頭，打開時轉向下（看得出點了會展開） */
+.scen > summary::before, .unit > summary::before { content: ""; flex: none; width: 7px; height: 7px; margin: 0 2px 0 2px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: translateY(-2px) rotate(-45deg); transition: transform .2s ease }
+.scen > summary::before { align-self: center }
+.scen[open] > summary::before, .unit[open] > summary::before { transform: translateY(-3px) rotate(45deg) }
+.scen > summary:hover::before, .unit > summary:hover::before { border-color: var(--ink) }
 .scen-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px }
 .scen-list button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink) }
 .scen-card { margin-top: 14px; border-left: 3px solid var(--yellow); padding: 2px 0 2px 14px; font-size: 14.5px }
@@ -257,10 +263,11 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .unit > summary { list-style: none; cursor: pointer; padding: 16px 20px; border-radius: var(--radius); transition: background-color .15s ease; display: flex; justify-content: space-between; align-items: center; gap: 12px }
 .unit > summary::-webkit-details-marker { display: none }
 .unit > summary:hover { background: var(--panel-2) }
+.unit > summary > :first-child { margin-right: auto !important }
 .unit .lock-note { margin: 0 20px 4px }
 .unit .body { padding: 0 20px 20px }
 .unit h3 { margin-top: 18px }
-.tag { font-size: 12px; border-radius: 999px; padding: 2px 10px; border: 1px solid var(--line); color: var(--ink-3); white-space: nowrap }
+.tag { font-size: 12px; font-weight: 500; border-radius: 999px; padding: 2px 10px; border: 1px solid var(--line); color: var(--ink-3); white-space: nowrap }
 .tag.must { border-color: var(--yellow); background: var(--amber-soft); color: var(--ink) }
 .tag.done { border-color: var(--green); background: var(--green-soft); color: var(--green) }
 .checklist { list-style: none; margin: 0; padding: 0 }
@@ -307,7 +314,7 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 @media (max-width: 720px) { .robust-sum { grid-template-columns: minmax(0, 1fr) } }
 .ctrl { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-2) }
 .toggles code { font-size: 11.5px; color: var(--ink-3); margin-left: 4px; word-break: break-all }
-.src-tag { display: inline-block; font-size: 12px; border-radius: 999px; padding: 1px 9px; border: 1px solid; white-space: nowrap; font-weight: 500 }
+.src-tag { display: inline-block; font-size: 12px; border-radius: 999px; padding: 2px 10px; border: 1px solid; white-space: nowrap; font-weight: 500 }
 .src-mini { display: inline-block; font-size: 10.5px; border-radius: 3px; padding: 0 4px; margin-left: 6px; border: 1px solid; vertical-align: 2px; font-weight: 500 }
 .src-calc { color: var(--green); border-color: var(--green); background: var(--green-soft) }
 .src-calcThenMeasure { color: var(--blue); border-color: var(--blue); background: var(--blue-soft) }
@@ -319,7 +326,7 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .src-kinds li > .src-tag { justify-self: start }
 .src-tbl td, .src-tbl th { vertical-align: top; font-size: 13px }
 @media (max-width: 720px) { .src-kinds { grid-template-columns: minmax(0, 1fr) } .src-kinds li > .src-tag { margin-top: 6px } }
-.approx { border-left: 3px solid var(--amber); background: var(--amber-soft); border-radius: 4px; padding: 8px 12px; font-size: 13px; color: var(--ink); margin: 10px 0 }
+.approx { border-left: 3px solid var(--amber); background: var(--amber-soft); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; color: var(--ink); margin: 10px 0 }
 .approx > b { margin-right: 4px }
 .approx details { margin-top: 4px }
 .approx summary { cursor: pointer; color: var(--ink-2) }
@@ -406,8 +413,12 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .lang-toggle button { border: 0; border-radius: 999px; background: none; padding: 2px 10px; font-size: 12.5px; cursor: pointer; color: var(--ink-3) }
 .lang-toggle button:not([aria-pressed="true"]):hover { color: var(--ink) }
 .lang-toggle button[aria-pressed="true"] { background: var(--yellow); color: var(--yellow-ink); font-weight: 600; cursor: default }
-/* 手機：主內容往下一點，不要跟右上角的中/EN 疊在一起 */
-@media (max-width: 720px) { main { padding-top: 48px } }
+/* 手機：主內容往下一點，不要跟右上角的中/EN 疊在一起；小按鈕至少 32px 高，手指按得到 */
+@media (max-width: 720px) {
+  main { padding-top: 56px }
+  .lang-toggle button { min-height: 32px; padding: 2px 12px }
+  .track-btn, .btn.small { min-height: 32px }
+}
 /* 回課程網站：側欄一行、主內容上方一行（手機看不到側欄時也找得到） */
 .course-link { display: block; margin: 0 20px 12px; font-size: 12.5px; color: var(--shaft-ink-2); text-decoration: none }
 .course-link:hover { color: var(--shaft-ink); text-decoration: underline }
