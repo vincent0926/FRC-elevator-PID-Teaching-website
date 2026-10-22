@@ -1,4 +1,5 @@
 import './app/langInit'
+import './app/palette'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './app/theme.css'

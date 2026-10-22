@@ -5,8 +5,9 @@ import { UpdateBanner } from './UpdateBanner'
 import { ErrorBoundary } from './ErrorBoundary'
 import { COURSE_URL, courseChapterUrl } from '../core/deepLink'
 import { t } from '../core/lang'
+import { PALETTES, loadPalette, setPalette, type Palette } from './palette'
 
-/** 井道導覽：樓層由下往上，黃色車廂停在目前頁面。 */
+/** 井道導覽：樓層由下往上，車廂（強調色，預設黃色）停在目前頁面。 */
 
 /** short：手機底部導覽用的短名稱（六個按鈕擠一排，長名稱會斷成好幾行） */
 const FLOORS: { id: PageId; lv: string; name: string; short: string }[] = [
@@ -21,6 +22,30 @@ const FLOORS: { id: PageId; lv: string; name: string; short: string }[] = [
 const FLYWHEEL_PAGES: PageId[] = ['sim', 'calc', 'lessons']
 
 type Theme = 'light' | 'dark' | null
+
+/** 配色風格下拉選單：側欄底部一個、手機版主內容上方一個 */
+function PaletteSelect({ className }: { className: string }) {
+  const [palette, setP] = useState<Palette>(loadPalette)
+  return (
+    <select
+      className={className}
+      aria-label={t('配色', 'Color scheme')}
+      title={t('配色', 'Color scheme')}
+      value={palette}
+      onChange={(e) => {
+        const next = e.target.value as Palette
+        setP(next)
+        setPalette(next)
+      }}
+    >
+      {PALETTES.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.name}
+        </option>
+      ))}
+    </select>
+  )
+}
 
 function isDark(t: Theme) {
   return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
@@ -109,6 +134,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </a>
           <div className="shaft-foot">
             <span>v{__APP_VERSION__}</span>
+            <PaletteSelect className="theme-btn palette-select" />
             <button className="theme-btn" type="button" onClick={toggleTheme}>
               {isDark(theme) ? t('淺色', 'Light') : t('深色', 'Dark')}
             </button>
@@ -122,9 +148,12 @@ export function Shell({ children }: { children: ReactNode }) {
           )}
           <div className="track-mobile">
             <span className="small muted">{t(`${trackName}調參工作站`, `${trackName} Tuning Station`)}</span>
-            <button className="track-btn" type="button" onClick={() => setTrack(null)}>
-              {t('換機構', 'Switch mechanism')}
-            </button>
+            <span className="row" style={{ gap: 6 }}>
+              <PaletteSelect className="track-btn palette-select" />
+              <button className="track-btn" type="button" onClick={() => setTrack(null)}>
+                {t('換機構', 'Switch mechanism')}
+              </button>
+            </span>
           </div>
           <ErrorBoundary resetKey={`${track}:${page}`}>{children}</ErrorBoundary>
         </main>

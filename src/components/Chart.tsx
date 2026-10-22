@@ -70,7 +70,7 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
       plot.current?.destroy()
       const ink3 = cssVar('--ink-3')
       const grid = cssVar('--line-2')
-      const bandColor = cssVar('--yellow')
+      const bandColor = cssVar('--mark')
       // 每個軸各自一份：uPlot 會改寫傳進去的 grid、ticks 物件，共用會讓 y 軸不畫刻度
       const axis = (): uPlot.Axis => ({ stroke: ink3, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid, width: 1 }, font: '11px ' + cssVar('--font') })
       const opts: uPlot.Options = {
