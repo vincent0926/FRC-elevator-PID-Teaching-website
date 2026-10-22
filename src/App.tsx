@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { Chooser } from './app/Chooser'
+import { Splash } from './app/Splash'
+import { loadSession } from './storage/local'
 import { Shell } from './app/Shell'
 import { useStore } from './app/store'
 import { HomePage } from './pages/home/HomePage'
@@ -18,7 +21,8 @@ import { ArmLessonsPage, ElevatorLessonsPage, FlywheelLessonsPage } from './page
 
 export default function App() {
   const { page, track } = useStore()
-  if (!track) return <Chooser />
+  const [splash, setSplash] = useState(() => loadSession('splashSeen') !== '1')
+  if (!track) return splash ? <Splash onStart={() => setSplash(false)} /> : <Chooser />
   // 射球飛輪只有 1F、3F 和教學關卡：停在其他樓層（例如深層連結）就顯示 1F
   if (track === 'flywheel')
     return <Shell>{page === 'sim' ? <FlywheelSimPage /> : page === 'lessons' ? <FlywheelLessonsPage /> : <FlywheelCalcPage />}</Shell>
