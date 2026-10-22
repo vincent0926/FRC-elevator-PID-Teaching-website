@@ -42,13 +42,13 @@ export function ArmHomePage() {
           <ol className="small">
             {t(
               <>
-              <li>1F 填手臂的質量、長度、重心、負載、齒比，看理論 kG、kV、kA 怎麼來。</li>
+              <li>1F 填手臂的質量、長度、重心、負載、齒比，再到「教學關卡」看理論 kG、kV、kA 怎麼來。</li>
               <li>3F 模擬：先用理想模型，再打開摩擦、電流限制；看「把手臂當電梯」「零點設錯」這些情境。</li>
               <li>4F 先做完單元零（方向、零點在水平、軟體限位），在水平用兩點法量 kS、kG。</li>
               <li>1F 算出參數、寫進機器人程式，上機錄日誌，到 2F 找問題，一次改一個參數。</li>
               </>,
               <>
-                <li>In 1F, enter the arm’s mass, length, center of mass, load and gear ratio, and see where the theory kG, kV and kA come from.</li>
+                <li>In 1F, enter the arm’s mass, length, center of mass, load and gear ratio, then use “Lessons” to see where the theory kG, kV and kA come from.</li>
                 <li>3F sim: start with the ideal model, then turn on friction and current limits; look at scenarios like “treating the arm as an elevator” and “wrong zero”.</li>
                 <li>In 4F, finish unit 0 first (direction, zero at horizontal, soft limits), then measure kS and kG at horizontal with the two-point method.</li>
                 <li>Calculate gains in 1F, put them in the robot code, record a log on the robot, find the problem in 2F, and change one gain at a time.</li>
@@ -58,6 +58,9 @@ export function ArmHomePage() {
           <div className="row">
             <button className="btn primary" type="button" onClick={() => go('calc')}>
               {t('1F 計算參數', '1F Calculate gains')}
+            </button>
+            <button className="btn" type="button" onClick={() => go('lessons')}>
+              {t('教學關卡', 'Lessons')}
             </button>
             <button className="btn" type="button" onClick={() => go('sim')}>
               {t('3F 模擬', '3F Simulate')}

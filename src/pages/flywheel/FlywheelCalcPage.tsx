@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../../app/store'
 import { NumberField } from '../../components/NumberField'
-import { Quiz } from '../../components/Quiz'
 import {
   computeFlywheelFeedforward,
   DEFAULT_KNOBS,
@@ -21,7 +20,6 @@ import {
   angleFromTurret,
   turretDeg,
 } from '../../core/flywheel/flywheel'
-import { FLYWHEEL_LESSONS } from './flywheelLessons'
 import { BallFields, distanceHint, GoalDistanceField, HubPreset, MechFields, TurretFields } from './FlywheelForms'
 import { FlywheelAim } from './FlywheelAim'
 import { loadFlywheelStyle, useFlywheelMechanism, useMoveSettings, usePersisted, useShotPlan } from './flywheelStore'
@@ -30,7 +28,7 @@ import { t } from '../../core/lang'
 /**
  * 射球飛輪 1F，看進站選的用法：
  * - 彈道：算轉速和仰角（FlywheelAim）：基本參數 → 距離 → 選軌跡，再到 3F 連射模擬
- * - 客製化：機構資料 → kV、kA，轉速 → 球速 → 射程，加上三個教學關卡。內部 SI，畫面 rps。
+ * - 客製化：機構資料 → kV、kA，轉速 → 球速 → 射程（教學關卡在另一頁 pages/lessons）。內部 SI，畫面 rps。
  * - 邊移動邊射：跟彈道一樣，多填機器人速度，算轉速、仰角和底盤偏角
  */
 
@@ -90,14 +88,12 @@ function BallisticCalc() {
 }
 
 function CustomCalc() {
-  const { go, lessonsDone, markLesson } = useStore()
+  const { go } = useStore()
   const [mech, setMech] = useFlywheelMechanism()
   const [plan, setPlan] = useShotPlan()
   // 電流限制跟 3F「真實一點」同一份
   const [knobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
   const ff = useMemo(() => computeFlywheelFeedforward(mech), [mech])
-  const [open, setOpen] = useState<string | null>(() => FLYWHEEL_LESSONS.find((l) => !lessonsDone[l.id])?.id ?? null)
-  const done = FLYWHEEL_LESSONS.filter((l) => lessonsDone[l.id]).length
   const setM = (p: Partial<FlywheelMechanism>) => setMech({ ...mech, ...p })
   const setP = (p: Partial<ShotPlan>) => setPlan({ ...plan, ...p })
 
@@ -129,9 +125,6 @@ function CustomCalc() {
             )}
           </p>
         </div>
-        <span className="phase">
-          {t(`教學關卡 ${done} / ${FLYWHEEL_LESSONS.length}`, `Lessons ${done} / ${FLYWHEEL_LESSONS.length}`)}
-        </span>
       </div>
 
       <div className="grid2">
@@ -208,32 +201,6 @@ function CustomCalc() {
                 ', ignoring air drag and ball spin; all approximations. Shoot a few on the real robot and measure where they land to get the real ratio.',
               )}
             </p>
-          </div>
-
-          <div className="panel">
-            <h2>{t('教學關卡', 'Lessons')}</h2>
-            <ol className="lessons">
-              {FLYWHEEL_LESSONS.map((l) => {
-                const isOpen = open === l.id
-                return (
-                  <li key={l.id} className={'lesson' + (lessonsDone[l.id] ? ' done' : '')}>
-                    <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.id)}>
-                      <span>
-                        {l.title}
-                        <small>{l.sub}</small>
-                      </span>
-                    </button>
-                    {isOpen && (
-                      <div className="body">
-                        <div className="goal">{t('學習目標：', 'Goal: ')}{l.goal}</div>
-                        <l.Body m={mech} ff={ff} plan={plan} />
-                        <Quiz key={l.id} quiz={l.quiz} done={lessonsDone[l.id]} onCorrect={() => markLesson(l.id)} />
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
-            </ol>
           </div>
         </div>
 

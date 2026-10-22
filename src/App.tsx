@@ -14,18 +14,20 @@ import { ArmLearnPage } from './pages/arm/ArmLearnPage'
 import { GuidePage } from './pages/guide/GuidePage'
 import { FlywheelSimPage } from './pages/flywheel/FlywheelSimPage'
 import { FlywheelCalcPage } from './pages/flywheel/FlywheelCalcPage'
+import { ArmLessonsPage, ElevatorLessonsPage, FlywheelLessonsPage } from './pages/lessons/LessonsPage'
 
 export default function App() {
   const { page, track } = useStore()
   if (!track) return <Chooser />
-  // 射球飛輪只有 1F 和 3F：停在其他樓層（例如深層連結）就顯示 1F
+  // 射球飛輪只有 1F、3F 和教學關卡：停在其他樓層（例如深層連結）就顯示 1F
   if (track === 'flywheel')
-    return <Shell>{page === 'sim' ? <FlywheelSimPage /> : <FlywheelCalcPage />}</Shell>
+    return <Shell>{page === 'sim' ? <FlywheelSimPage /> : page === 'lessons' ? <FlywheelLessonsPage /> : <FlywheelCalcPage />}</Shell>
   if (track === 'arm')
     return (
       <Shell>
         {page === 'home' && <ArmHomePage />}
         {page === 'calc' && <ArmCalcPage />}
+        {page === 'lessons' && <ArmLessonsPage />}
         {page === 'tune' && <ArmTuningPage />}
         {page === 'sim' && <ArmSimPage />}
         {page === 'learn' && <ArmLearnPage />}
@@ -36,6 +38,7 @@ export default function App() {
     <Shell>
       {page === 'home' && <HomePage />}
       {page === 'calc' && <CalcPage />}
+      {page === 'lessons' && <ElevatorLessonsPage />}
       {page === 'tune' && <TuningPage />}
       {page === 'sim' && <SimPage />}
       {page === 'learn' && <LearnPage />}

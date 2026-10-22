@@ -11,7 +11,7 @@ import { simulate } from '../../core/physics/simulate'
 import { DEG, type ArmMechanism } from '../../schema/armParameterSet'
 import { t } from '../../core/lang'
 
-/** 手臂 1F 教學關卡：每關有學習目標、內容（用你的機構算）、檢核題 */
+/** 手臂教學關卡（pages/lessons 那一頁）：每關有學習目標、內容（用你的機構算）、檢核題 */
 
 export interface ArmLessonCtx {
   m: ArmMechanism

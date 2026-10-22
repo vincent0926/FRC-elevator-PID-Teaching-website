@@ -8,8 +8,8 @@ import { t } from '../../core/lang'
  */
 
 const FLOOR_NAME: Partial<Record<PageId, string>> = t(
-  { calc: '計算參數', sim: '模擬', tune: '調參建議', learn: '實機資料教學' },
-  { calc: 'Calculate gains', sim: 'Simulate', tune: 'Tuning advice', learn: 'Real-robot lessons' },
+  { calc: '計算參數', lessons: '教學關卡', sim: '模擬', tune: '調參建議', learn: '實機資料教學' },
+  { calc: 'Calculate gains', lessons: 'Lessons', sim: 'Simulate', tune: 'Tuning advice', learn: 'Real-robot lessons' },
 )
 
 function Section({ s, go }: { s: GuideSection; go: (p: PageId) => void }) {
