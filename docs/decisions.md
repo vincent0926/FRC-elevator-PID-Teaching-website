@@ -343,3 +343,9 @@
 | # | 決策 | 理由 |
 |---|---|---|
 | 134 | 目標那一端的量測點：射球飛輪的目標距離可選量到「HUB 中心」或「前面的 tag」（欄位「量到 HUB 哪裡」）（`flywheelStore.ts` 的 `useDistanceRef`，存 localStorage，1F、3F 共用；跟決策 133 機器人那一端的 `distanceFrom` 分開）。計算一律用到 HUB 中心的 `plan.goalDistance`，選 tag 時輸入框顯示、輸入的是到 tag 的距離 = 中心距離 − offset；改 offset 時到 tag 的距離不變。offset 預設 `HUB_TAG_TO_CENTER` = 23.5 in（HUB 底座 47 in 見方的一半），可改 0～2 m。1F 彈道、客製化、3F 連射模擬有；邊移動邊射不給選（使用者沒選），照舊用到中心 | 使用者要能選以 HUB 中心或前面 tag 為準：Limelight 量到的是到 tag 的距離，直接填會少算一段、球打不到中心。只換輸入框，core 的彈道計算都不用改 |
+
+## v0.38 實作時新增的決策
+
+| # | 決策 | 理由 |
+|---|---|---|
+| 135 | 介面改版只動 `theme.css`：圓角（`--radius` 12px、`--radius-sm` 8px）、淡陰影（`--shadow`）、對焦光暈（`--ring`）、側欄顏色也改成變數（`--shaft-*`），不加 CSS 框架或元件庫 | 原本的平面方框、細邊線看起來很舊；只改樣式不動結構，測試、說明文字裡的介面名稱都不受影響 |
