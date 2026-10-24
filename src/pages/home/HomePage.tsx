@@ -1,5 +1,6 @@
 import { UNIT0_ITEMS, useStore, type PageId } from '../../app/store'
 import { LESSONS } from '../calculate/lessons'
+import { QuickStart } from '../../components/QuickStart'
 import { t } from '../../core/lang'
 
 const LOOP: { where: 'site' | 'robot'; tag: string; name: string; page?: PageId }[] = [
@@ -36,12 +37,18 @@ export function HomePage() {
         </div>
       </div>
 
+      <QuickStart what={t('電梯', 'elevator')} />
+
       <button className="path-card guide-card" type="button" onClick={() => go('guide')}>
         <h2>{t('第一次來？先看使用說明', 'First time here? Read the guide')}</h2>
         <p>{t('怎麼從機構資料走到看懂調參建議、每一層怎麼操作、卡住了怎麼辦。大約 30 分鐘走一遍。', 'How to go from mechanism data to understanding the tuning advice, how each floor works, and what to do when you’re stuck. About 30 minutes end to end.')}</p>
       </button>
 
-      <h2>{t('調參循環', 'The tuning loop')}</h2>
+      <details className="unit">
+      <summary>
+        <h2 style={{ margin: 0 }}>{t('完整的調參循環（8 步）', 'The full tuning loop (8 steps)')}</h2>
+      </summary>
+      <div style={{ padding: '0 20px 18px' }}>
       <ol className="loop">
         {LOOP.map((s, i) => (
           <li key={i} className={s.where}>
@@ -82,6 +89,8 @@ export function HomePage() {
           )}
         </span>
       </div>
+      </div>
+      </details>
 
       <div className="paths">
         <button className="path-card" type="button" onClick={() => go('lessons')}>

@@ -370,6 +370,14 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .u-legend .u-marker { border-radius: 2px }
 .u-select { background: rgba(47, 111, 222, .12) }
 
+/* 總覽頁的快速開始 */
+.quick-start { margin-bottom: 22px; border-left: 4px solid var(--blue) }
+.quick-start h2 { margin: 0 0 10px }
+.qs-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; list-style: none; margin: 0 0 14px; padding: 0; counter-reset: qs }
+.qs-steps li { counter-increment: qs; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--blue-soft) }
+.qs-steps li > b::before { content: counter(qs) "．"; color: var(--ink-3) }
+@media (max-width: 720px) { .qs-steps { grid-template-columns: minmax(0, 1fr) } }
+
 /* 教學單元 */
 .unit { border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--panel); margin-bottom: 14px; box-shadow: var(--shadow) }
 .unit > summary { list-style: none; cursor: pointer; padding: 16px 20px; border-radius: var(--radius); transition: background-color .15s ease; display: flex; justify-content: space-between; align-items: center; gap: 12px }
