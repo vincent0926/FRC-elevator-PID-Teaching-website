@@ -6,10 +6,11 @@ import { t } from '../core/lang'
  * 一進站就套用（main.tsx import），選機構的畫面也看得到。
  */
 
-export type Palette = 'default' | 'nordic' | 'tech' | 'cute'
+export type Palette = 'default' | 'team' | 'nordic' | 'tech' | 'cute'
 
 export const PALETTES: { id: Palette; name: string }[] = [
   { id: 'default', name: t('預設', 'Default') },
+  { id: 'team', name: t('FRC 9427 隊服', 'FRC 9427 team colors') },
   { id: 'nordic', name: t('北歐簡約', 'Nordic') },
   { id: 'tech', name: t('科技', 'Tech') },
   { id: 'cute', name: t('可愛', 'Cute') },
