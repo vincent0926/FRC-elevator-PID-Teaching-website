@@ -20,7 +20,7 @@ function block(selector: string): Record<string, string> {
 
 const ROOT = block(':root')
 const DEFAULT_DARK = block(':root[data-theme="dark"]')
-const PALETTES = ['nordic', 'tech', 'cute'] as const
+const PALETTES = ['team', 'nordic', 'tech', 'cute'] as const
 /** 不是顏色的變數：深色段不用重寫 */
 const NOT_COLOR = new Set(['--radius', '--radius-sm', '--font', '--mono'])
 
