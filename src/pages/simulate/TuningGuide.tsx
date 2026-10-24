@@ -23,7 +23,7 @@ export function TuningGuide({
     onStep(i)
   }
   return (
-    <details className="panel scen" style={{ marginBottom: 16 }}>
+    <details className="panel scen">
       <summary>
         <b>{t('新手：照順序調', 'Beginner: tune in order')}</b>
         <span className="small muted">{t('kG → kV、kA → kP → kD，一步一步加，看每個參數在做什麼。會換掉目前的「自訂」參數。', 'kG → kV, kA → kP → kD, adding one step at a time to see what each gain does. This replaces your current “Custom” gains.')}</span>

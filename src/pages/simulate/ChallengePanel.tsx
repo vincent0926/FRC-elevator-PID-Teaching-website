@@ -40,7 +40,7 @@ export function ChallengePanel({
 
   if (!state) {
     return (
-      <details className="panel scen" style={{ marginBottom: 16 }}>
+      <details className="panel scen">
         <summary>
           <b>{t('挑戰模式', 'Challenge mode')}</b>
           <span className="small muted">{t('系統隨機產生一台看不到參數的電梯，你要在有限次數內把它調到達標。', 'The system makes a random elevator whose parameters you can’t see, and you have to tune it to pass within a limited number of tries.')}</span>

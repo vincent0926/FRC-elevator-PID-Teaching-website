@@ -301,15 +301,7 @@ export function SimPage() {
         </span>
       </div>
 
-      <ChallengePanel
-        state={challenge}
-        onStart={startChallenge}
-        onSubmit={submitChallenge}
-        onQuit={quitChallenge}
-        solution={challenge && challenge.status !== 'playing' ? referenceSolution(challenge.hidden, ff) : null}
-        submitted={challenge?.submitted ?? null}
-        onTrySolution={trySolution}
-      />
+      <div className="scen-row">
       {!challenge && (
         <TuningGuide
           onStep={(i) => {
@@ -343,6 +335,16 @@ export function SimPage() {
         />
       )}
       {!challenge && <ScenarioPicker active={scenario} onPick={loadScenario} onLeave={leaveScenario} />}
+      <ChallengePanel
+        state={challenge}
+        onStart={startChallenge}
+        onSubmit={submitChallenge}
+        onQuit={quitChallenge}
+        solution={challenge && challenge.status !== 'playing' ? referenceSolution(challenge.hidden, ff) : null}
+        submitted={challenge?.submitted ?? null}
+        onTrySolution={trySolution}
+      />
+      </div>
 
       <div className="bar">
         <div className="seg" role="group" aria-label={t('參數來源', 'Gain source')}>
@@ -519,7 +521,7 @@ export function SimPage() {
 
 function ScenarioPicker({ active, onPick, onLeave }: { active: SimScenario | null; onPick: (s: SimScenario) => void; onLeave: () => void }) {
   return (
-    <details className="panel scen" open={active !== null || undefined} style={{ marginBottom: 16 }}>
+    <details className="panel scen" open={active !== null || undefined}>
       <summary>
         <b>{t('教學情境', 'Teaching scenarios')}</b>
         <span className="small muted">{t('按一下載入一個「故意設錯」的例子，看圖找出問題。會換掉目前的「自訂」參數。', 'Click to load a deliberately wrong example and find the problem from the charts. This replaces your current “Custom” gains.')}</span>
