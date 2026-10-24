@@ -97,17 +97,6 @@ export function ArmHomePage() {
           </div>
         </div>
       </div>
-
-      <div className="warn" style={{ marginTop: 16 }}>
-        {t(
-          <>
-          <b>網站不能當急停。</b>急停一律用 Driver Station。手臂轉起來比電梯更容易打到人：上機時所有人離開手臂轉得到的範圍。
-          </>,
-          <>
-            <b>The site is not an e-stop.</b> Always use the Driver Station. A swinging arm hits people more easily than an elevator: everyone stays out of the arm’s reach during testing.
-          </>,
-        )}
-      </div>
     </section>
   )
 }
