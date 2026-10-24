@@ -25,6 +25,7 @@ import { UnsavedNote } from './UnsavedNote'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
 import { t } from '../../core/lang'
+import { SERIES_STYLE } from '../../components/seriesStyle'
 
 /** 手臂 3F 模擬：理論值／自訂、理想／真實模型、重力型態、教學情境、照順序調、指標（角度） */
 
@@ -129,8 +130,8 @@ export function ArmSimPage() {
     }
     const volt: ChartSeries[] = [
       { label: t('輸出電壓', 'Output voltage'), color: '--ink-2', values: result.voltage },
-      { label: resultGravity === 'constant' ? t('前饋（常數 kG）', 'Feedforward (constant kG)') : t('前饋（含 kG·cos θ）', 'Feedforward (with kG·cos θ)'), color: '--green', values: result.feedforward },
-      { label: t('回授（P+I+D）', 'Feedback (P+I+D)'), color: '--red', values: result.feedback },
+      { label: resultGravity === 'constant' ? t('前饋（常數 kG）', 'Feedforward (constant kG)') : t('前饋（含 kG·cos θ）', 'Feedforward (with kG·cos θ)'), ...SERIES_STYLE.feedforward, values: result.feedforward },
+      { label: t('回授（P+I+D）', 'Feedback (P+I+D)'), ...SERIES_STYLE.feedback, values: result.feedback },
     ]
     const cur: ChartSeries[] = [{ label: t('每顆馬達 Stator 電流', 'Stator current per motor'), color: '--amber', values: result.statorCurrent }]
     return { pos, err, vel, volt, cur }

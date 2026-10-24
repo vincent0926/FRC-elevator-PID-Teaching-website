@@ -35,6 +35,7 @@ import { MoveView } from './MoveView'
 import { BallFields, distanceHint, FROM_LABEL, GoalDistanceField, HubPreset, MechFields, TurretFields } from './FlywheelForms'
 import { loadFlywheelStyle, SHAPES, useFlywheelMechanism, useMoveSettings, usePersisted, useRpsLimit, useShotPlan, type MoveSettings } from './flywheelStore'
 import { t } from '../../core/lang'
+import { SERIES_STYLE } from '../../components/seriesStyle'
 
 /**
  * 3F 射球飛輪連射模擬：轉到目標轉速、連射幾發，看掉速和恢復。內部 SI（rad/s），畫面一律 rps。
@@ -146,8 +147,8 @@ function ShotSim({
     ]
     const volt: ChartSeries[] = [
       { label: t('輸出電壓', 'Output voltage'), color: '--ink', values: result.volt },
-      { label: t('前饋', 'Feedforward'), color: '--green', values: result.ff },
-      { label: t('回授', 'Feedback'), color: '--red', values: result.fb },
+      { label: t('前饋', 'Feedforward'), ...SERIES_STYLE.feedforward, values: result.ff },
+      { label: t('回授', 'Feedback'), ...SERIES_STYLE.feedback, values: result.fb },
     ]
     const cur: ChartSeries[] = [{ label: t('每顆馬達電流', 'Current per motor'), color: '--amber', values: result.motorCurrent }]
     return { vel, volt, cur }

@@ -7,6 +7,7 @@ import { sampleAlignedLog } from '../../core/log/sampleLog'
 import { SCENARIOS } from '../tuning/sampleScenarios'
 import { CASES, CHANGES, COMPONENTS, EVIDENCE, EXPECTS, PASS_SCORE, SAFETY, SYMPTOMS, grade, type Answers, type Option } from './assessment'
 import { t } from '../../core/lang'
+import { SERIES_STYLE } from '../../components/seriesStyle'
 
 /** 4F 單元四：期末檢核。一份沒看過的日誌，照七個問題寫出診斷與推理。 */
 
@@ -68,8 +69,8 @@ export function Unit4() {
     ]
     const volt: ChartSeries[] = [
       { label: t('輸出電壓', 'Output voltage'), color: '--ink-2', values: col('appliedVolts') },
-      { label: t('前饋', 'Feedforward'), color: '--green', values: col('feedforwardOutput') },
-      { label: t('回授（P+I+D）', 'Feedback (P+I+D)'), color: '--red', values: col('closedLoopOutput') },
+      { label: t('前饋', 'Feedforward'), ...SERIES_STYLE.feedforward, values: col('feedforwardOutput') },
+      { label: t('回授（P+I+D）', 'Feedback (P+I+D)'), ...SERIES_STYLE.feedback, values: col('closedLoopOutput') },
       { label: t('電池電壓', 'Battery voltage'), color: '--amber', dash: true, values: col('supplyVoltage') },
     ]
     const vel: ChartSeries[] = [
