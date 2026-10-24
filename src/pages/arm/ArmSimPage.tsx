@@ -196,6 +196,7 @@ export function ArmSimPage() {
         </div>
       </div>
 
+      <div className="scen-row">
       <TuningGuide
         onStep={(i) => {
           setScenario(null)
@@ -226,7 +227,7 @@ export function ArmSimPage() {
         }}
       />
 
-      <details className="panel scen" open={scenario !== null || undefined} style={{ marginBottom: 16 }}>
+      <details className="panel scen" open={scenario !== null || undefined}>
         <summary>
           <b>{t('教學情境', 'Teaching scenarios')}</b>
           <span className="small muted">{t('按一下載入一個「故意設錯」的例子，看圖找出問題。會換掉目前的「自訂」參數。', 'Click to load a deliberately wrong example and find the problem from the charts. This replaces your current “Custom” gains.')}</span>
@@ -254,6 +255,7 @@ export function ArmSimPage() {
           </div>
         )}
       </details>
+      </div>
 
       <div className="bar">
         <div className="seg" role="group" aria-label={t('參數來源', 'Gain source')}>
