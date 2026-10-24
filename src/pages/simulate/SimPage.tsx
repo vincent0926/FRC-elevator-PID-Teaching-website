@@ -30,6 +30,7 @@ import { SIM_SCENARIOS, type SimScenario } from './simScenarios'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
 import { t } from '../../core/lang'
+import { SERIES_STYLE } from '../../components/seriesStyle'
 
 /**
  * 3F 模擬。三個入口（理論值、調參建議值、自訂）共用這一頁，差別只在參數來源。
@@ -176,8 +177,8 @@ export function SimPage() {
     }
     const volt: ChartSeries[] = [
       { label: t('輸出電壓', 'Output voltage'), color: '--ink-2', values: result.voltage },
-      { label: t('前饋', 'Feedforward'), color: '--green', values: result.feedforward },
-      { label: t('回授（P+I+D）', 'Feedback (P+I+D)'), color: '--red', values: result.feedback },
+      { label: t('前饋', 'Feedforward'), ...SERIES_STYLE.feedforward, values: result.feedforward },
+      { label: t('回授（P+I+D）', 'Feedback (P+I+D)'), ...SERIES_STYLE.feedback, values: result.feedback },
     ]
     const perMotor = Math.max(1, mechanism.motorCount)
     const cur: ChartSeries[] = [

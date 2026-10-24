@@ -244,7 +244,7 @@ export function armGravityCompare(m: ArmMechanism, ff: ArmFeedforwardResult, kP:
   const series: ChartSeries[] = [
     { label: t('目標', 'Target'), color: '--steel', dash: true, values: pick(cos.refPos) },
     { label: t('Arm_Cosine（kG·cos θ）', 'Arm_Cosine (kG·cos θ)'), color: '--blue', values: pick(cos.pos) },
-    { label: t('常數 kG（當成電梯）', 'Constant kG (treated as an elevator)'), color: '--red', values: pick(con.pos) },
+    { label: t('常數 kG（當成電梯）', 'Constant kG (treated as an elevator)'), color: '--amber', values: pick(con.pos) },
   ]
   return { t: tt, series, goal, cos: cos.moves[0], con: con.moves[0] }
 }

@@ -399,7 +399,7 @@ function WhyPid({ m, ff, kP }: LessonCtx) {
     }
     const series: ChartSeries[] = [
       { label: t('目標', 'Target'), color: '--steel', dash: true, values: ref },
-      { label: t('只有前饋', 'Feedforward only'), color: '--red', values: pa },
+      { label: t('只有前饋', 'Feedforward only'), color: '--amber', values: pa },
       { label: t(`前饋 + kP ${f(kP, 0)}`, `Feedforward + kP ${f(kP, 0)}`), color: '--blue', values: pb },
     ]
     return { t: tt, series, err: (b.pos[b.pos.length - 1] - start) * 100 }
@@ -511,8 +511,8 @@ function CompareTable({ labels, metrics }: { labels: string[]; metrics: ReturnTy
 export function pidVsFfCases(ff: FeedforwardResult, kP: number): CompareCase[] {
   const noFf = { kS: 0, kG: 0, kV: 0, kA: 0, kI: 0, kD: 0 }
   return [
-    { label: t(`只有 PID（kP ${Math.round(kP)}）`, `PID only (kP ${Math.round(kP)})`), color: '--red', gains: { ...noFf, kP } },
-    { label: t(`只有 PID，kP 加到 ${Math.round(kP * 4)}`, `PID only, kP raised to ${Math.round(kP * 4)}`), color: '--amber', gains: { ...noFf, kP: kP * 4 } },
+    { label: t(`只有 PID（kP ${Math.round(kP)}）`, `PID only (kP ${Math.round(kP)})`), color: '--amber', gains: { ...noFf, kP } },
+    { label: t(`只有 PID，kP 加到 ${Math.round(kP * 4)}`, `PID only, kP raised to ${Math.round(kP * 4)}`), color: '--violet', gains: { ...noFf, kP: kP * 4 } },
     { label: t(`前饋 + PID（kP ${Math.round(kP)}）`, `Feedforward + PID (kP ${Math.round(kP)})`), color: '--blue', gains: { kS: 0.15, kG: ff.kG, kV: ff.kV, kA: ff.kA, kP, kI: 0, kD: 0 } },
   ]
 }
@@ -521,9 +521,9 @@ export function pidVsFfCases(ff: FeedforwardResult, kP: number): CompareCase[] {
 export function kiCases(ff: FeedforwardResult, kP: number): CompareCase[] {
   const base = { kS: 0.15, kG: ff.kG * 0.8, kV: ff.kV, kA: ff.kA, kP, kI: 0, kD: 0 }
   return [
-    { label: t('kG 少 20%，只有 kP', 'kG 20% low, kP only'), color: '--red', gains: base },
-    { label: t('kG 少 20%，加 kI 300', 'kG 20% low, add kI 300'), color: '--amber', gains: { ...base, kI: 300 } },
-    { label: t('kG 少 20%，加 kI 300，電池 9 V', 'kG 20% low, add kI 300, battery 9 V'), color: '--violet', gains: { ...base, kI: 300 }, batteryVoltage: 9 },
+    { label: t('kG 少 20%，只有 kP', 'kG 20% low, kP only'), color: '--amber', gains: base },
+    { label: t('kG 少 20%，加 kI 300', 'kG 20% low, add kI 300'), color: '--violet', gains: { ...base, kI: 300 } },
+    { label: t('kG 少 20%，加 kI 300，電池 9 V', 'kG 20% low, add kI 300, battery 9 V'), color: '--ink', gains: { ...base, kI: 300 }, batteryVoltage: 9 },
     { label: t('同上，加積分防飽和（飽和時停止積分）', 'Same, with anti-windup (stop integrating when saturated)'), color: '--green', gains: { ...base, kI: 300 }, batteryVoltage: 9, antiWindup: { mode: 'clamp' } },
     { label: t('把 kG 修好，只有 kP', 'kG fixed, kP only'), color: '--blue', gains: { ...base, kG: ff.kG } },
   ]

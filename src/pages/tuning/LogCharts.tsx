@@ -27,7 +27,7 @@ export function LogCharts({ log, bands, angle }: { log: AlignedLog; bands?: [num
       volt: pick([
         ['appliedVolts', t('輸出電壓', 'Output voltage'), '--ink-2'],
         ['feedforwardOutput', t('前饋', 'Feedforward'), '--green'],
-        ['closedLoopOutput', t('回授（P+I+D）', 'Feedback (P+I+D)'), '--red'],
+        ['closedLoopOutput', t('回授（P+I+D）', 'Feedback (P+I+D)'), '--red', true],
       ]),
       power: pick([
         ['statorCurrent', t('Stator 電流（A）', 'Stator current (A)'), '--amber'],
