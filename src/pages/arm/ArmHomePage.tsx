@@ -1,5 +1,6 @@
 import { useStore } from '../../app/store'
 import { t } from '../../core/lang'
+import { QuickStart } from '../../components/QuickStart'
 
 /** 手臂線的總覽：跟電梯差在哪、從哪裡開始 */
 
@@ -30,6 +31,8 @@ export function ArmHomePage() {
           </p>
         </div>
       </div>
+
+      <QuickStart what={t('手臂', 'arm')} />
 
       <button className="path-card guide-card" type="button" onClick={() => go('guide')}>
         <h2>{t('第一次來？先看使用說明', 'First time here? Read the guide')}</h2>
