@@ -4,6 +4,8 @@ import { ArmParamCard } from './ArmParamCard'
 import { KIND_INFO, PARAM_ROWS } from '../calculate/paramSources'
 import { useArm } from './armStore'
 import { UnsavedNote } from './UnsavedNote'
+import { RevCode } from '../../components/RevCode'
+import { revArmJava } from '../../core/codegen/rev'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
 import { t } from '../../core/lang'
@@ -97,6 +99,16 @@ export function ArmCalcPage() {
           </p>
         </aside>
       </div>
+
+      <details className="panel scen" style={{ marginTop: 20 }}>
+        <summary>
+          <b>{t('REV SPARK 設定', 'REV SPARK config')}</b>
+          <span className="small muted">{t('用 SPARK MAX／Flex 的隊伍：把上面的參數卡轉成 REVLib 設定檔。', 'For teams on SPARK MAX / Flex: turn the parameter card above into a REVLib config file.')}</span>
+        </summary>
+        <div style={{ marginTop: 12 }}>
+          <RevCode code={revArmJava(theory)} label="ArmRevConfig.java" />
+        </div>
+      </details>
     </section>
   )
 }

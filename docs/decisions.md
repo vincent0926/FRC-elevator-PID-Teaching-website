@@ -393,3 +393,9 @@
 |---|---|---|
 | 143 | 新增第 5 種配色風格 `team`「FRC 9427 隊服」：黃（`#F2B705`）當強調色、深藍（`#14284B`）鋪側欄、內容區白底。**預設風格不改。**隊色的綠不當介面色，只有進站畫面標題下線用 `--team-green`（`#2E9E4F`）；圖表的綠線是「前饋」（決策 141），介面也用綠會混在一起。 | 隊服是黃加深藍，預設本來就是黃色強調，差別只在深藍；風格讓隊員自己選，才看得出大家喜不喜歡。 |
 
+## v0.46 實作時新增的決策
+
+| # | 決策 | 理由 |
+|---|---|---|
+| 144 | 新增 REV SPARK（REVLib 2026）設定輸出，換算在 `core/codegen/rev.ts`：用 encoder 的 `positionConversionFactor = 1/齒比`、`velocityConversionFactor = 1/齒比/60`，讓位置是「機構圈數」、速度是 rps，增益數值就是 Phoenix 6 轉數制那一組。前饋（kS、kV、kA、kG／kCos）直接貼伏特；**P、I、D 除以 12（`NOMINAL_VOLTS`）**，因為 SPARK 的 PID 輸出是工作週期。手臂用 `kCos` + `kCosRatio = 1`，不用 kG。位置控制用 MAXMotion。摩擦不對稱的往下增益寫成常數，不自動換 Slot。CANcoder 在 SPARK 讀不到，提醒改接 Through Bore Encoder。畫面只輸出設定片段，不做完整子系統 ZIP。 | 換算只在 codegen 做（CLAUDE.md）。P 的單位、MAXMotion 的方法名稱沒有在真機測過，文件也沒寫死，所以畫面上直接寫「沒測過、先低速確認」。 |
+
