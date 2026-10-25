@@ -4,6 +4,7 @@ import { computeFeedforward, kPFromVoltsPerCm } from '../src/core/feedforward'
 import { DEFAULT_MECHANISM, type ParameterSet } from '../src/schema/parameterSet'
 import { phoenix6_2026, toRobotConfig } from '../src/core/codegen'
 import { renderArmGains, toArmRobotConfig } from '../src/core/codegen/arm'
+import { revArmJava, revElevatorJava } from '../src/core/codegen/rev'
 import { computeArmFeedforward, kPFromVoltsPerDeg } from '../src/core/arm/feedforward'
 import { DEFAULT_ARM, type ArmParameterSet } from '../src/schema/armParameterSet'
 
@@ -61,4 +62,18 @@ describe('robot-example 手臂與範本同步', () => {
   }
   it('ArmGains.java', () => expect(readFileSync(ARM_JAVA, 'utf8')).toBe(java))
   it('arm-gains.json', () => expect(readFileSync(ARM_JSON, 'utf8')).toBe(json))
+})
+
+const REV_EL = new URL('java/frc/robot/subsystems/elevator/ElevatorRevConfig.java', DIR)
+const REV_ARM = new URL('java/frc/robot/subsystems/arm/ArmRevConfig.java', DIR)
+
+describe('robot-example REV 設定與範本同步', () => {
+  const el = revElevatorJava(theory, NOW)
+  const am = revArmJava(armTheory, NOW)
+  if (process.env.UPDATE_ROBOT_EXAMPLE) {
+    writeFileSync(REV_EL, el)
+    writeFileSync(REV_ARM, am)
+  }
+  it('ElevatorRevConfig.java', () => expect(readFileSync(REV_EL, 'utf8')).toBe(el))
+  it('ArmRevConfig.java', () => expect(readFileSync(REV_ARM, 'utf8')).toBe(am))
 })

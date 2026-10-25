@@ -4,6 +4,8 @@ import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
 import { MOTOR_SPECS } from '../../core/motors'
 import { flywheelJava } from '../../core/codegen/flywheel'
+import { revFlywheelJava } from '../../core/codegen/rev'
+import { RevNote } from '../../components/RevCode'
 import {
   computeFlywheelFeedforward,
   DEFAULT_LIMIT_FRACTION,
@@ -83,6 +85,7 @@ function ShotSim({
   setPlan: (p: ShotPlan) => void
   move?: { settings: MoveSettings; set: (m: MoveSettings) => void }
 }) {
+  const [brand, setBrand] = usePersisted<{ brand: 'phoenix' | 'rev' }>('flywheel-brand', { brand: 'phoenix' }, (v) => v.brand === 'phoenix' || v.brand === 'rev')
   const { go } = useStore()
   const [knobs, setKnobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
   const [spec, setSpec] = usePersisted<FlywheelSpec>('flywheel:spec', DEFAULT_FLYWHEEL_SPEC)
@@ -570,7 +573,19 @@ function ShotSim({
             'The current slider values as a config snippet only, not a full subsystem: CAN IDs, motor direction (Inverted), follower direction, limits and safe test steps have to be written for your robot. With two or more motors, the others follow with Follower.',
           )}
         </p>
-        <pre className="code">{flywheelJava(gains, mech, knobs, plan)}</pre>
+        <div className="seg" role="group" aria-label={t('馬達控制器', 'Motor controller')}>
+          {(['phoenix', 'rev'] as const).map((b) => (
+            <button key={b} type="button" aria-pressed={brand.brand === b} onClick={() => setBrand({ brand: b })}>
+              {b === 'phoenix' ? 'Phoenix 6 (TalonFX)' : 'REV SPARK'}
+            </button>
+          ))}
+        </div>
+        {brand.brand === 'rev' && (
+          <div style={{ marginTop: 8 }}>
+            <RevNote />
+          </div>
+        )}
+        <pre className="code">{brand.brand === 'rev' ? revFlywheelJava(gains, mech, knobs, plan) : flywheelJava(gains, mech, knobs, plan)}</pre>
       </div>
     </>
   )
