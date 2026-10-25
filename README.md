@@ -68,7 +68,7 @@
 
 ## 目前進度：v0.46
 
-- ✅ 新增 REV SPARK MAX／Flex 的設定輸出（REVLib 2026）：電梯、手臂 1F 最下面的「REV SPARK 設定」可複製 `ElevatorRevConfig.java`、`ArmRevConfig.java`；射球 3F 的「程式設定」可切換 Phoenix 6／REV SPARK。**沒在真機上測過**，上機前先低速確認方向和單位
+- ✅ 新增 REV SPARK MAX／Flex 的設定輸出（REVLib 2026）：電梯、手臂 1F 最下面的「REV SPARK 設定」可複製 `ElevatorRevConfig.java`、`ArmRevConfig.java`，也可下載完整子系統 .zip（含 `ElevatorIOSparkMax`／`ArmIOSparkMax`）；射球 3F 的「程式設定」可切換 Phoenix 6／REV SPARK。REV 版日誌沒有回授／前饋兩欄，2F 部分診斷規則用不了。**沒在真機上測過**，上機前先低速確認方向和單位
 - ✅ 手臂總覽頁最下面的紅色「網站不能當急停」提示拿掉（電梯總覽、4F、使用說明裡的急停提醒還在）
 - ✅ 新增配色風格「FRC 9427 隊服」（黃 + 深藍 + 白，淺色、深色都有），在左下角的風格選單選
 - ✅ 3F 頁首的「新手：照順序調」「教學情境」「挑戰模式」併成一排，收起時只剩標題，電梯畫面和滑桿第一屏就看得到；頁首的離線提示不再被右上角的中／EN 蓋住

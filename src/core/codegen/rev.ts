@@ -24,6 +24,7 @@ const SOURCE_LABEL: Record<ParameterSet['source'], [string, string]> = {
   custom: ['自訂', 'custom'],
   measured: ['實測值', 'measured'],
 }
+const deg = (rad: number) => jd(Math.round((rad * 180) / Math.PI * 1000) / 1000)
 const src = (s: ParameterSet['source']) => t(SOURCE_LABEL[s][0], SOURCE_LABEL[s][1])
 
 const IMPORTS = [
@@ -120,6 +121,9 @@ public final class ArmRevConfig {
 
   /** ${t('馬達圈數 : 手臂 1 圈', 'Motor turns : 1 arm turn')} */
   public static final double GEAR_RATIO = ${jd(m.gearRatio)};
+  /** ${t('可以動的角度範圍（度，0 = 水平），軟體限位和子系統限制目標用', 'Allowed angle range (deg, 0 = horizontal), used for software limits and clamping goals')} */
+  public static final double MIN_ANGLE_DEG = ${deg(m.minAngle)};
+  public static final double MAX_ANGLE_DEG = ${deg(m.maxAngle)};
   /** ${t('SPARK 的 P、I、D 輸出是工作週期（-1～1），增益用這個電壓換算；前饋本來就是伏特', 'SPARK’s P, I, D output is duty cycle (-1 to 1), so gains are divided by this voltage; the feedforward is already volts')} */
   public static final double NOMINAL_VOLTS = ${jd(NOMINAL_VOLTS)};
 

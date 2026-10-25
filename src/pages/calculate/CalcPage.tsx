@@ -6,6 +6,8 @@ import { ParamSources } from './ParamSources'
 import { RatioSweep, ShareMechanism } from './RatioSweep'
 import { RevCode } from '../../components/RevCode'
 import { revElevatorJava } from '../../core/codegen/rev'
+import { downloadBlob } from '../../app/download'
+import { revSubsystemZip } from './revSubsystemExport'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
 import { t } from '../../core/lang'
@@ -130,7 +132,11 @@ export function CalcPage() {
           <span className="small muted">{t('用 SPARK MAX／Flex 的隊伍：把上面的參數卡轉成 REVLib 設定檔。', 'For teams on SPARK MAX / Flex: turn the parameter card above into a REVLib config file.')}</span>
         </summary>
         <div style={{ marginTop: 12 }}>
-          <RevCode code={revElevatorJava(theory)} label="ElevatorRevConfig.java" />
+          <RevCode
+            code={revElevatorJava(theory)}
+            label="ElevatorRevConfig.java"
+            onDownloadZip={() => downloadBlob('elevator-rev-subsystem.zip', new Blob([revSubsystemZip(theory) as BlobPart], { type: 'application/zip' }))}
+          />
         </div>
       </details>
 

@@ -57,3 +57,15 @@ AdvantageKit 會把 `Logger.processInputs("Elevator", inputs)` 記成 `/Elevator
 | `deploy/arm-gains.json` | **由網站產生**（手臂 1F「下載 JSON 設定檔」） |
 
 手臂斷電或保護觸發時會因重力往下掉，測試時人不可以站在手臂掃過的範圍。
+
+## REV SPARK 版（`ElevatorIOSparkMax`、`ArmIOSparkMax`）
+
+| 檔案 | 用途 |
+|---|---|
+| `elevator/ElevatorIOSparkMax.java`、`arm/ArmIOSparkMax.java` | SPARK MAX 實作（REVLib 2026）：MAXMotion 位置控制；手臂用 kCos，只支援內建編碼器 |
+| `elevator/ElevatorRevConfig.java`、`arm/ArmRevConfig.java` | **由網站產生**（1F「REV SPARK 設定」），是參數的最終依據 |
+
+`Elevator.java`、`Arm.java` 和 TalonFX 版共用（網站的 REV 版 .zip 會把 `ArmGains` 換成 `ArmRevConfig`）。
+**沒有在真機上測過**，上機前先用低速、小行程確認方向和單位。
+SPARK 不回報回授與前饋各自的伏特數，`ClosedLoopOutputVolts`、`ClosedLoopFeedForwardVolts` 一律是 0，網站 2F 靠這兩欄的診斷規則用不了。
+`*RevConfig.java` 由網站範本產生，改範本後執行 `UPDATE_ROBOT_EXAMPLE=1 npm test` 重新產生。
