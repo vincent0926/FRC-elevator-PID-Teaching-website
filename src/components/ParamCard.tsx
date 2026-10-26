@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { convert } from '../core/codegen'
 import type { ParameterSet } from '../schema/parameterSet'
 import { t } from '../core/lang'
+import { fixed as f } from '../core/format'
 
 /** 參數卡：左邊 SI，灰字是 Phoenix 6 轉數制（換算由 codegen 負責）。 */
 
@@ -12,8 +13,6 @@ const SOURCE_LABEL: Record<ParameterSet['source'], string> = {
   custom: t('自訂', 'Custom'),
   measured: t('實測值', 'Measured'),
 }
-
-const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
 /**
  * tags：每個參數旁邊的小標籤（1F 用來標「算／量／決定」），key 是參數名稱。
