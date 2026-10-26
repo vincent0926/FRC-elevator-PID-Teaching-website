@@ -3,10 +3,10 @@ import type { ReactNode } from 'react'
 import { convertArm } from '../../core/codegen'
 import type { ArmParameterSet } from '../../schema/armParameterSet'
 import { t } from '../../core/lang'
+import { fixed as f } from '../../core/format'
 
 /** 手臂參數卡：左邊 SI（角度用 rad），灰字是 Phoenix 6 轉數制（換算由 codegen 負責） */
 
-const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 const R2D = 180 / Math.PI
 
 const LABEL: Record<ArmParameterSet['source'], string> = t({ theory: '理論值', tuning: '調參建議值', custom: '自訂', measured: '實測值' }, { theory: 'Theory', tuning: 'Tuning suggestion', custom: 'Custom', measured: 'Measured' })
