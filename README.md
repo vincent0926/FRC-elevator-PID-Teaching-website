@@ -8,6 +8,12 @@
 
 手機、平板、電腦都能用；第一次開過之後，沒網路也能用（PWA）。
 
+## 介紹影片
+
+[![網站介紹影片（約 3 分鐘，點圖片播放）](video/poster.jpg)](https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/intro.mp4)
+
+**▶ [點這裡看介紹影片](https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/intro.mp4)**（約 3 分鐘）：網站去哪裡找、怎麼用、每一層做什麼。影片怎麼做的見 [`video/`](video/)。
+
 > 網站只做計算、模擬、診斷和教學，**不連線機器人、不寫馬達參數**。急停一律用 Driver Station。
 
 ## 三步上手
