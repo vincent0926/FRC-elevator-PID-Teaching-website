@@ -1,10 +1,11 @@
-"""合成影片的背景音樂（synthwave 風格）和換幕音效，輸出 out/music.wav。
+"""合成影片的背景音樂（synthwave 風格）和換幕音效，輸出 out/<名稱>-music.wav。
 
-時間軸讀 timeline.json（render.cjs 產生），每一幕開頭放一個掃頻音效。
-用法：python3 music.py
+時間軸讀 timeline-<名稱>.json（render.cjs 產生）：有故障效果的換幕放掃頻和撞擊聲，其他換幕只有輕的嗶聲。
+用法：python3 music.py intro　或　python3 music.py short
 """
 import json
 import os
+import sys
 import wave
 
 import numpy as np
@@ -12,7 +13,8 @@ from scipy.signal import butter, lfilter
 
 SR = 44100
 HERE = os.path.dirname(os.path.abspath(__file__))
-tl = json.load(open(os.path.join(HERE, 'timeline.json')))
+NAME = sys.argv[1] if len(sys.argv) > 1 else 'intro'
+tl = json.load(open(os.path.join(HERE, f'timeline-{NAME}.json')))
 TOTAL = tl['total']
 starts = tl['starts']
 N = int((TOTAL + 1.0) * SR)
@@ -59,14 +61,17 @@ def midi(m):
 CHORDS = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]
 
 # 段落強弱：開機只有鋪底，標題後鼓進來，安全提醒那段收小，結尾淡出
-SAFETY = starts[-2]
-END = starts[-1]
+chs = tl['ch']
+END = starts[chs.index('END')]
+SAFETY = starts[chs.index('SAFETY')] if 'SAFETY' in chs else END
+NEXT = starts[chs.index('NEXT')] if 'NEXT' in chs else END
+GLITCH = set(tl.get('glitch', starts))
 
 
 def section_gain(t):
-    if t < starts[1]:
+    if chs[0] == 'BOOT' and t < starts[1]:
         return 0.0  # 開機：沒有鼓
-    if SAFETY <= t < END:
+    if SAFETY <= t < NEXT:
         return 0.35
     return 1.0
 
@@ -134,9 +139,16 @@ arp = lp(arp, 4000)
 # 換幕音效：雜訊掃頻 + 低頻撞擊；第一幕開機用電子嗶聲
 for i, st in enumerate(starts):
     if i == 0:
+        if chs[0] != 'BOOT':
+            continue
         for k in range(5):
             nn = int(0.06 * SR)
             add(fx, np.sin(2 * np.pi * (1200 + 300 * k) * np.arange(nn) / SR) * env(nn, 0.001, 0.03) * 0.15, 0.2 + k * 0.95)
+        continue
+    if st not in GLITCH:
+        # 一般換幕：只有一個輕的嗶聲
+        nb = int(0.08 * SR)
+        add(fx, np.sin(2 * np.pi * 1760 * np.arange(nb) / SR) * env(nb, 0.002, 0.03) * 0.06, st)
         continue
     nn = int(0.5 * SR)
     tt = np.arange(nn) / SR
@@ -177,7 +189,7 @@ right = mix + np.roll(arp * duck, int(0.023 * SR)) * 0.3
 st = np.stack([left, right], axis=1)
 st /= max(1e-9, np.abs(st).max()) / 0.89
 os.makedirs(os.path.join(HERE, 'out'), exist_ok=True)
-path = os.path.join(HERE, 'out', 'music.wav')
+path = os.path.join(HERE, 'out', f'{NAME}-music.wav')
 with wave.open(path, 'wb') as w:
     w.setnchannels(2)
     w.setsampwidth(2)
