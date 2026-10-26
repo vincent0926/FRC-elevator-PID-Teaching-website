@@ -70,41 +70,48 @@
   --ring: 0 0 0 3px rgba(168, 200, 224, .3);
 }
 
-/* FRC 9427 隊服：黃是強調色，深藍只鋪在側欄和底，內容區維持白底。
+/* FRC 9427 隊服：深藍是主色（側欄、主要按鈕、頁面最上面的藍黃條），黃是點綴，內容區維持白底。
+   預設也是黃色強調、深色側欄，所以這裡要讓深藍看得出來：側欄用飽和的寶藍不用近黑，主要按鈕換深藍白字加黃底線。
    隊色的綠不當介面色（圖表的綠線是「前饋」，介面也用綠會混在一起），只有進站畫面的標題下線用 --team-green */
 :root[data-palette="team"] {
-  --bg: #EDF1F8; --bg-glow: rgba(20, 40, 75, .06); --panel: #FFFFFF; --panel-2: #F3F6FB; --ink: #101C33; --ink-2: #3E4C66; --ink-3: #56647E;
-  --line: #CCD5E3; --line-2: #E3E9F2; --steel: #7683A0; --shaft: #14284B; --shaft-2: #0E1D38;
-  --shaft-ink: #E1E8F5; --shaft-ink-2: #A3B2CE; --shaft-ink-strong: #FFFFFF; --shaft-line: rgba(255, 255, 255, .10); --shaft-hover: rgba(255, 255, 255, .06); --shaft-active: rgba(242, 183, 5, .16);
-  --yellow: #F2B705; --yellow-2: #E3A500; --yellow-ink: #3A2C00; --accent-glow: rgba(242, 183, 5, .4); --scrim: rgba(10, 20, 38, .55); --mark: #F2B705; --mark-ink: #3A2C00;
-  --blue: #1F54B8; --blue-soft: #DEE8FA; --red: #C0392F; --red-soft: #FBE6E5; --green: #23704A; --green-soft: #E0F2E7;
-  --amber: #855B00; --amber-soft: #FCF2D8; --violet: #7A4FC9; --team-green: #2E9E4F;
-  --flash: rgba(242, 183, 5, .38); --lift-shadow: 0 10px 28px -8px rgba(16, 28, 51, .22), 0 2px 6px rgba(16, 28, 51, .07); --shadow: 0 1px 2px rgba(16, 28, 51, .05), 0 2px 8px -2px rgba(16, 28, 51, .07);
+  --bg: #E4EBF6; --bg-glow: rgba(242, 183, 5, .10); --panel: #FFFFFF; --panel-2: #F1F5FB; --ink: #0F1B33; --ink-2: #3A4A68; --ink-3: #52617F;
+  --line: #C6D1E3; --line-2: #DDE5F1; --steel: #7683A0; --shaft: #102A5C; --shaft-2: #0A1D44;
+  --shaft-ink: #E6EDF8; --shaft-ink-2: #B7C5DF; --shaft-ink-strong: #FFFFFF; --shaft-line: rgba(255, 255, 255, .12); --shaft-hover: rgba(255, 255, 255, .07); --shaft-active: rgba(255, 255, 255, .13);
+  --yellow: #F2B705; --yellow-2: #E3A500; --yellow-ink: #3A2C00; --accent-glow: rgba(242, 183, 5, .45); --scrim: rgba(10, 20, 38, .55); --mark: #F2B705; --mark-ink: #3A2C00;
+  --blue: #1F54B8; --blue-soft: #DCE6F9; --red: #C0392F; --red-soft: #FBE6E5; --green: #23704A; --green-soft: #E0F2E7;
+  --amber: #855B00; --amber-soft: #FCF2D8; --violet: #7A4FC9; --team-green: #2E9E4F; --team-navy: #102A5C; --team-navy-2: #0B214D; --team-navy-ink: #FFFFFF;
+  --flash: rgba(242, 183, 5, .38); --lift-shadow: 0 10px 28px -8px rgba(16, 28, 51, .24), 0 2px 6px rgba(16, 28, 51, .08); --shadow: 0 1px 2px rgba(16, 28, 51, .06), 0 2px 8px -2px rgba(16, 28, 51, .08);
   --ring: 0 0 0 3px rgba(31, 84, 184, .2);
 }
 @media (prefers-color-scheme: dark) {
   :root[data-palette="team"]:not([data-theme="light"]) {
-  --bg: #0A1426; --bg-glow: rgba(110, 157, 240, .08); --panel: #111F38; --panel-2: #182A48; --ink: #E8EEF8; --ink-2: #B5C2D8; --ink-3: #93A4C0;
-  --line: #34476A; --line-2: #263756; --steel: #7C8DA8; --shaft: #07101F; --shaft-2: #040A15;
-  --shaft-ink: #DDE6F4; --shaft-ink-2: #9DADC8; --shaft-ink-strong: #FFFFFF; --shaft-line: rgba(255, 255, 255, .09); --shaft-hover: rgba(255, 255, 255, .06); --shaft-active: rgba(242, 183, 5, .14);
-  --yellow: #F2B705; --yellow-2: #E3A500; --yellow-ink: #3A2C00; --accent-glow: rgba(242, 183, 5, .4); --scrim: rgba(3, 8, 18, .62); --mark: #F2B705; --mark-ink: #3A2C00;
-  --blue: #6E9DF0; --blue-soft: #1B2E52; --red: #E36B67; --red-soft: #3A2024; --green: #5BBE85; --green-soft: #17332A;
-  --amber: #E0B040; --amber-soft: #342A13; --violet: #B294F0; --team-green: #2E9E4F;
-  --flash: rgba(242, 183, 5, .30); --lift-shadow: 0 12px 30px -8px rgba(0, 0, 0, .65), 0 2px 6px rgba(0, 0, 0, .3); --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 2px 8px -2px rgba(0, 0, 0, .3);
-  --ring: 0 0 0 3px rgba(110, 157, 240, .28);
+    --bg: #0A1833; --bg-glow: rgba(242, 183, 5, .07); --panel: #12264A; --panel-2: #193059; --ink: #EAF0FA; --ink-2: #BAC7DD; --ink-3: #99AAC6;
+    --line: #3A5482; --line-2: #2A4068; --steel: #7F91B0; --shaft: #0C2350; --shaft-2: #061637;
+    --shaft-ink: #E1E9F6; --shaft-ink-2: #AEBEDA; --shaft-ink-strong: #FFFFFF; --shaft-line: rgba(255, 255, 255, .11); --shaft-hover: rgba(255, 255, 255, .07); --shaft-active: rgba(255, 255, 255, .12);
+    --yellow: #F2B705; --yellow-2: #E3A500; --yellow-ink: #3A2C00; --accent-glow: rgba(242, 183, 5, .4); --scrim: rgba(3, 8, 18, .62); --mark: #F2B705; --mark-ink: #3A2C00;
+    --blue: #7AA6F2; --blue-soft: #1C3460; --red: #E36B67; --red-soft: #3A2024; --green: #5BBE85; --green-soft: #17332A;
+    --amber: #E0B040; --amber-soft: #342A13; --violet: #B294F0; --team-green: #2E9E4F; --team-navy: #234C9C; --team-navy-2: #1D4189; --team-navy-ink: #FFFFFF;
+    --flash: rgba(242, 183, 5, .30); --lift-shadow: 0 12px 30px -8px rgba(0, 0, 0, .65), 0 2px 6px rgba(0, 0, 0, .3); --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 2px 8px -2px rgba(0, 0, 0, .3);
+    --ring: 0 0 0 3px rgba(122, 166, 242, .3);
   }
 }
 :root[data-palette="team"][data-theme="dark"] {
-  --bg: #0A1426; --bg-glow: rgba(110, 157, 240, .08); --panel: #111F38; --panel-2: #182A48; --ink: #E8EEF8; --ink-2: #B5C2D8; --ink-3: #93A4C0;
-  --line: #34476A; --line-2: #263756; --steel: #7C8DA8; --shaft: #07101F; --shaft-2: #040A15;
-  --shaft-ink: #DDE6F4; --shaft-ink-2: #9DADC8; --shaft-ink-strong: #FFFFFF; --shaft-line: rgba(255, 255, 255, .09); --shaft-hover: rgba(255, 255, 255, .06); --shaft-active: rgba(242, 183, 5, .14);
+  --bg: #0A1833; --bg-glow: rgba(242, 183, 5, .07); --panel: #12264A; --panel-2: #193059; --ink: #EAF0FA; --ink-2: #BAC7DD; --ink-3: #99AAC6;
+  --line: #3A5482; --line-2: #2A4068; --steel: #7F91B0; --shaft: #0C2350; --shaft-2: #061637;
+  --shaft-ink: #E1E9F6; --shaft-ink-2: #AEBEDA; --shaft-ink-strong: #FFFFFF; --shaft-line: rgba(255, 255, 255, .11); --shaft-hover: rgba(255, 255, 255, .07); --shaft-active: rgba(255, 255, 255, .12);
   --yellow: #F2B705; --yellow-2: #E3A500; --yellow-ink: #3A2C00; --accent-glow: rgba(242, 183, 5, .4); --scrim: rgba(3, 8, 18, .62); --mark: #F2B705; --mark-ink: #3A2C00;
-  --blue: #6E9DF0; --blue-soft: #1B2E52; --red: #E36B67; --red-soft: #3A2024; --green: #5BBE85; --green-soft: #17332A;
-  --amber: #E0B040; --amber-soft: #342A13; --violet: #B294F0; --team-green: #2E9E4F;
+  --blue: #7AA6F2; --blue-soft: #1C3460; --red: #E36B67; --red-soft: #3A2024; --green: #5BBE85; --green-soft: #17332A;
+  --amber: #E0B040; --amber-soft: #342A13; --violet: #B294F0; --team-green: #2E9E4F; --team-navy: #234C9C; --team-navy-2: #1D4189; --team-navy-ink: #FFFFFF;
   --flash: rgba(242, 183, 5, .30); --lift-shadow: 0 12px 30px -8px rgba(0, 0, 0, .65), 0 2px 6px rgba(0, 0, 0, .3); --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 2px 8px -2px rgba(0, 0, 0, .3);
-  --ring: 0 0 0 3px rgba(110, 157, 240, .28);
+  --ring: 0 0 0 3px rgba(122, 166, 242, .3);
 }
 :root[data-palette="team"] .splash-team { display: inline-block; padding-bottom: 6px; border-bottom: 3px solid var(--team-green) }
+/* 頁面最上面一條深藍加黃，像隊服的領口 */
+:root[data-palette="team"] body, :root[data-palette="team"] .chooser { background: linear-gradient(180deg, var(--team-navy) 0 6px, var(--yellow) 6px 9px, transparent 9px) no-repeat, radial-gradient(1200px 520px at 70% -120px, var(--bg-glow), transparent 70%) no-repeat, var(--bg) }
+:root[data-palette="team"] .btn.primary { background: linear-gradient(180deg, var(--team-navy), var(--team-navy-2)); border-color: var(--team-navy-2); color: var(--team-navy-ink); box-shadow: inset 0 -3px 0 var(--yellow), 0 2px 6px -2px rgba(16, 28, 51, .35) }
+:root[data-palette="team"] .btn.primary:hover { background: var(--team-navy); border-color: var(--team-navy-2) }
+:root[data-palette="team"] .lang-toggle button[aria-pressed="true"] { background: var(--team-navy); color: var(--team-navy-ink) }
+:root[data-palette="team"] .chooser-card::before { opacity: 1 }
 
 /* 科技：深藍黑側欄、青色強調、銳利的小圓角，深色模式帶一點螢光 */
 :root[data-palette="tech"] {
