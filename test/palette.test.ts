@@ -99,6 +99,16 @@ describe('配色風格', () => {
     expect(bad).toEqual([])
   })
 
+  it('隊服跟預設看得出不同：側欄是藍的、主要按鈕深藍白字', () => {
+    for (const v of [block(':root[data-palette="team"]'), block(':root[data-palette="team"][data-theme="dark"]')]) {
+      expect(contrast(v['--team-navy-ink'], v['--team-navy'])).toBeGreaterThanOrEqual(4.5)
+      // 藍色成分要明顯比紅色多，不能是預設那種近黑的灰藍
+      const [r, , b] = [1, 3, 5].map((i) => parseInt(v['--shaft'].slice(i, i + 2), 16))
+      expect(b - r).toBeGreaterThan(60)
+    }
+    expect(block(':root[data-palette="team"]')['--shaft']).not.toBe(ROOT['--shaft'])
+  })
+
   it.each(themes())('%s：面板、邊線分得出來', (_name, v) => {
     const bad = SURFACES.map(([a, b, min]) => [a, b, contrast(v[a], v[b]), min] as const)
       .filter(([, , c, min]) => c < min)
