@@ -1,6 +1,6 @@
 # 網站介紹影片
 
-給 FRC 程式組看的網站介紹影片（約 3 分鐘，1920×1080，30 fps，賽博風格）。成品：`out/frc9427-tuner-intro.mp4`。
+給 FRC 程式組看的網站介紹影片（約 3 分鐘，1920×1080，30 fps，賽博風格）。成品放在 `public/intro.mp4`，跟網站一起部署到 https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/intro.mp4（專案 README 的介紹影片連到這裡；不在 PWA 離線快取裡）。`poster.jpg` 是 README 上的封面圖。
 
 內容依序是：痛點 → 網站做什麼 → **01 去哪裡找**（網址、QR Code、手機也能用、離線可用）→ **02 怎麼用**（開始、選機構、樓層 1F／3F／4F／2F、射球飛輪）→ **03 建議順序** → 卡住時去哪裡看 → 安全提醒 → 結尾網址。
 
@@ -20,7 +20,7 @@ cd video
 node render.cjs --stills 10,60,120   # 只截幾張圖檢查（存到 stills/）
 node render.cjs out/silent.mp4 30    # 無聲影片，約 15 分鐘
 python3 music.py                     # out/music.wav
-ffmpeg -y -i out/silent.mp4 -i out/music.wav -c:v libx264 -preset slow -crf 24 -pix_fmt yuv420p -c:a aac -b:a 160k -shortest -movflags +faststart out/frc9427-tuner-intro.mp4
+ffmpeg -y -i out/silent.mp4 -i out/music.wav -c:v libx264 -preset slow -crf 24 -pix_fmt yuv420p -c:a aac -b:a 160k -shortest -movflags +faststart ../public/intro.mp4
 ```
 
 改了網站介面要更新截圖時，到網站切「科技」配色、深色，用 1600×900 視窗、1.5 倍縮放重新截，存成 `assets/` 裡同樣的檔名。
