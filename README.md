@@ -12,7 +12,9 @@
 
 [![網站介紹影片（約 3 分鐘，點圖片播放）](video/poster.jpg)](https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/intro.mp4)
 
-**▶ [點這裡看介紹影片](https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/intro.mp4)**（約 3 分鐘）：網站去哪裡找、怎麼用、每一層做什麼。影片怎麼做的見 [`video/`](video/)。
+**▶ [點這裡看介紹影片](https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/intro.mp4)**（約 3 分鐘）：網站去哪裡找、怎麼用、每一層做什麼，還有在 3F 實際把「往下掉的電梯」調好。
+
+只有 30 秒？看[直式精華版](https://vincent0926.github.io/FRC-elevator-PID-Teaching-website/intro-short.mp4)（適合手機、社群分享）。影片怎麼做的見 [`video/`](video/)。
 
 > 網站只做計算、模擬、診斷和教學，**不連線機器人、不寫馬達參數**。急停一律用 Driver Station。
 

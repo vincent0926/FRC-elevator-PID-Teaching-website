@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>FRC 9427 調參網站 30 秒精華</title>
+<!-- 直式 1080×1920 的 30 秒精華版（社群用）；樣式、時間軸跟 intro.html 共用 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Orbitron:wght@600;900&family=JetBrains+Mono:wght@400;700&display=block" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+:root { --W: 1080px; --H: 1920px }
+#floor { top: 70%; opacity: .45 }
+#horizon { top: 70% }
+#sky { height: 70% }
+.h0 { font-size: 150px }
+.chips { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-top: 70px }
+.chip { width: 380px }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"><div id="sky"></div><div id="floor"></div><div id="horizon"></div></div>
+
+  <!-- 1 痛點 -->
+  <section class="scene" data-dur="4" data-ch="ERROR">
+    <div class="center">
+      <div class="warn" data-in="0.1" data-fx="glitch">⚠ WARNING</div>
+      <div class="h1" data-in="0.4" data-fx="glitch" style="margin-top:60px;font-size:96px">電梯停住後<br><span class="neon-mg">往下掉</span>？</div>
+    </div>
+  </section>
+
+  <!-- 2 實際操作 -->
+  <section class="scene" data-dur="11" data-ch="3F / DEMO" data-glitch data-hook="demo" data-play="1,4.5,5.6,6.4,9.6">
+    <div class="label" data-in="0" data-fx="up" style="position:absolute;left:80px;top:200px">// 3F 模擬 · 實際操作</div>
+    <div class="shot" data-in="0.1" data-fx="zoom" style="left:80px;top:320px;width:920px;height:105px">
+      <div class="win demo-frames" data-set="knobs"></div>
+      <div class="hl" data-in="0.4" data-out="5.4" style="left:0;top:0;width:50%;height:100%"></div>
+      <div class="hl" data-in="5.7" style="left:0;top:0;width:50%;height:100%"></div>
+    </div>
+    <div class="shot" data-in="0.2" data-fx="zoom" style="left:80px;top:500px;width:330px;height:660px">
+      <div class="tag">托架</div>
+      <div class="win demo-frames" data-set="view"></div>
+    </div>
+    <div class="cap" style="left:460px;top:640px;width:560px">
+      <div class="swap" data-in="0.4" data-out="4.6" data-fx="up"><div class="t" style="font-size:64px"><span class="neon-mg">kG = 0</span></div><div class="s" style="color:var(--ink)">只靠很小的 kP<br>撐重力</div></div>
+      <div class="swap" data-in="4.6" data-out="5.5" data-fx="glitch"><div class="t" style="font-size:64px"><span class="neon-mg">往下掉 ✗</span></div></div>
+      <div class="swap" data-in="5.6" data-out="9.7" data-fx="up"><div class="t" style="font-size:64px">kG 填回<br><span class="neon">理論值 <span class="demo-kg">0.51</span></span></div></div>
+      <div class="swap" data-in="9.7" data-fx="glitch"><div class="t" style="font-size:64px"><span class="neon-yl">停住了 ✓</span></div></div>
+    </div>
+    <div class="shot" data-in="0.3" data-fx="zoom" style="left:80px;top:1240px;width:920px;height:345px">
+      <div class="tag">PLOT · 位置</div>
+      <div class="win demo-frames" data-set="chart"></div>
+    </div>
+  </section>
+
+  <!-- 3 網站是什麼 -->
+  <section class="scene" data-dur="6" data-ch="WHAT IT DOES" data-glitch>
+    <div class="center">
+      <div class="h0 chroma" data-in="0.1" data-fx="glitch">FRC 9427</div>
+      <div class="h2 neon" data-in="0.5" data-fx="up" style="margin-top:20px">調整參數網站</div>
+      <div class="sub" data-in="1.0" data-fx="up" style="margin-top:20px">先搞懂，再自己調好</div>
+      <div class="chips">
+        <div class="chip" data-in="1.8" data-fx="zoom"><b>計算</b><span>CALC</span></div>
+        <div class="chip" data-in="2.3" data-fx="zoom"><b>模擬</b><span>SIM</span></div>
+        <div class="chip" data-in="2.8" data-fx="zoom"><b>診斷</b><span>DIAG</span></div>
+        <div class="chip" data-in="3.3" data-fx="zoom"><b>教學</b><span>LEARN</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 網址 -->
+  <section class="scene" data-dur="9" data-ch="END" data-glitch>
+    <div class="center">
+      <div class="label" data-in="0.1" data-fx="up">// 手機掃一下就能用</div>
+      <div class="qr" data-in="0.3" data-fx="zoom" style="position:relative;width:620px;height:620px;margin-top:50px"><img src="assets/qr.svg" alt=""></div>
+      <div class="url" data-in="1.0" data-fx="up" style="margin-top:70px;font-size:46px"><span class="host">vincent0926.github.io/</span><br><span class="path">FRC-elevator-PID-</span><br><span class="path">Teaching-website/</span></div>
+      <div class="sub" data-in="2.2" data-fx="up" style="margin-top:50px">電梯・手臂・射球飛輪</div>
+    </div>
+  </section>
+
+  <div id="hud">
+    <div class="corner a"></div><div class="corner b"></div><div class="corner c"></div><div class="corner d"></div>
+    <div class="tl">FRC9427 // TUNER.SYS</div>
+    <div class="tr"><span class="rec" id="rec">● REC</span>&nbsp;&nbsp;<span id="tc">T+00:00.00</span></div>
+    <div class="bar"><b id="prog" style="width:0"></b></div>
+    <div class="bl" id="ch">ERROR</div>
+    <div class="br">FEEDFORWARD × PID</div>
+  </div>
+  <div id="scan"></div><div id="noise"></div><div id="vignette"></div>
+  <div id="glitch"></div>
+</div>
+<script src="engine.js"></script>
+</body>
+</html>
