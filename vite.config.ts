@@ -41,8 +41,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff2,jpg}'],
-        // version.json 永遠走網路，才比得出新版本
-        navigateFallbackDenylist: [/version\.json$/],
+        // version.json 永遠走網路，才比得出新版本；網址是檔案（有副檔名，例如介紹影片 intro.mp4）也不能換成網站首頁（決策 154）
+        navigateFallbackDenylist: [/version\.json$/, /\/[^/?]+\.[^/?]+(\?.*)?$/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\//,
