@@ -175,13 +175,14 @@ function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
-export function Chooser() {
+/** `fromSplash`：剛按完「開始」，門上的隊號先淡掉再開門（決策 148） */
+export function Chooser({ fromSplash = false }: { fromSplash?: boolean }) {
   const { setTrack } = useStore()
   const [fwOpen, setFwOpen] = useState(false)
   const { closing, pick, cls } = usePick()
   return (
     <div className="chooser">
-      <Doors closing={closing} />
+      <Doors closing={closing} sign={fromSplash && !closing} />
       <div className="chooser-in">
         <p className="small muted" style={{ margin: 0 }}>
           {t('FRC 9427 前饋與 PID 學習', 'FRC 9427 feedforward & PID learning')}

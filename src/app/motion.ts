@@ -3,6 +3,9 @@
 /** 門關上的時間（`door-close`） */
 export const DOOR_CLOSE_MS = 450
 
+/** 按「開始」到換成選機構的時間：爆光、門在 0.7 秒開始關、亮隊號（`.splash.leaving`，決策 148） */
+export const SPLASH_LEAVE_MS = 1500
+
 /** 選到的卡片彈一下的時間（`card-pick`），之後門開始關 */
 export const PICK_MS = 280
 
