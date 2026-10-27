@@ -699,13 +699,12 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .loop li:nth-child(8) { animation-delay: .71s }
 
 /* 進站選機構：滑過時電梯升起、手臂轉一下、飛輪轉起來 */
-.splash-in { animation: rise-in .5s cubic-bezier(.2, .7, .3, 1) both }
 /* 進站照片輪播：4 張 × 6 秒，交接時淡入淡出 1.2 秒（減少動態效果時停在第一張） */
 @keyframes splash-fade { 0% { opacity: 0 } 5% { opacity: 1 } 25% { opacity: 1 } 30% { opacity: 0 } 100% { opacity: 0 } }
 .splash-bg > span { animation: splash-fade 24s linear infinite both }
-.chooser-cards > * { animation: rise-in .35s cubic-bezier(.2, .7, .3, 1) both }
-.chooser-cards > :nth-child(2) { animation-delay: .08s }
-.chooser-cards > :nth-child(3) { animation-delay: .16s }
+.chooser-cards > * { animation: rise-in .35s cubic-bezier(.2, .7, .3, 1) .45s both }
+.chooser-cards > :nth-child(2) { animation-delay: .53s }
+.chooser-cards > :nth-child(3) { animation-delay: .61s }
 .ch-car-move, .ch-stage-move, .ch-arm-swing, .ch-wheel-spin { transform-box: view-box }
 .ch-wheel-spin { transform-origin: 34px 40px }
 .ch-arm-swing { transform-origin: 25px 42px }
@@ -713,6 +712,44 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .chooser-card:hover .ch-stage-move, .chooser-card:focus-visible .ch-stage-move { animation: stage-bob 1.2s ease-in-out infinite }
 .chooser-card:hover .ch-arm-swing, .chooser-card:focus-visible .ch-arm-swing { animation: arm-swing 1.4s ease-in-out infinite }
 .chooser-card:hover .ch-wheel-spin, .chooser-card:focus-visible .ch-wheel-spin { animation: wheel-spin .6s linear infinite }
+
+/* 進站過場（決策 147）：電梯門左右兩片，一進站滑開；按「開始」、選機構之後關上才換頁。
+   門平常是打開的（在畫面外、看不見），所以減少動態效果時什麼都不擋 */
+@keyframes door-open-l { from { transform: none } to { transform: translateX(-101%) } }
+@keyframes door-open-r { from { transform: none } to { transform: translateX(101%) } }
+@keyframes door-close-l { from { transform: translateX(-101%) } to { transform: none } }
+@keyframes door-close-r { from { transform: translateX(101%) } to { transform: none } }
+@keyframes doors-show { 0%, 99% { visibility: visible } 100% { visibility: hidden } }
+.doors { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; visibility: hidden; animation: doors-show .9s linear both }
+.doors > span { position: absolute; top: 0; bottom: 0; width: 50%; background: linear-gradient(90deg, var(--shaft), var(--shaft-2)); transform: translateX(-101%) }
+.doors > span:first-child { left: 0; border-right: 3px solid var(--yellow); animation: door-open-l .7s cubic-bezier(.65, 0, .35, 1) .15s both }
+.doors > span:last-child { right: 0; border-left: 3px solid var(--yellow); background: linear-gradient(270deg, var(--shaft), var(--shaft-2)); transform: translateX(101%); animation: door-open-r .7s cubic-bezier(.65, 0, .35, 1) .15s both }
+.doors.closing { visibility: visible; animation: none; pointer-events: auto }
+.doors.closing > span:first-child { animation: door-close-l .45s cubic-bezier(.65, 0, .35, 1) both }
+.doors.closing > span:last-child { animation: door-close-r .45s cubic-bezier(.65, 0, .35, 1) both }
+
+/* 進站畫面：門開了之後，字一行一行出來，「開始」最後出來並亮一下 */
+@keyframes go-glow { 0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow) } 50% { box-shadow: 0 0 0 12px transparent } }
+.splash-in > * { animation: rise-in .5s cubic-bezier(.2, .7, .3, 1) both }
+.splash-in > :nth-child(1) { animation-delay: .5s }
+.splash-in > :nth-child(2) { animation-delay: .62s }
+.splash-in > :nth-child(3) { animation-delay: .74s }
+.splash-in > .splash-go { animation: rise-in .5s cubic-bezier(.2, .7, .3, 1) .86s both, go-glow 1.6s ease-out 1.4s 2 }
+.splash.leaving .splash-in { transition: transform .45s ease-in, opacity .45s ease-in; transform: scale(.96); opacity: .6 }
+
+/* 選機構：選到的卡片彈一下、圖示動起來，其他卡片變淡 */
+@keyframes card-pick { 0% { transform: none } 45% { transform: scale(1.04) } 100% { transform: scale(1.02) } }
+.chooser-card.picked { animation: card-pick .28s ease-out both; border-color: var(--yellow); box-shadow: var(--lift-shadow), 0 0 0 3px var(--accent-glow) }
+.chooser-card.picked::before { opacity: 1 }
+.chooser-card.dimmed { animation: none; opacity: .4; transform: scale(.97); transition: opacity .2s ease, transform .2s ease }
+.chooser-card.picked .ch-car-move { animation: car-bob 1.2s ease-in-out infinite }
+.chooser-card.picked .ch-stage-move { animation: stage-bob 1.2s ease-in-out infinite }
+.chooser-card.picked .ch-arm-swing { animation: arm-swing 1.4s ease-in-out infinite }
+.chooser-card.picked .ch-wheel-spin { animation: wheel-spin .6s linear infinite }
+/* 射球飛輪的對話框：從中間放大出來 */
+@keyframes dialog-in { from { opacity: 0; transform: scale(.94) translateY(8px) } to { opacity: 1; transform: none } }
+.ch-modal { animation: fade-in .2s ease-out both }
+.ch-dialog { animation: dialog-in .25s cubic-bezier(.2, .7, .3, 1) both }
 
 /* 步驟列的提示、使用說明的路線 */
 .guide-route li { animation: rise-in .3s ease-out both }
