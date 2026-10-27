@@ -699,13 +699,12 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .loop li:nth-child(8) { animation-delay: .71s }
 
 /* 進站選機構：滑過時電梯升起、手臂轉一下、飛輪轉起來 */
-.splash-in { animation: rise-in .5s cubic-bezier(.2, .7, .3, 1) both }
 /* 進站照片輪播：4 張 × 6 秒，交接時淡入淡出 1.2 秒（減少動態效果時停在第一張） */
 @keyframes splash-fade { 0% { opacity: 0 } 5% { opacity: 1 } 25% { opacity: 1 } 30% { opacity: 0 } 100% { opacity: 0 } }
 .splash-bg > span { animation: splash-fade 24s linear infinite both }
-.chooser-cards > * { animation: rise-in .35s cubic-bezier(.2, .7, .3, 1) both }
-.chooser-cards > :nth-child(2) { animation-delay: .08s }
-.chooser-cards > :nth-child(3) { animation-delay: .16s }
+.chooser-cards > * { animation: rise-in .35s cubic-bezier(.2, .7, .3, 1) .45s both }
+.chooser-cards > :nth-child(2) { animation-delay: .53s }
+.chooser-cards > :nth-child(3) { animation-delay: .61s }
 .ch-car-move, .ch-stage-move, .ch-arm-swing, .ch-wheel-spin { transform-box: view-box }
 .ch-wheel-spin { transform-origin: 34px 40px }
 .ch-arm-swing { transform-origin: 25px 42px }
@@ -713,6 +712,74 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .chooser-card:hover .ch-stage-move, .chooser-card:focus-visible .ch-stage-move { animation: stage-bob 1.2s ease-in-out infinite }
 .chooser-card:hover .ch-arm-swing, .chooser-card:focus-visible .ch-arm-swing { animation: arm-swing 1.4s ease-in-out infinite }
 .chooser-card:hover .ch-wheel-spin, .chooser-card:focus-visible .ch-wheel-spin { animation: wheel-spin .6s linear infinite }
+
+/* 進站過場（決策 147）：電梯門左右兩片，一進站滑開；按「開始」、選機構之後關上才換頁。
+   門平常是打開的（在畫面外、看不見），所以減少動態效果時什麼都不擋 */
+@keyframes door-open-l { from { transform: none } to { transform: translateX(-101%) } }
+@keyframes door-open-r { from { transform: none } to { transform: translateX(101%) } }
+@keyframes door-close-l { from { transform: translateX(-101%) } to { transform: none } }
+@keyframes door-close-r { from { transform: translateX(101%) } to { transform: none } }
+@keyframes doors-show { 0%, 99% { visibility: visible } 100% { visibility: hidden } }
+.doors { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; visibility: hidden; animation: doors-show .9s linear both }
+.doors > span { position: absolute; top: 0; bottom: 0; width: 50%; background: linear-gradient(90deg, var(--shaft), var(--shaft-2)); transform: translateX(-101%) }
+.doors > .door-l { left: 0; border-right: 3px solid var(--yellow); animation: door-open-l .7s cubic-bezier(.65, 0, .35, 1) .15s both }
+.doors > .door-r { right: 0; border-left: 3px solid var(--yellow); background: linear-gradient(270deg, var(--shaft), var(--shaft-2)); transform: translateX(101%); animation: door-open-r .7s cubic-bezier(.65, 0, .35, 1) .15s both }
+.doors.closing { visibility: visible; animation: none; pointer-events: auto }
+.doors.closing > .door-l { animation: door-close-l .45s cubic-bezier(.65, 0, .35, 1) both }
+.doors.closing > .door-r { animation: door-close-r .45s cubic-bezier(.65, 0, .35, 1) both }
+
+/* 進站畫面：門開了之後，字一行一行出來，「開始」最後出來並亮一下 */
+@keyframes go-glow { 0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow) } 50% { box-shadow: 0 0 0 12px transparent } }
+.splash-in > * { animation: rise-in .5s cubic-bezier(.2, .7, .3, 1) both }
+.splash-in > :nth-child(1) { animation-delay: .5s }
+.splash-in > :nth-child(2) { animation-delay: .62s }
+.splash-in > :nth-child(3) { animation-delay: .74s }
+.splash-in > .splash-go { animation: rise-in .5s cubic-bezier(.2, .7, .3, 1) .86s both, go-glow 1.6s ease-out 1.4s 2 }
+
+/* 按「開始」（決策 148，共 1.5 秒）：0 秒從按鈕爆光、光環、碎片炸開，字往前衝散、照片拉近變亮；
+   0.15 秒起速度線往下掃（像電梯往上衝）；0.7 秒門關上；1.1 秒門上亮出隊號 */
+@keyframes splash-rush { to { transform: scale(1.35) translateY(-24px); opacity: 0; filter: blur(8px) } }
+@keyframes splash-zoom { to { transform: scale(1.18); filter: brightness(1.35) saturate(1.3) } }
+@keyframes burst-flash { 0% { opacity: .9; transform: translate(-50%, -50%) scale(.2) } 100% { opacity: 0; transform: translate(-50%, -50%) scale(3) } }
+@keyframes burst-ring { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.3) } 100% { opacity: 0; transform: translate(-50%, -50%) scale(9) } }
+@keyframes burst-spark { 0% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--a)) translateX(0) scale(1) } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateX(var(--d)) scale(.3) } }
+@keyframes burst-streak { 0% { opacity: 0; transform: translateY(-110vh) } 20% { opacity: 1 } 100% { opacity: 0; transform: translateY(110vh) } }
+@keyframes sign-on { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.7); filter: blur(6px) } 60% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); filter: none } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1) } }
+@keyframes sign-off { from { opacity: 1 } to { opacity: 0; transform: translate(-50%, -50%) scale(1.1) } }
+@keyframes sign-arrow { 0%, 100% { transform: none } 50% { transform: translateY(-6px) } }
+.splash.leaving .splash-in { animation: splash-rush .6s cubic-bezier(.5, 0, .75, 0) both }
+.splash.leaving .splash-bg { animation: splash-zoom 1s ease-in both }
+.burst { position: fixed; inset: 0; z-index: 55; pointer-events: none; overflow: hidden }
+.burst > span { position: absolute; left: var(--bx); top: var(--by); border-radius: 50% }
+.burst-flash { width: 260px; height: 260px; background: radial-gradient(circle, var(--photo-ink), var(--mark) 35%, transparent 70%); animation: burst-flash .55s ease-out both }
+.burst-ring { width: 80px; height: 80px; border: 3px solid var(--mark); animation: burst-ring .7s cubic-bezier(.2, .7, .3, 1) both }
+.burst-ring.r2 { border-color: var(--photo-ink); animation-delay: .12s }
+.burst-spark { width: 10px; height: 10px; background: var(--splash-c1); box-shadow: 0 0 10px currentColor; animation: burst-spark .75s cubic-bezier(.15, .7, .3, 1) both }
+.burst-spark:nth-child(4n) { background: var(--splash-c2) }
+.burst-spark:nth-child(4n+1) { background: var(--splash-c4) }
+.burst-spark:nth-child(4n+2) { background: var(--splash-c5) }
+.burst > .burst-streak { top: 0; width: 2px; height: 40vh; border-radius: 1px; background: linear-gradient(180deg, transparent, var(--photo-ink-2), transparent); animation: burst-streak .55s linear both }
+.burst > .burst-streak:nth-child(odd) { width: 3px; background: linear-gradient(180deg, transparent, var(--mark), transparent) }
+.splash.leaving .doors.closing > .door-l { animation-delay: .7s }
+.splash.leaving .doors.closing > .door-r { animation-delay: .7s }
+.splash.leaving .doors.closing > span { box-shadow: 0 0 40px var(--accent-glow) }
+.doors-sign { position: absolute; z-index: 1; left: 50%; top: 50%; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: clamp(48px, 12vw, 120px); line-height: 1; font-weight: 800; letter-spacing: .08em; color: var(--mark); text-shadow: 0 0 18px var(--accent-glow), 0 0 48px var(--accent-glow); transform: translate(-50%, -50%); opacity: 0; animation: sign-off .2s ease-in both }
+.doors-sign i { font-style: normal; font-size: .4em; animation: sign-arrow .5s ease-in-out infinite }
+.doors.closing .doors-sign { animation: sign-on .4s cubic-bezier(.2, .7, .3, 1) 1.1s both }
+
+/* 選機構：選到的卡片彈一下、圖示動起來，其他卡片變淡 */
+@keyframes card-pick { 0% { transform: none } 45% { transform: scale(1.04) } 100% { transform: scale(1.02) } }
+.chooser-card.picked { animation: card-pick .28s ease-out both; border-color: var(--yellow); box-shadow: var(--lift-shadow), 0 0 0 3px var(--accent-glow) }
+.chooser-card.picked::before { opacity: 1 }
+.chooser-card.dimmed { animation: none; opacity: .4; transform: scale(.97); transition: opacity .2s ease, transform .2s ease }
+.chooser-card.picked .ch-car-move { animation: car-bob 1.2s ease-in-out infinite }
+.chooser-card.picked .ch-stage-move { animation: stage-bob 1.2s ease-in-out infinite }
+.chooser-card.picked .ch-arm-swing { animation: arm-swing 1.4s ease-in-out infinite }
+.chooser-card.picked .ch-wheel-spin { animation: wheel-spin .6s linear infinite }
+/* 射球飛輪的對話框：從中間放大出來 */
+@keyframes dialog-in { from { opacity: 0; transform: scale(.94) translateY(8px) } to { opacity: 1; transform: none } }
+.ch-modal { animation: fade-in .2s ease-out both }
+.ch-dialog { animation: dialog-in .25s cubic-bezier(.2, .7, .3, 1) both }
 
 /* 步驟列的提示、使用說明的路線 */
 .guide-route li { animation: rise-in .3s ease-out both }

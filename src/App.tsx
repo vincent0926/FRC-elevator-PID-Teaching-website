@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Chooser } from './app/Chooser'
 import { Splash } from './app/Splash'
+import { Doors } from './app/Doors'
 import { loadSession } from './storage/local'
 import { Shell } from './app/Shell'
 import { useStore } from './app/store'
@@ -20,9 +21,38 @@ import { FlywheelCalcPage } from './pages/flywheel/FlywheelCalcPage'
 import { ArmLessonsPage, ElevatorLessonsPage, FlywheelLessonsPage } from './pages/lessons/LessonsPage'
 
 export default function App() {
-  const { page, track } = useStore()
+  const { track } = useStore()
   const [splash, setSplash] = useState(() => loadSession('splashSeen') !== '1')
-  if (!track) return splash ? <Splash onStart={() => setSplash(false)} /> : <Chooser />
+  const [fromSplash, setFromSplash] = useState(false)
+  // 剛從選機構進來才放電梯門滑開；重新整理、深層連結直接進樓層就不放（決策 147）
+  const [prevTrack, setPrevTrack] = useState(track)
+  const [entered, setEntered] = useState(false)
+  if (prevTrack !== track) {
+    setPrevTrack(track)
+    setFromSplash(false)
+    setEntered(prevTrack === null && track !== null)
+  }
+  if (!track)
+    return splash ? (
+      <Splash
+        onStart={() => {
+          setSplash(false)
+          setFromSplash(true)
+        }}
+      />
+    ) : (
+      <Chooser fromSplash={fromSplash} />
+    )
+  return (
+    <>
+      {entered && <Doors />}
+      <Floors />
+    </>
+  )
+}
+
+function Floors() {
+  const { page, track } = useStore()
   // 射球飛輪只有 1F、3F 和教學關卡：停在其他樓層（例如深層連結）就顯示 1F
   if (track === 'flywheel')
     return <Shell>{page === 'sim' ? <FlywheelSimPage /> : page === 'lessons' ? <FlywheelLessonsPage /> : <FlywheelCalcPage />}</Shell>

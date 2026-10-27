@@ -2,12 +2,31 @@ import { useEffect, useRef, useState } from 'react'
 import { saveFlywheelStyle } from '../pages/flywheel/flywheelStore'
 import { useStore, type Track } from './store'
 import { t } from '../core/lang'
+import { Doors } from './Doors'
+import { DOOR_CLOSE_MS, PICK_MS, afterMotion } from './motion'
 
 /**
  * 進站先選機構：電梯、單關節手臂或射球飛輪。選完才進到各樓層（射球飛輪只有 1F、3F）。
  * 射球飛輪每次都再問一次要「彈道」（1F 算轉速和仰角 → 3F 連射模擬）、「客製化」（直接到 3F 連射模擬，自己設）
  * 還是「邊移動邊射」（1F 算補償 → 3F 邊開邊射）。
+ * 進來時電梯門滑開；點了之後選到的卡片彈一下、其他變淡，接著門關上才進樓層（決策 147）。
  */
+
+/** 點了卡片之後：先彈一下、門關上，才真的換頁；過場中再點不理 */
+function usePick() {
+  const [picked, setPicked] = useState<string | null>(null)
+  const [closing, setClosing] = useState(false)
+  const pick = (id: string, go: () => void) => {
+    if (picked) return
+    setPicked(id)
+    afterMotion(PICK_MS, () => {
+      setClosing(true)
+      afterMotion(DOOR_CLOSE_MS, go)
+    })
+  }
+  const cls = (id: string, base: string) => (picked === null ? base : `${base} ${picked === id ? 'picked' : 'dimmed'}`)
+  return { picked, closing, pick, cls }
+}
 
 const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = [
   {
@@ -110,6 +129,7 @@ const FLYWHEEL_STYLES = [
 
 function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
   const { setTrack } = useStore()
+  const { closing, pick, cls } = usePick()
   const first = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     first.current?.focus()
@@ -127,11 +147,13 @@ function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
               key={st.id}
               ref={i === 0 ? first : undefined}
               type="button"
-              className="chooser-card ch-style"
-              onClick={() => {
-                saveFlywheelStyle(st.id)
-                setTrack('flywheel', st.start)
-              }}
+              className={cls(st.id, 'chooser-card ch-style')}
+              onClick={() =>
+                pick(st.id, () => {
+                  saveFlywheelStyle(st.id)
+                  setTrack('flywheel', st.start)
+                })
+              }
             >
               <b>{st.title}</b>
               <span className="small">{st.what}</span>
@@ -148,15 +170,19 @@ function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
           {t('回去選機構', 'Back to mechanisms')}
         </button>
       </div>
+      {closing && <Doors closing />}
     </div>
   )
 }
 
-export function Chooser() {
+/** `fromSplash`：剛按完「開始」，門上的隊號先淡掉再開門（決策 148） */
+export function Chooser({ fromSplash = false }: { fromSplash?: boolean }) {
   const { setTrack } = useStore()
   const [fwOpen, setFwOpen] = useState(false)
+  const { closing, pick, cls } = usePick()
   return (
     <div className="chooser">
+      <Doors closing={closing} sign={fromSplash && !closing} />
       <div className="chooser-in">
         <p className="small muted" style={{ margin: 0 }}>
           {t('FRC 9427 前饋與 PID 學習', 'FRC 9427 feedforward & PID learning')}
@@ -172,7 +198,12 @@ export function Chooser() {
           {CHOICES.map((c) => {
             const Icon = ICONS[c.id]
             return (
-            <button key={c.id} type="button" className="chooser-card" onClick={() => (c.id === 'flywheel' ? setFwOpen(true) : setTrack(c.id))}>
+            <button
+              key={c.id}
+              type="button"
+              className={cls(c.id, 'chooser-card')}
+              onClick={() => (c.id === 'flywheel' ? setFwOpen(true) : pick(c.id, () => setTrack(c.id)))}
+            >
               <Icon />
               <b>{c.title}</b>
               <span className="small">{c.what}</span>
