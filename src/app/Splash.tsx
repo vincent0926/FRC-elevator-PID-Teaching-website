@@ -1,9 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { saveSession } from '../storage/local'
 import { t } from '../core/lang'
+import { Doors } from './Doors'
+import { DOOR_CLOSE_MS, afterMotion } from './motion'
 
 /**
  * 進站第一個畫面：網站名稱，背景是比賽中的機器人照片（`public/splash/`）輪流淡入淡出，按「開始」才到選機構（決策 139）。
+ * 一進站電梯門滑開、字一行一行出來；按「開始」門關上才換到選機構（決策 147）。
  * 照片載不到只會看到深色漸層，不會壞；減少動態效果時只顯示第一張；手機寬度（≤ 640px）不放照片，改彩色漸層。看過就記在這個分頁（sessionStorage `splashSeen`，App.tsx 讀），重新整理、「換機構」都不會再出現。
  */
 
@@ -14,12 +17,16 @@ const SPLASH_PHOTOS = ['robot-blue.jpg', 'robot-red-1.jpg', 'robot-red-2.jpg', '
 export function Splash({ onStart }: { onStart: () => void }) {
   const start = useRef<HTMLButtonElement>(null)
   useEffect(() => start.current?.focus(), [])
+  const [leaving, setLeaving] = useState(false)
   const go = () => {
+    if (leaving) return
+    setLeaving(true)
     saveSession('splashSeen', '1')
-    onStart()
+    afterMotion(DOOR_CLOSE_MS, onStart)
   }
   return (
-    <div className="splash">
+    <div className={leaving ? 'splash leaving' : 'splash'}>
+      <Doors closing={leaving} />
       <div className="splash-bg" aria-hidden="true">
         {SPLASH_PHOTOS.map((f, i) => (
           <span key={f} style={{ backgroundImage: `url("${import.meta.env.BASE_URL}splash/${f}")`, animationDelay: `${i * 6 - 1.2}s` }} />
