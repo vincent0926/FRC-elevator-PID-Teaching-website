@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alignSeries, missingRequired, suggestMapping } from './fieldMap'
+import { alignSeries, missingRequired, parseFieldMapping, suggestMapping } from './fieldMap'
 import type { Series, WpilogEntryInfo } from './reader'
 
 const e = (name: string, type = 'double'): WpilogEntryInfo => ({ name, type, metadata: '', count: 10, firstTimestamp: 0, lastTimestamp: 1 })
@@ -72,5 +72,24 @@ describe('手臂的欄位對應', () => {
     expect(m.velocity.entry).toBe('/Arm/VelocityRadPerSec')
     expect(m.reference.entry).toBe('/Arm/ClosedLoopReferenceRad')
     expect(suggestMapping(entries).position.entry).toBe('/Elevator/PositionMeters')
+  })
+})
+
+describe('parseFieldMapping：瀏覽器存的欄位對應', () => {
+  it('只留認得的角色和格式對的欄位', () => {
+    expect(
+      parseFieldMapping({
+        position: { entry: '/Elevator/PositionMeters', scale: 1 },
+        velocity: { entry: null, scale: 2 },
+        reference: { entry: 5, scale: 1 },
+        appliedVolts: { entry: 'x', scale: '1' },
+        bogus: { entry: 'y', scale: 1 },
+      }),
+    ).toEqual({ position: { entry: '/Elevator/PositionMeters', scale: 1 }, velocity: { entry: null, scale: 2 } })
+  })
+  it('不是物件就不用', () => {
+    expect(parseFieldMapping('abc')).toBeUndefined()
+    expect(parseFieldMapping(null)).toBeUndefined()
+    expect(parseFieldMapping([])).toBeUndefined()
   })
 })

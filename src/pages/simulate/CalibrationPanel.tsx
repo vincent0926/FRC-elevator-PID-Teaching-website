@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useStore, type Calibration } from '../../app/store'
+import { useStore } from '../../app/store'
+import { useElevator, type Calibration } from '../../app/elevatorStore'
 import { ApproxNote } from '../../components/ApproxNote'
 import { Chart } from '../../components/Chart'
 import { randomHiddenPlant } from '../../core/challenge'
@@ -16,7 +17,8 @@ import { t } from '../../core/lang'
 const cm = (v: number) => `${(v * 100).toFixed(1)} cm`
 
 export function CalibrationPanel({ onApply }: { onApply: (c: Calibration) => void }) {
-  const { mechanism, ff, theory, lastLog, calibration, setCalibration, go } = useStore()
+  const { go } = useStore()
+  const { mechanism, ff, theory, lastLog, calibration, setCalibration } = useElevator()
   const [src, setSrc] = useState<{ log: AlignedLog; name: string; truth?: string } | null>(null)
   const result: CalibrationResult | null = useMemo(() => (src ? calibrate(src.log, mechanism, ff) : null), [src, mechanism, ff])
 

@@ -1,4 +1,5 @@
 import { useStore } from '../../app/store'
+import { useElevator } from '../../app/elevatorStore'
 import { ParamCard } from '../../components/ParamCard'
 import { MechanismForm } from './MechanismForm'
 import { PARAM_ROWS, KIND_INFO } from './paramSources'
@@ -11,11 +12,11 @@ import { revSubsystemZip } from './revSubsystemExport'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
 import { t } from '../../core/lang'
-
-const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
+import { fixed as f } from '../../core/format'
 
 export function CalcPage() {
-  const { mechanism, setMechanism, voltsPerCm, setVoltsPerCm, ff, theory, setCustom, setSimSource, go, shared, dismissShared } = useStore()
+  const { go } = useStore()
+  const { mechanism, setMechanism, voltsPerCm, setVoltsPerCm, ff, theory, setCustom, setSimSource, shared, dismissShared } = useElevator()
 
   const toSim = (asCustom: boolean) => {
     if (asCustom) {

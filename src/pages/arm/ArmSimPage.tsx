@@ -26,11 +26,11 @@ import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
 import { t } from '../../core/lang'
 import { SERIES_STYLE } from '../../components/seriesStyle'
+import { fixed as f } from '../../core/format'
 
 /** 手臂 3F 模擬：理論值／自訂、理想／真實模型、重力型態、教學情境、照順序調、指標（角度） */
 
 const R2D = 180 / Math.PI
-const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
 const ARM_ASSUMPTIONS = t(
   [

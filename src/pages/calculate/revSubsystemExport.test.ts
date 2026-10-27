@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildTheory } from '../../app/store'
+import { buildTheory } from '../../app/elevatorStore'
 import { computeFeedforward } from '../../core/feedforward'
 import { DEFAULT_MECHANISM } from '../../schema/parameterSet'
 import { readZip } from '../../core/codegen/zip'

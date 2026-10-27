@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import './app/theme.css'
 import App from './App.tsx'
 import { StoreProvider } from './app/store.tsx'
+import { ElevatorStoreProvider } from './app/elevatorStore.tsx'
 import { ArmStoreProvider } from './pages/arm/armStore.tsx'
 import { LangToggle } from './app/LangToggle.tsx'
 
@@ -12,9 +13,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <LangToggle />
     <StoreProvider>
-      <ArmStoreProvider>
-        <App />
-      </ArmStoreProvider>
+      <ElevatorStoreProvider>
+        <ArmStoreProvider>
+          <App />
+        </ArmStoreProvider>
+      </ElevatorStoreProvider>
     </StoreProvider>
   </StrictMode>,
 )

@@ -22,8 +22,9 @@ import {
 } from '../../core/flywheel/flywheel'
 import { BallFields, distanceHint, GoalDistanceField, HubPreset, MechFields, TurretFields } from './FlywheelForms'
 import { FlywheelAim } from './FlywheelAim'
-import { loadFlywheelStyle, useFlywheelMechanism, useMoveSettings, usePersisted, useShotPlan } from './flywheelStore'
+import { loadFlywheelStyle, useFlywheelMechanism, useMoveSettings, useSanitized, useShotPlan } from './flywheelStore'
 import { t } from '../../core/lang'
+import { fixed as f } from '../../core/format'
 
 /**
  * 射球飛輪 1F，看進站選的用法：
@@ -33,7 +34,6 @@ import { t } from '../../core/lang'
  */
 
 const TAU = 2 * Math.PI
-const f = (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
 export function FlywheelCalcPage() {
   // 讀一次就好：換用法要回進站重選，整頁會重新掛上
@@ -92,7 +92,7 @@ function CustomCalc() {
   const [mech, setMech] = useFlywheelMechanism()
   const [plan, setPlan] = useShotPlan()
   // 電流限制跟 3F「真實一點」同一份
-  const [knobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
+  const [knobs] = useSanitized<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
   const ff = useMemo(() => computeFlywheelFeedforward(mech), [mech])
   const setM = (p: Partial<FlywheelMechanism>) => setMech({ ...mech, ...p })
   const setP = (p: Partial<ShotPlan>) => setPlan({ ...plan, ...p })

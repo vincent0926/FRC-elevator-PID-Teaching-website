@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react'
 import { useStore } from '../../app/store'
+import { useElevator } from '../../app/elevatorStore'
 import { QuizSet, type QuizDef } from '../../components/Quiz'
 import { computeFeedforward } from '../../core/feedforward'
 import { t } from '../../core/lang'
@@ -56,7 +57,8 @@ const QUIZZES: QuizDef[] = [
 ]
 
 export function Unit3() {
-  const { mechanism, theory, lessonsDone, markLesson } = useStore()
+  const { lessonsDone, markLesson } = useStore()
+  const { mechanism, theory } = useElevator()
   const kTop = mechanism.stages[mechanism.stages.length - 1].speedRatio
   const payload = useMemo(() => {
     const piece = mechanism.payloadMass > 0 ? mechanism.payloadMass : 2

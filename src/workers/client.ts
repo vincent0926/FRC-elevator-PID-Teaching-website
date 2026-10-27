@@ -25,8 +25,22 @@ function getSimWorker(): Worker {
       if (!d.ok) p.reject(new Error(d.error))
       else p.resolve(('robust' in d ? d.robust : d.result) as never)
     }
+    // Worker 載入失敗（例如 Service Worker 更新後舊的程式塊不見了）或丟出沒接住的錯誤：
+    // 等著的全部 reject，畫面才不會一直停在「計算中」；丟掉這個 Worker，下次重開一個
+    simWorker.onerror = (e) => {
+      e.preventDefault()
+      failSimWorker(e.message || t('模擬 Worker 發生錯誤', 'Simulation worker error'))
+    }
+    simWorker.onmessageerror = () => failSimWorker(t('模擬 Worker 回傳的資料讀不了', 'Couldn’t read the reply from the simulation worker'))
   }
   return simWorker
+}
+
+function failSimWorker(message: string) {
+  simWorker?.terminate()
+  simWorker = null
+  for (const p of simPending.values()) p.reject(new Error(message))
+  simPending.clear()
 }
 
 /**

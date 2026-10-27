@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useStore } from '../../app/store'
+import { useElevator } from '../../app/elevatorStore'
 import { twoPointKsKg } from '../../core/twoPoint'
 import { ElevatorMechanismSchema } from '../../schema/parameterSet'
 import { t } from '../../core/lang'
@@ -9,7 +9,7 @@ import { t } from '../../core/lang'
 const f = (v: number, d = 3) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 
 export function MeasureKsKg() {
-  const { mechanism, setMechanism, ff } = useStore()
+  const { mechanism, setMechanism, ff } = useElevator()
   const [up, setUp] = useState('')
   const [down, setDown] = useState('')
   const [msg, setMsg] = useState<string | null>(null)

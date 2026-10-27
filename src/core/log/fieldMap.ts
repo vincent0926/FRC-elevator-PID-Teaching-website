@@ -51,6 +51,22 @@ export interface RoleMapping {
 
 export type FieldMapping = Record<RoleKey, RoleMapping>
 
+/**
+ * 瀏覽器存的欄位對應：只留認得的角色、而且 entry 是字串或 null、倍率是有限數字的；
+ * 整個不是物件就回傳 undefined（用空的對應）。
+ */
+export function parseFieldMapping(raw: unknown): Partial<FieldMapping> | undefined {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined
+  const out: Partial<FieldMapping> = {}
+  for (const r of ROLES) {
+    const m = (raw as Record<string, unknown>)[r.key]
+    if (typeof m !== 'object' || m === null) continue
+    const { entry, scale } = m as Record<string, unknown>
+    if ((typeof entry === 'string' || entry === null) && typeof scale === 'number' && Number.isFinite(scale)) out[r.key] = { entry, scale }
+  }
+  return out
+}
+
 /** 手臂（robot-example 的 ArmIO）欄位名稱，優先於通用的關鍵字 */
 const ARM_PATTERNS: Partial<Record<RoleKey, RegExp[]>> = {
   position: [/\/PositionRad$/i, /arm.*\/(position|angle)/i],

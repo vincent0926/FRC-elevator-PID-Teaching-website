@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useStore, type Calibration, type SimSource } from '../../app/store'
+import { useStore } from '../../app/store'
+import { useElevator, type Calibration, type SimSource } from '../../app/elevatorStore'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
 import { CONTROL_PERIOD, type AntiWindup, type ControllerLocation } from '../../core/controller/slot0'
@@ -79,7 +80,8 @@ const ELEVATOR_UNITS: Record<TuneKey, string> = {
 }
 
 export function SimPage() {
-  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration, pendingScenario, openScenario, spec, setSpec, compareSet, setCompareSet, setSimLog, go } = useStore()
+  const { pendingScenario, openScenario, go } = useStore()
+  const { mechanism, ff, theory, custom, setCustom, tuning, simSource, setSimSource, baseline, setBaseline, calibration, spec, setSpec, compareSet, setCompareSet, setSimLog } = useElevator()
   const [knobs, setKnobs] = useState<PlantKnobs>(DEFAULT_KNOBS)
   const [location, setLocation] = useState<ControllerLocation>('talonfx')
   const [periodOverride, setPeriodOverride] = useState<number | null>(null)

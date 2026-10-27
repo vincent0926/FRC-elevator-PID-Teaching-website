@@ -1,4 +1,5 @@
-import { UNIT0_ITEMS, useStore, type PageId } from '../../app/store'
+import { useStore, type PageId } from '../../app/store'
+import { UNIT0_ITEMS, useElevator } from '../../app/elevatorStore'
 import { LESSONS } from '../calculate/lessons'
 import { QuickStart } from '../../components/QuickStart'
 import { t } from '../../core/lang'
@@ -15,7 +16,8 @@ const LOOP: { where: 'site' | 'robot'; tag: string; name: string; page?: PageId 
 ]
 
 export function HomePage() {
-  const { go, lessonsDone, unit0 } = useStore()
+  const { go, lessonsDone } = useStore()
+  const { unit0 } = useElevator()
   const lessonCount = LESSONS.filter((l) => lessonsDone[l.id]).length
   const unit0Count = unit0.filter(Boolean).length
 

@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react'
 import { useStore } from '../../app/store'
+import { useElevator } from '../../app/elevatorStore'
 import { LessonList } from '../../components/LessonList'
 import { LESSONS } from '../calculate/lessons'
 import { ARM_LESSONS } from '../arm/armLessons'
@@ -47,7 +48,8 @@ function Frame({ id, title, lead, count, total, help = true, children }: { id: s
 const count = (ids: { id: string }[], done: Record<string, boolean>) => ids.filter((l) => done[l.id]).length
 
 export function ElevatorLessonsPage() {
-  const { mechanism, ff, theory, lessonsDone, markLesson } = useStore()
+  const { lessonsDone, markLesson } = useStore()
+  const { mechanism, ff, theory } = useElevator()
   return (
     <Frame
       id="t-lessons"
