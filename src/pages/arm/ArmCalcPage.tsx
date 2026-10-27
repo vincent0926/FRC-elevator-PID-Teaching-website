@@ -11,10 +11,10 @@ import { armRevSubsystemZip } from './armRevSubsystemExport'
 import { HelpLink } from '../../components/HelpLink'
 import { GUIDE_ANCHOR } from '../guide/guideContent'
 import { t } from '../../core/lang'
+import { fixed as f } from '../../core/format'
 
 /** 手臂 1F：機構資料 → 理論參數（教學關卡在另一頁 pages/lessons） */
 
-const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
 const R2D = 180 / Math.PI
 
 export function ArmCalcPage() {

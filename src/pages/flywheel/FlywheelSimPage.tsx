@@ -35,7 +35,7 @@ import { FLYWHEEL_PRESETS, GAIN_ROWS, gainRange, missText, moveMissText, yawText
 import { FlywheelView } from './FlywheelView'
 import { MoveView } from './MoveView'
 import { BallFields, distanceHint, FROM_LABEL, GoalDistanceField, HubPreset, MechFields, TurretFields } from './FlywheelForms'
-import { loadFlywheelStyle, SHAPES, useFlywheelMechanism, useMoveSettings, usePersisted, useRpsLimit, useShotPlan, type MoveSettings } from './flywheelStore'
+import { loadFlywheelStyle, SHAPES, useFlywheelMechanism, useMoveSettings, useSanitized, useRpsLimit, useShotPlan, type MoveSettings } from './flywheelStore'
 import { t } from '../../core/lang'
 import { SERIES_STYLE } from '../../components/seriesStyle'
 
@@ -85,10 +85,10 @@ function ShotSim({
   setPlan: (p: ShotPlan) => void
   move?: { settings: MoveSettings; set: (m: MoveSettings) => void }
 }) {
-  const [brand, setBrand] = usePersisted<{ brand: 'phoenix' | 'rev' }>('flywheel-brand', { brand: 'phoenix' }, (v) => v.brand === 'phoenix' || v.brand === 'rev')
+  const [brand, setBrand] = useSanitized<{ brand: 'phoenix' | 'rev' }>('flywheel-brand', { brand: 'phoenix' }, (v) => v.brand === 'phoenix' || v.brand === 'rev')
   const { go } = useStore()
-  const [knobs, setKnobs] = usePersisted<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
-  const [spec, setSpec] = usePersisted<FlywheelSpec>('flywheel:spec', DEFAULT_FLYWHEEL_SPEC)
+  const [knobs, setKnobs] = useSanitized<FlywheelKnobs>('flywheel:knobs', DEFAULT_KNOBS)
+  const [spec, setSpec] = useSanitized<FlywheelSpec>('flywheel:spec', DEFAULT_FLYWHEEL_SPEC)
   const ff = useMemo(() => computeFlywheelFeedforward(mech), [mech])
   const theory = useMemo(() => theoryGains(ff), [ff])
   const [limit, setLimit] = useRpsLimit()
@@ -96,7 +96,7 @@ function ShotSim({
   // 有填轉速上限，而且比馬達做得到的低
   const userLimit = limit.rps > 0 && limit.rps * TAU < ff.freeSpeed * DEFAULT_LIMIT_FRACTION
   // null = 跟著理論值（改機構資料時一起變）
-  const [custom, setCustom] = usePersisted<{ gains: FlywheelGains | null }>('flywheel:gains', { gains: null }, (g) => g.gains === null || GAIN_ROWS.every(({ k }) => Number.isFinite(g.gains?.[k])))
+  const [custom, setCustom] = useSanitized<{ gains: FlywheelGains | null }>('flywheel:gains', { gains: null }, (g) => g.gains === null || GAIN_ROWS.every(({ k }) => Number.isFinite(g.gains?.[k])))
   const gains = custom.gains ?? theory
   const [preset, setPreset] = useState<string | null>(null)
 

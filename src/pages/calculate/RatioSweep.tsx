@@ -1,19 +1,18 @@
 import { useMemo, useState } from 'react'
-import { useStore } from '../../app/store'
+import { useElevator } from '../../app/elevatorStore'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { ratioPoint, sweepRatios } from '../../core/ratioSweep'
 import { shareUrl } from '../../core/shareLink'
 import { t } from '../../core/lang'
+import { fixed as f } from '../../core/format'
 
 /**
  * 1F「齒比怎麼選」：其他機構資料不變只換齒比，畫跑完全程的時間和停在半空的電流。
  * 參考 ReCalc 的線性機構計算機；數字用這個網站自己的前饋模型，跟參數卡一致。
  */
 
-const f = (v: number, d: number) => (Number.isFinite(v) ? v.toFixed(d) : '—')
-
 export function RatioSweep() {
-  const { mechanism, setMechanism } = useStore()
+  const { mechanism, setMechanism } = useElevator()
   const G = mechanism.gearRatio
   const { points, fastest, here } = useMemo(() => {
     const min = Math.max(1, Math.min(3, G * 0.5))
@@ -94,7 +93,7 @@ export function RatioSweep() {
 
 /** 把機構資料放進網址，傳給隊友打開就是同一台電梯 */
 export function ShareMechanism() {
-  const { mechanism } = useStore()
+  const { mechanism } = useElevator()
   const [url, setUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const make = () => {

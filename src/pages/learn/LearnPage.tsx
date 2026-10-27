@@ -1,6 +1,7 @@
 import { MeasureKsKg } from './MeasureKsKg'
 import { Unit4 } from './Unit4'
-import { UNIT0_ITEMS, useStore } from '../../app/store'
+import { useStore } from '../../app/store'
+import { UNIT0_ITEMS, useElevator } from '../../app/elevatorStore'
 import { Unit1 } from './Unit1'
 import { Unit2 } from './Unit2'
 import { Unit3 } from './Unit3'
@@ -61,7 +62,8 @@ const UNIT0: { title: string; items: string[] }[] = t(
 )
 
 export function LearnPage() {
-  const { unit0, setUnit0, lessonsDone, mechanism } = useStore()
+  const { lessonsDone } = useStore()
+  const { unit0, setUnit0, mechanism } = useElevator()
   const done0 = unit0.filter(Boolean).length
   const unlocked = done0 === UNIT0_ITEMS
 

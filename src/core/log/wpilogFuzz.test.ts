@@ -4,7 +4,7 @@ import { makeSampleLog } from './sampleLog'
 import { WpilogFormatError } from './wpilog'
 import { computeFeedforward } from '../feedforward'
 import { DEFAULT_MECHANISM } from '../../schema/parameterSet'
-import { buildTheory } from '../../app/store'
+import { buildTheory } from '../../app/elevatorStore'
 const mech = DEFAULT_MECHANISM; const ff0 = computeFeedforward(mech); const th = buildTheory(mech, ff0, 0.5)
 
 describe('wpilog 損毀檔案', () => {

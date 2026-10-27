@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildTheory } from '../../app/store'
+import { buildTheory } from '../../app/elevatorStore'
 import { computeArmFeedforward } from '../../core/arm/feedforward'
 import { convert, convertArm } from '../../core/codegen'
 import { computeFeedforward } from '../../core/feedforward'

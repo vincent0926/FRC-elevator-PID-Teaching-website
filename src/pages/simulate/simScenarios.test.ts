@@ -1,6 +1,6 @@
 import type { AntiWindup } from '../../core/controller/slot0'
 import { describe, expect, it } from 'vitest'
-import { buildTheory } from '../../app/store'
+import { buildTheory } from '../../app/elevatorStore'
 import { CONTROL_PERIOD } from '../../core/controller/slot0'
 import { computeFeedforward } from '../../core/feedforward'
 import { simulate, type SimResult } from '../../core/physics/simulate'

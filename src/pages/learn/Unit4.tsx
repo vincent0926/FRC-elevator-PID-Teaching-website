@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { buildTheory, useStore } from '../../app/store'
+import { useStore } from '../../app/store'
+import { buildTheory, useElevator } from '../../app/elevatorStore'
 import { computeFeedforward } from '../../core/feedforward'
 import { DEFAULT_MECHANISM } from '../../schema/parameterSet'
 import { Chart, type ChartSeries } from '../../components/Chart'
@@ -45,7 +46,8 @@ export function Multi({ options, value, onChange, disabled }: { options: Option[
 }
 
 export function Unit4() {
-  const { mechanism, ff, theory, lessonsDone, markLesson } = useStore()
+  const { lessonsDone, markLesson } = useStore()
+  const { mechanism, ff, theory } = useElevator()
   const [idx, setIdx] = useState(() => Math.floor(Math.random() * CASES.length))
   const [a, setA] = useState<Answers>(EMPTY)
   const [submitted, setSubmitted] = useState(false)

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../../app/store'
+import { useElevator } from '../../app/elevatorStore'
 import { NumberField } from '../../components/NumberField'
 import { compareSysId, measuredParameterSet, sysIdToSi, type FfGains, type SysIdUnits } from '../../core/analysis/sysid'
 import { metersPerRotation } from '../../core/units'
@@ -17,7 +18,8 @@ const UNIT: Record<keyof FfGains, Record<SysIdUnits, string>> = {
 const LEVEL_TEXT = t({ ok: '正常', warn: '差有點多', bad: '差很多' }, { ok: 'Normal', warn: 'Somewhat off', bad: 'Far off' })
 
 export function SysIdCompare() {
-  const { mechanism, ff, theory, setCustom, setSimSource, go } = useStore()
+  const { go } = useStore()
+  const { mechanism, ff, theory, setCustom, setSimSource } = useElevator()
   const [units, setUnits] = useState<SysIdUnits>('meters')
   const [raw, setRaw] = useState<FfGains>({ kS: 0, kG: 0, kV: 0, kA: 0 })
   const mpr = metersPerRotation(mechanism.drumRadius)
