@@ -23,14 +23,26 @@ import { ArmLessonsPage, ElevatorLessonsPage, FlywheelLessonsPage } from './page
 export default function App() {
   const { track } = useStore()
   const [splash, setSplash] = useState(() => loadSession('splashSeen') !== '1')
+  const [fromSplash, setFromSplash] = useState(false)
   // 剛從選機構進來才放電梯門滑開；重新整理、深層連結直接進樓層就不放（決策 147）
   const [prevTrack, setPrevTrack] = useState(track)
   const [entered, setEntered] = useState(false)
   if (prevTrack !== track) {
     setPrevTrack(track)
+    setFromSplash(false)
     setEntered(prevTrack === null && track !== null)
   }
-  if (!track) return splash ? <Splash onStart={() => setSplash(false)} /> : <Chooser />
+  if (!track)
+    return splash ? (
+      <Splash
+        onStart={() => {
+          setSplash(false)
+          setFromSplash(true)
+        }}
+      />
+    ) : (
+      <Chooser fromSplash={fromSplash} />
+    )
   return (
     <>
       {entered && <Doors />}
