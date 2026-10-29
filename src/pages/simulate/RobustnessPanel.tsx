@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Chart } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
+import { Fold } from '../../components/Fold'
 import type { FeedforwardResult } from '../../core/feedforward'
 import { DEFAULT_RANGES, type RobustRanges, type RobustResult } from '../../core/physics/robustness'
 import type { SimInput } from '../../core/physics/simulate'
@@ -48,8 +49,11 @@ export function RobustnessPanel({ base, mechanism, ff, realistic, spec }: { base
   const pct = result ? Math.round(result.passRate * 100) : 0
 
   return (
-    <div className="panel" style={{ marginTop: 20 }}>
-      <h2>{t('穩健性測試', 'Robustness test')}</h2>
+    <Fold
+      style={{ marginTop: 20 }}
+      title={t('穩健性測試', 'Robustness test')}
+      summary={result ? t(`上次結果：${pct}% 達標`, `Last result: ${pct}% pass`) : t('電池、負載、摩擦變了還能不能達標？', 'Still passing when battery, load and friction change?')}
+    >
       <p className="small muted" style={{ marginTop: 0 }}>
         {t('電池、負載、摩擦每天都不一樣。在下面的範圍內隨機抽樣跑很多次，看這組參數有幾成還達標。', 'Battery, load and friction change from day to day. Run many random samples within the ranges below and see what fraction still passes with these gains.')}
         {!realistic && t(' 目前是理想模型，建議先切到真實模型（有電流限制和電池壓降）再測。', ' You’re on the ideal model; switch to the realistic model (with current limits and battery sag) before testing.')}
@@ -119,6 +123,6 @@ export function RobustnessPanel({ base, mechanism, ff, realistic, spec }: { base
           </p>
         </>
       )}
-    </div>
+    </Fold>
   )
 }
