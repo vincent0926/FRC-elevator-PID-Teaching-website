@@ -1,3 +1,4 @@
+import { Fold } from '../../components/Fold'
 import { useMemo, useState } from 'react'
 import { useStore } from '../../app/store'
 import { useElevator, type Calibration } from '../../app/elevatorStore'
@@ -68,8 +69,11 @@ export function CalibrationPanel({ onApply }: { onApply: (c: Calibration) => voi
     : []
 
   return (
-    <div className="panel" style={{ marginTop: 20 }}>
-      <h2>{t('模型校正', 'Model calibration')}</h2>
+    <Fold
+      style={{ marginTop: 20 }}
+      title={t('模型校正', 'Model calibration')}
+      summary={t('用實機日誌讓模擬更接近真的機器人', 'Use a robot log to make the sim closer to the real robot')}
+    >
       <p className="small muted" style={{ marginTop: 0 }}>
         {t(
           <>
@@ -181,6 +185,6 @@ export function CalibrationPanel({ onApply }: { onApply: (c: Calibration) => voi
           </div>
         </>
       )}
-    </div>
+    </Fold>
   )
 }

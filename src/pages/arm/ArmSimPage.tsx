@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ApproxNote } from '../../components/ApproxNote'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
+import { Fold } from '../../components/Fold'
 import { TuneSliders } from '../../components/TuneSliders'
 import { alignedFromSim } from '../../core/log/sampleLog'
 import type { TuneKey } from '../simulate/tuneRange'
@@ -354,14 +355,20 @@ export function ArmSimPage() {
       )}
 
       <div className="grid2" style={{ marginTop: 20 }}>
-        <div className="panel">
-          <h2>{t('進階設定', 'Advanced settings')}</h2>
+        <Fold
+          open={src === 'custom'}
+          title={t('進階設定', 'Advanced settings')}
+          summary={t(`積分防飽和：${antiWindup.mode === 'none' ? '沒有' : '有'}`, `Anti-windup: ${antiWindup.mode === 'none' ? 'none' : 'on'}`)}
+        >
           {src === 'custom' && ps.note && <p className="small muted">{t('自訂參數來源：', 'Custom gains source: ')}{ps.note}</p>}
           <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />
-        </div>
+        </Fold>
 
-        <div className="panel">
-          <h2>{t('受控體（模擬的手臂）', 'Plant (the simulated arm)')}</h2>
+        <Fold
+          open={scenario !== null}
+          title={t('受控體（模擬的手臂）', 'Plant (the simulated arm)')}
+          summary={t(`${knobs.realistic ? '真實' : '理想'}模型，${location === 'talonfx' ? 'TalonFX 1 kHz' : 'roboRIO 50 Hz'}`, `${knobs.realistic ? 'Realistic' : 'Ideal'} model, ${location === 'talonfx' ? 'TalonFX 1 kHz' : 'roboRIO 50 Hz'}`)}
+        >
           <div className="seg" role="group" aria-label={t('模型', 'Model')}>
             <button type="button" aria-pressed={!knobs.realistic} onClick={() => setK({ realistic: false })}>
               {t('理想模型', 'Ideal model')}
@@ -443,7 +450,7 @@ export function ArmSimPage() {
               hint={t('0 = 零點設在水平（正確）', '0 = zero at horizontal (correct)')}
             />
           </div>
-        </div>
+        </Fold>
       </div>
 
       <ApproxNote

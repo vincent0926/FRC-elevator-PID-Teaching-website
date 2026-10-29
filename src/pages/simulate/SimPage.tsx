@@ -24,6 +24,7 @@ import { tuningStepParams } from './tuningSteps'
 import { MetricsTable } from './Metrics'
 import { SpecEditor } from './SpecEditor'
 import { ElevatorView } from './ElevatorView'
+import { Fold } from '../../components/Fold'
 import { PlaybackBar, usePlayback } from './MiniShaft'
 import { RobustnessPanel } from './RobustnessPanel'
 import { buildSimInput, DEFAULT_KNOBS, TOGGLES, type PlantKnobs } from './plantKnobs'
@@ -460,8 +461,11 @@ export function SimPage() {
       )}
 
       <div className="grid2" style={{ marginTop: 20 }}>
-        <div className="panel">
-          <h2>{source === 'custom' ? t('自訂參數：Slot 1 與基準', 'Custom gains: Slot 1 and baseline') : t('進階設定', 'Advanced settings')}</h2>
+        <Fold
+          open={source === 'custom'}
+          title={source === 'custom' ? t('自訂參數：Slot 1 與基準', 'Custom gains: Slot 1 and baseline') : t('進階設定', 'Advanced settings')}
+          summary={t(`積分防飽和：${antiWindup.mode === 'none' ? '沒有' : '有'}${source === 'custom' ? '，可改 Slot 1 與基準' : ''}`, `Anti-windup: ${antiWindup.mode === 'none' ? 'none' : 'on'}${source === 'custom' ? '; Slot 1 and baseline editable' : ''}`)}
+        >
           {source === 'custom' && custom && (
             <CustomEditor
               custom={custom}
@@ -483,13 +487,12 @@ export function SimPage() {
             </p>
           )}
           {!challenge && <AntiWindupEditor value={antiWindup} onChange={setAntiWindup} kI={ps.feedback.kI} />}
-        </div>
+        </Fold>
 
         {challenge ? (
-          <div className="panel">
-            <h2>{t('受控體（隱藏中）', 'Plant (hidden)')}</h2>
+          <Fold open title={t('受控體（隱藏中）', 'Plant (hidden)')} summary={t('挑戰模式', 'Challenge mode')}>
             <p className="small muted">{t('挑戰模式：這台電梯跟理論值不一樣，但不告訴你哪裡不一樣。真實模型（摩擦、電流限制、電池壓降），TalonFX 1 kHz。挑戰結束後會公布答案。', 'Challenge mode: this elevator differs from theory, but you aren’t told how. Realistic model (friction, current limits, battery sag), TalonFX 1 kHz. The answer is revealed when the challenge ends.')}</p>
-          </div>
+          </Fold>
         ) : (
         <PlantPanel
           statorDefault={mechanism.statorCurrentLimit}
@@ -507,6 +510,7 @@ export function SimPage() {
           }}
           setPeriodOverride={setPeriodOverride}
           continuous={mechanism.rig === 'continuous'}
+          open={scenario !== null}
         />
         )}
       </div>
@@ -567,6 +571,7 @@ function PlantPanel({
   setLocation,
   setPeriodOverride,
   continuous,
+  open,
 }: {
   statorDefault: number
   travel: number
@@ -580,11 +585,15 @@ function PlantPanel({
   setLocation: (l: ControllerLocation) => void
   setPeriodOverride: (v: number) => void
   continuous: boolean
+  open: boolean
 }) {
   const set = (patch: Partial<PlantKnobs>) => setKnobs({ ...knobs, ...patch, calibrated: false })
   return (
-    <div className="panel">
-      <h2>{t('受控體（模擬的電梯）', 'Plant (the simulated elevator)')}</h2>
+    <Fold
+      open={open}
+      title={t('受控體（模擬的電梯）', 'Plant (the simulated elevator)')}
+      summary={t(`${knobs.calibrated ? '已校正' : knobs.realistic ? '真實' : '理想'}模型，${location === 'talonfx' ? 'TalonFX 1 kHz' : 'roboRIO 50 Hz'}`, `${knobs.calibrated ? 'Calibrated' : knobs.realistic ? 'Realistic' : 'Ideal'} model, ${location === 'talonfx' ? 'TalonFX 1 kHz' : 'roboRIO 50 Hz'}`)}
+    >
       <div className="seg" role="group" aria-label={t('模型', 'Model')}>
         <button type="button" aria-pressed={!knobs.realistic} onClick={() => set({ realistic: false })}>
           {t('理想模型', 'Ideal model')}
@@ -710,7 +719,7 @@ function PlantPanel({
           {t('重置受控體', 'Reset plant')}
         </button>
       </div>
-    </div>
+    </Fold>
   )
 }
 
