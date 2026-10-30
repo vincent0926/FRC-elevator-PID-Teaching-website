@@ -3,6 +3,7 @@ import { ApproxNote } from '../../components/ApproxNote'
 import { Chart, type ChartSeries } from '../../components/Chart'
 import { NumberField } from '../../components/NumberField'
 import { Fold } from '../../components/Fold'
+import { useSlow } from '../../components/useSlow'
 import { TuneSliders } from '../../components/TuneSliders'
 import { alignedFromSim } from '../../core/log/sampleLog'
 import type { TuneKey } from '../simulate/tuneRange'
@@ -71,6 +72,7 @@ export function ArmSimPage() {
   const [resultGravity, setResultGravity] = useState<GravityType>('armCosine')
   const [other, setOther] = useState<SimResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [doneFor, setDoneFor] = useState<{ setup: unknown; ps: unknown } | null>(null)
   const pb = usePlayback(result)
 
   const src = source === 'custom' && custom ? 'custom' : 'theory'
@@ -88,6 +90,7 @@ export function ArmSimPage() {
       .then((r) => {
         if (!alive) return
         setResult(r)
+        setDoneFor({ setup, ps })
         setResultInfo({ params: ps, location: setup.location, label: src === 'custom' ? t('自訂', 'Custom') : t('理論值', 'Theory') })
         setResultGravity(setup.gravityType)
         setError(null)
@@ -97,6 +100,9 @@ export function ArmSimPage() {
       alive = false
     }
   }, [setup, ps])
+  // 還在算：輸入變了但結果還是上一份。算超過 0.25 秒才顯示，拖滑桿時不會閃
+  const pending = !error && (!doneFor || doneFor.setup !== setup || doneFor.ps !== ps)
+  const slow = useSlow(pending ? ps : null)
 
   const showCompare = compare && src === 'custom'
   useEffect(() => {
@@ -314,9 +320,14 @@ export function ArmSimPage() {
       {error && <div className="warn">{t('模擬失敗：', 'Simulation failed: ')}{error}</div>}
       {gravityType === 'constant' && <div className="note">{t('重力型態是「常數 kG」：控制器不會乘 cos θ。程式裡對手臂一定要設 GravityType = Arm_Cosine。', 'Gravity type is “constant kG”: the controller won’t multiply by cos θ. For an arm, the code must always set GravityType = Arm_Cosine.')}</div>}
 
-      <div className="simwrap">
+      <div className={slow ? 'simwrap busy' : 'simwrap'} aria-busy={slow}>
         <ArmView result={result} arm={arm} goal={safeGoal} idx={pb.idx} zeroOffset={knobs.zeroOffset} />
         <div className="panel stack">
+          {slow && (
+            <div className="small calc-busy" role="status">
+              {t('計算中…下面的圖還是上一份的結果', 'Computing… the charts below are still the previous result')}
+            </div>
+          )}
           <PlaybackBar result={result} pb={pb} unit="rad" />
           <TuneSliders
             mechanism="arm"

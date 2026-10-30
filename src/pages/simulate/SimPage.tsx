@@ -25,6 +25,7 @@ import { MetricsTable } from './Metrics'
 import { SpecEditor } from './SpecEditor'
 import { ElevatorView } from './ElevatorView'
 import { Fold } from '../../components/Fold'
+import { useSlow } from '../../components/useSlow'
 import { PlaybackBar, usePlayback } from './MiniShaft'
 import { RobustnessPanel } from './RobustnessPanel'
 import { buildSimInput, DEFAULT_KNOBS, TOGGLES, type PlantKnobs } from './plantKnobs'
@@ -96,6 +97,8 @@ export function SimPage() {
   const [resultInfo, setResultInfo] = useState<{ params: ParameterSet; location: ControllerLocation; label: string; challenge: boolean } | null>(null)
   const [otherRaw, setOther] = useState<SimResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // 結果是用哪一份輸入算的：跟現在的輸入不同就是還在算
+  const [doneFor, setDoneFor] = useState<{ setup: unknown; ps: unknown } | null>(null)
   const [scenario, setScenario] = useState<SimScenario | null>(null)
   const [challenge, setChallenge] = useState<(ChallengeState & { submitted: ParameterSet }) | null>(null)
   // 送出後等模擬結果出來才判斷勝負
@@ -127,6 +130,7 @@ export function SimPage() {
       .then((r) => {
         if (!alive) return
         setResult(r)
+        setDoneFor({ setup, ps })
         setResultInfo({ params: ps, location, label: SOURCES.find((s) => s.id === source)!.label, challenge: !!challenge })
         setError(null)
         if (judging.current) {
@@ -139,6 +143,9 @@ export function SimPage() {
       alive = false
     }
   }, [setup, ps])
+  // 還在算：輸入變了但結果還是上一份。算超過 0.25 秒才顯示，拖滑桿時不會閃
+  const pending = !error && (!doneFor || doneFor.setup !== setup || doneFor.ps !== ps)
+  const slow = useSlow(pending ? ps : null)
 
   // 從滑桿切到自訂時存下的那組（例如調參建議值）優先當疊圖對象（挑戰模式不疊）
   const libCompare = challenge ? null : compareSet
@@ -416,9 +423,14 @@ export function SimPage() {
         </div>
       )}
 
-      <div className="simwrap">
+      <div className={slow ? 'simwrap busy' : 'simwrap'} aria-busy={slow}>
         <ElevatorView result={result} mechanism={mechanism} goal={safeGoal} idx={pb.idx} />
         <div className="panel stack">
+          {slow && (
+            <div className="small calc-busy" role="status">
+              {t('計算中…下面的圖還是上一份的結果', 'Computing… the charts below are still the previous result')}
+            </div>
+          )}
           <PlaybackBar result={result} pb={pb} />
           {!challenge && (
             <TuneSliders
