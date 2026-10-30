@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
 import { t } from '../core/lang'
+import { lineCues } from './seriesStyle'
 
 /**
  * uPlot 包一層。顏色用 CSS 變數名稱，主題切換時重畫。
@@ -71,6 +72,9 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
       const ink3 = cssVar('--ink-3')
       const grid = cssVar('--line-2')
       const bandColor = cssVar('--mark')
+      const cues = lineCues(series)
+      // 第二條以後的實線每隔一段畫一個圓點（等距挑 8 個資料點）
+      const markerIdx = () => Array.from({ length: 8 }, (_, i) => Math.round(((i + 0.5) * (x.length - 1)) / 8))
       // 每個軸各自一份：uPlot 會改寫傳進去的 grid、ticks 物件，共用會讓 y 軸不畫刻度
       const axis = (): uPlot.Axis => ({ stroke: ink3, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid, width: 1 }, font: '11px ' + cssVar('--font') })
       const opts: uPlot.Options = {
@@ -86,14 +90,16 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
         ],
         series: [
           { label: xName },
-          ...series.map((s) => ({
+          ...series.map((s, i) => ({
             label: s.label,
             stroke: cssVar(s.color),
             width: s.width ?? 1.75,
-            dash: s.dash ? [6, 4] : undefined,
+            dash: cues[i].dash,
             // 明確傳 undefined 會蓋掉 uPlot 預設的 'y'，y 軸就畫不出刻度
             ...(s.scale ? { scale: s.scale } : {}),
-            points: { show: false },
+            points: cues[i].marker
+              ? { show: true, size: 6, width: 1.5, stroke: cssVar(s.color), fill: cssVar('--panel'), space: 0, filter: markerIdx }
+              : { show: false },
           })),
         ],
         hooks: bands?.length

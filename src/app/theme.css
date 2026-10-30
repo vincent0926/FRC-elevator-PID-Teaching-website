@@ -350,6 +350,8 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .seg button[aria-pressed="true"], .seg button[aria-pressed="true"]:hover { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: var(--shadow), 0 0 0 1px var(--line-2) }
 .seg button:disabled { color: var(--ink-3); cursor: not-allowed }
 .simwrap { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px }
+.simwrap.busy .uplot { opacity: .5 }
+.calc-busy { color: var(--ink-2); font-weight: 600 }
 .mini-shaft { position: relative; background: var(--panel-2); border: 1px solid var(--line-2); border-radius: var(--radius); height: 100%; min-height: 300px }
 .mini-shaft .tgt, .mini-shaft .cab { position: absolute; left: 16px; right: 30px; height: 26px; border-radius: 3px }
 .mini-shaft .tgt { border: 1.5px dashed var(--steel) }
