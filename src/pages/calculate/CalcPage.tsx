@@ -100,7 +100,11 @@ export function CalcPage() {
           </div>
           <p className="small muted" style={{ margin: '8px 0 0' }}>
             {t('參數名稱旁的小字是它怎麼來的：算、算＋量、量、調、限制（游標停在上面看說明）。', 'The small tag next to each gain says where it comes from: calc, calc + measure, measure, tune, limit (hover for details). ')}
-            <button className="linkbtn" type="button" onClick={() => document.getElementById('param-sources')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>
+            <button className="linkbtn" type="button" onClick={() => {
+                const el = document.getElementById('param-sources')
+                if (el instanceof HTMLDetailsElement) el.open = true
+                el?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+              }}>
               {t('看對照表', 'See the table')}
             </button>
           </p>

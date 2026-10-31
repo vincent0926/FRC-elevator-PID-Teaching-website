@@ -102,20 +102,28 @@ export function MetricsTable({
           </>
         )}
       </p>
-      {moves.map((m, i) =>
-        diagnoseMove(m, spec, unit).length ? (
+      {moves.map((m, i) => {
+        const diag = diagnoseMove(m, spec, unit)
+        if (!diag.length) return null
+        // 一次只攤開第一項，其餘收起來，免得兩次移動各五條擠成一整面字
+        const item = (d: (typeof diag)[number]) => (
+          <li key={d.key}>
+            <b>{d.label}</b> {d.actual}{t('（標準 ≤ ', ' (limit ≤ ')}{d.limit}{t('）→ 可能：', ') → likely: ')}{d.cause}{t(' → 先試：', ' → try first: ')}{d.next}
+          </li>
+        )
+        return (
           <div key={i} className="move-diag">
             <b className="small">{moveLabel(m, i)}</b>
-            <ul className="small">
-              {diagnoseMove(m, spec, unit).map((d) => (
-                <li key={d.key}>
-                  <b>{d.label}</b> {d.actual}{t('（標準 ≤ ', ' (limit ≤ ')}{d.limit}{t('）→ 可能：', ') → likely: ')}{d.cause}{t(' → 先試：', ' → try first: ')}{d.next}
-                </li>
-              ))}
-            </ul>
+            <ul className="small">{item(diag[0])}</ul>
+            {diag.length > 1 && (
+              <details className="small">
+                <summary>{t(`還有 ${diag.length - 1} 項沒過`, `${diag.length - 1} more failed`)}</summary>
+                <ul>{diag.slice(1).map(item)}</ul>
+              </details>
+            )}
           </div>
-        ) : null,
-      )}
+        )
+      })}
       <p className="small muted" style={{ margin: '10px 0 0' }}>
         {t('達標標準（教學用，不是 FRC 官方標準）：', 'Pass criteria (for teaching, not an official FRC standard): ')}{describeSpec(spec, unit)}{t('。', '.')}
       </p>

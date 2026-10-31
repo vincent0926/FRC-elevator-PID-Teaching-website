@@ -1,3 +1,4 @@
+import { Fold } from '../../components/Fold'
 import { Workflow } from '../../components/Workflow'
 import { INPUT_ROWS, KIND_INFO, PARAM_ROWS, type SourceKind, type SourceRow } from './paramSources'
 import { t } from '../../core/lang'
@@ -48,8 +49,11 @@ function Table({ rows, first }: { rows: SourceRow[]; first: string }) {
 
 export function ParamSources() {
   return (
-    <div className="panel" id="param-sources">
-      <h2>{t('哪些參數可以算、哪些一定要量', 'Which gains can be calculated and which must be measured')}</h2>
+    <Fold
+      id="param-sources"
+      title={t('哪些參數可以算、哪些一定要量', 'Which gains can be calculated and which must be measured')}
+      summary={t('kV 相信公式、kS 一定要量、kP／kI／kD 上機調。完整對照表點開看。', 'Trust the formula for kV, always measure kS, tune kP/kI/kD on the robot. Open for the full table.')}
+    >
       <p className="small" style={{ marginTop: 0 }}>
         {t(
           <>
@@ -93,6 +97,6 @@ export function ParamSources() {
           </>,
         )}
       </div>
-    </div>
+    </Fold>
   )
 }
