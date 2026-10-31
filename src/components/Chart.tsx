@@ -38,6 +38,18 @@ export interface ChartProps {
   cursorX?: number | null
 }
 
+/** 圖的說明只先顯示第一句，其餘點開才看（一頁五張圖時不會變成一整面字） */
+function ChartNote({ note }: { note: string }) {
+  const m = /^(.+?(?:。|\.(?=\s)))\s*(.+)$/s.exec(note)
+  if (!m) return <p className="chart-note small muted">{note}</p>
+  return (
+    <details className="chart-note small muted">
+      <summary>{m[1]}</summary>
+      <span>{m[2]}</span>
+    </details>
+  )
+}
+
 /** uPlot 只認 null 為斷點，NaN 會弄壞 y 軸範圍 */
 function withGaps(v: ArrayLike<number>): ArrayLike<number | null> {
   for (let i = 0; i < v.length; i++) {
@@ -155,7 +167,7 @@ export function Chart({ title, x, series, height = 220, yLabel, syncKey, bands, 
   return (
     <figure className="chart-box" style={{ margin: 0 }}>
       {title && <figcaption className="chart-title">{title}</figcaption>}
-      {note && <p className="chart-note small muted">{note}</p>}
+      {note && <ChartNote note={note} />}
       <div ref={box} />
     </figure>
   )
