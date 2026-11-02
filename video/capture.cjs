@@ -34,6 +34,11 @@ const DEMO_FRAMES = 36
       const r = n.parentElement.getBoundingClientRect()
       return { x: r.x, y: r.y + scrollY, w: r.width, h: r.height }
     }, text)
+  // 進站、選機構有電梯門過場（約 1.5 秒），等門藏起來、卡片進場完再截圖
+  const settle = async () => {
+    await p.waitForSelector('.doors', { state: 'hidden', timeout: 10000 })
+    await p.waitForTimeout(1000)
+  }
   const floor = async (id) => {
     await p.click(`.floor[data-floor="${id}"]`)
     await p.waitForTimeout(1500)
@@ -43,10 +48,13 @@ const DEMO_FRAMES = 36
   await p.waitForTimeout(2500)
   await shot('splash')
   await p.click('.splash-go')
-  await p.waitForTimeout(800)
+  // 按「開始」後約 1.15 秒：電梯門關上、門上亮 9427（motion.ts 的 SPLASH_LEAVE_MS 是 1.5 秒）
+  await p.waitForTimeout(1150)
+  await shot('doors')
+  await settle()
   await shot('chooser')
   await p.getByText('進入電梯').click()
-  await p.waitForTimeout(1000)
+  await settle()
 
   // 1F
   await floor('calc')
@@ -116,11 +124,12 @@ const DEMO_FRAMES = 36
   // 射球飛輪：彈道
   await p.setViewportSize({ width: 1600, height: 900 })
   await p.click('.brand .theme-btn')
-  await p.waitForTimeout(800)
+  await settle()
   await p.getByText('進入射球飛輪').click()
-  await p.waitForTimeout(800)
+  await settle()
   await p.getByText('用彈道').click()
-  await p.waitForTimeout(2500)
+  await settle()
+  await p.waitForTimeout(1500)
   const s3 = await box('選一條軌跡')
   await clip('fly-traj', s3.x - 60, s3.y - 30, 900, 530)
 
