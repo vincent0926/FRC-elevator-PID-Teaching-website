@@ -6,6 +6,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { COURSE_URL, courseChapterUrl } from '../core/deepLink'
 import { t } from '../core/lang'
 import { PALETTES, loadPalette, setPalette, type Palette } from './palette'
+import { SiteFooter } from './SiteFooter'
 
 /** 井道導覽：樓層由下往上，車廂（強調色，預設黃色）停在目前頁面。 */
 
@@ -156,6 +157,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </span>
           </div>
           <ErrorBoundary resetKey={`${track}:${page}`}>{children}</ErrorBoundary>
+          <SiteFooter track={track} page={page} />
         </main>
       </div>
     </>

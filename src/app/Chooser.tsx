@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { saveFlywheelStyle } from '../pages/flywheel/flywheelStore'
+import { SiteFooter } from './SiteFooter'
+import { countEvent } from './telemetry'
 import { useStore, type Track } from './store'
 import { t } from '../core/lang'
 import { Doors } from './Doors'
@@ -151,6 +153,7 @@ function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
               onClick={() =>
                 pick(st.id, () => {
                   saveFlywheelStyle(st.id)
+                  countEvent(`flywheel-${st.id}`)
                   setTrack('flywheel', st.start)
                 })
               }
@@ -226,6 +229,7 @@ export function Chooser({ fromSplash = false }: { fromSplash?: boolean }) {
             'You’ll be asked every time you open the site; refreshing the same tab keeps your choice. Once inside, “Switch mechanism” in the left navigation switches at any time, and each mechanism’s data is saved separately.',
           )}
         </p>
+        <SiteFooter track={null} page="chooser" />
       </div>
     </div>
   )
