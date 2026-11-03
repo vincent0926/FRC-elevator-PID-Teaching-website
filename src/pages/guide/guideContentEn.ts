@@ -203,6 +203,10 @@ export function guideContentEn(track: Track): GuideContent {
         a: `Only in this browser on this computer (mechanism data, custom gains, lesson progress…). It’s gone if you switch computers or browsers or clear site data. The elevator and arm are saved separately and don’t affect each other.${arm ? '' : ' The elevator’s mechanism data can travel with you through the 1F “Share this elevator” link.'}`,
       },
       {
+        q: 'What does the site collect? Who do I tell about a problem?',
+        a: 'Nothing you type, no files and no logs are sent anywhere. The site only records, anonymously and without cookies, which mechanism and floor you open plus a few main actions; open “Anonymous usage stats” at the bottom of the page to read more or turn it off at any time. To report a problem or suggest something, use “Report a problem / suggest something” at the bottom of the page; the site version and the page you are on are filled in for you.',
+      },
+      {
         q: 'The page still looks old after an update?',
         a: 'The site is cached; press Ctrl+F5 to force a reload. On a phone, close the tab and open it again.',
       },

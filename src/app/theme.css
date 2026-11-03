@@ -619,6 +619,12 @@ details.chart-note > span { display: block; margin-top: 2px }
 /* 回課程網站：側欄一行、主內容上方一行（手機看不到側欄時也找得到） */
 .course-link { display: block; margin: 0 20px 12px; font-size: 12.5px; color: var(--shaft-ink-2); text-decoration: none }
 .course-link:hover { color: var(--shaft-ink); text-decoration: underline }
+/* 每一頁最下面：回報問題、匿名使用統計（決策 159、160） */
+.site-foot { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px }
+.site-foot-note { margin-right: auto }
+.site-foot-stats { flex-basis: 100% }
+.site-foot-stats summary { cursor: pointer; width: fit-content }
+.site-foot-stats p { max-width: 70ch; margin: 8px 0 }
 .course-back { display: inline-block; margin-bottom: 12px; font-size: 14px; font-weight: 600 }
 @media (max-width: 720px) { .track-mobile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px } }
 .arm-derived { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 12px 0 }

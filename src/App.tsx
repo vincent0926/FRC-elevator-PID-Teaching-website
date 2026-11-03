@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Chooser } from './app/Chooser'
 import { Splash } from './app/Splash'
 import { Doors } from './app/Doors'
 import { loadSession } from './storage/local'
 import { Shell } from './app/Shell'
 import { useStore } from './app/store'
+import { countView } from './app/telemetry'
 import { HomePage } from './pages/home/HomePage'
 import { CalcPage } from './pages/calculate/CalcPage'
 import { TuningPage } from './pages/tuning/TuningPage'
@@ -21,8 +22,13 @@ import { FlywheelCalcPage } from './pages/flywheel/FlywheelCalcPage'
 import { ArmLessonsPage, ElevatorLessonsPage, FlywheelLessonsPage } from './pages/lessons/LessonsPage'
 
 export default function App() {
-  const { track } = useStore()
+  const { track, page } = useStore()
   const [splash, setSplash] = useState(() => loadSession('splashSeen') !== '1')
+  // 匿名使用統計：進站畫面、選機構、每個機構的每一層（射球飛輪沒有的樓層算 1F，跟畫面一樣）
+  const viewPage = track === 'flywheel' && !['sim', 'calc', 'lessons'].includes(page) ? 'calc' : page
+  useEffect(() => {
+    countView(track, track ? viewPage : splash ? 'splash' : 'chooser')
+  }, [track, viewPage, splash])
   const [fromSplash, setFromSplash] = useState(false)
   // 剛從選機構進來才放電梯門滑開；重新整理、深層連結直接進樓層就不放（決策 147）
   const [prevTrack, setPrevTrack] = useState(track)

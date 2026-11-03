@@ -14,6 +14,7 @@ import { FieldMappingTable } from './FieldMappingTable'
 import { LogCharts } from './LogCharts'
 import { HelpLink } from '../../components/HelpLink'
 import { t } from '../../core/lang'
+import { countEvent } from '../../app/telemetry'
 
 /**
  * 2F 調參建議的共用流程（電梯、手臂共用，各機構的頁面只給文字、範例情境和診斷面板）。
@@ -114,6 +115,8 @@ export function TuningWorkspace<P>(props: TuningWorkspaceProps<P>) {
       if (my !== job.current) return
       const aligned = alignSeries(series, m)
       const checked = accept(aligned)
+      // 匿名統計只記「讀了範例還是自己的檔案」，不記檔名和內容
+      countEvent(file?.scenario ? '2f-read-sample' : '2f-read-file')
       props.onFileChecked?.(aligned, checked, name)
       setFieldMapping(m)
     } catch (e) {

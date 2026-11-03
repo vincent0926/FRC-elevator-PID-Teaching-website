@@ -3,6 +3,7 @@ import { loadSession, saveSession } from '../storage/local'
 import { isBoolRecord, usePersisted } from '../storage/usePersisted'
 import { SHARE_PARAM } from '../core/shareLink'
 import { hasDeepLink, parseDeepLink, stripDeepLink } from '../core/deepLink'
+import { countEvent } from './telemetry'
 
 /**
  * 全站共用狀態：選哪個機構、在哪一層樓、教學關卡、課程連結。
@@ -117,7 +118,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [go],
   )
 
-  const markLesson = useCallback((id: string) => setLessonsDone({ ...lessonsDone, [id]: true }), [lessonsDone, setLessonsDone])
+  const markLesson = useCallback(
+    (id: string) => {
+      if (!lessonsDone[id]) countEvent(`lesson-${id}`)
+      setLessonsDone({ ...lessonsDone, [id]: true })
+    },
+    [lessonsDone, setLessonsDone],
+  )
 
   const value = useMemo<Store>(
     () => ({ track, setTrack, lessonsDone, markLesson, page, go, openGuide, pendingScenario, openScenario, courseChapter, pendingSection, clearPendingSection }),
