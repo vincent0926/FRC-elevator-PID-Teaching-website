@@ -30,33 +30,21 @@ function usePick() {
   return { picked, closing, pick, cls }
 }
 
-const CHOICES: { id: Track; title: string; what: string; points: string[] }[] = [
+const CHOICES: { id: Track; title: string; what: string }[] = [
   {
     id: 'elevator',
     title: t('電梯', 'Elevator'),
     what: t('直線上下的機構：串級式、連續式都可以。', 'A mechanism that moves straight up and down: cascade or continuous rigging.'),
-    points: t(
-      ['重力固定：kG 是常數', '串級等效質量 Σmᵢkᵢ、Σmᵢkᵢ²', '1F～4F 完整：計算、日誌診斷、模擬、實機教學'],
-      ['Gravity is constant: kG is a single number', 'Cascade equivalent mass Σmᵢkᵢ, Σmᵢkᵢ²', 'Full 1F–4F: calculate, log diagnosis, simulate, real-robot lessons'],
-    ),
   },
   {
     id: 'arm',
     title: t('手臂', 'Arm'),
     what: t('繞一個轉軸轉動的單關節手臂。', 'A single-joint arm that rotates about one pivot.'),
-    points: t(
-      ['重力跟角度有關：kG·cos θ', '轉動慣量、重心距離', '1F～4F 完整：計算參數（內建編碼器或 CANcoder）、日誌診斷、模擬、實機教學'],
-      ['Gravity depends on angle: kG·cos θ', 'Moment of inertia, center-of-mass distance', 'Full 1F–4F: calculate gains (built-in encoder or CANcoder), log diagnosis, simulate, real-robot lessons'],
-    ),
   },
   {
     id: 'flywheel',
     title: t('射球飛輪', 'Flywheel shooter'),
-    what: t('控制轉速的射球機構：先轉到目標轉速，球打出去會掉速。', 'A speed-controlled shooter: spin up to the target speed, and it slows down each time a ball goes through.'),
-    points: t(
-      ['沒有重力：只有 kS、kV、kA', '速度控制（VelocityVoltage），單位就是 rps', '彈道：1F 選軌跡得到 RPS 和砲台角度 → 3F 連射', '客製化：直接連射模擬，參數自己設', '邊移動邊射：算補償，看邊開邊射進不進'],
-      ['No gravity: only kS, kV, kA', 'Velocity control (VelocityVoltage), units are rps', 'Ballistic: pick a trajectory in 1F to get RPS and turret angle → rapid fire in 3F', 'Custom: go straight to the rapid-fire sim and set everything yourself', 'Shoot on the move: compute the compensation and see if shots still go in while driving'],
-    ),
+    what: t('控制轉速的射球機構，球打出去會掉速。', 'A speed-controlled shooter that slows down with every shot.'),
   },
 ]
 
@@ -112,19 +100,19 @@ const FLYWHEEL_STYLES = [
   {
     id: 'ballistic',
     title: t('彈道', 'Ballistic'),
-    what: t('照步驟來：在 1F 填機構和球，給離目標多遠，看每個砲台角度要幾 RPS，選一條軌跡，再到 3F 連射模擬。', 'Step by step: in 1F enter the mechanism and ball, set the distance to the target, see how many RPS each turret angle needs, pick a trajectory, then run the rapid-fire sim in 3F.'),
+    what: t('1F 算轉速和砲台角度，再到 3F 連射。', 'Work out RPS and turret angle in 1F, then rapid-fire in 3F.'),
     start: 'calc',
   },
   {
     id: 'custom',
     title: t('客製化', 'Custom'),
-    what: t('直接到 3F 連射模擬：機構、砲台角度、RPS、發數、間隔、kP 全部自己設，看轉速撐不撐得住、球進不進。', 'Go straight to the 3F rapid-fire sim: set the mechanism, turret angle, RPS, ball count, interval and kP yourself, and see whether the speed holds up and the balls go in.'),
+    what: t('直接到 3F 連射模擬，參數自己設。', 'Go straight to the 3F rapid-fire sim and set everything yourself.'),
     start: 'sim',
   },
   {
     id: 'move',
     title: t('邊移動邊射', 'Shoot on the move'),
-    what: t('Shoot on the move：機器人邊開邊射，球會帶著機器人的速度。1F 算出要幾 RPS、砲台角度、底盤偏幾度，3F 看有補償和沒補償差多少。', 'The robot shoots while driving, so the ball carries the robot’s velocity. 1F works out the RPS, turret angle and how far to turn the chassis; 3F shows the difference with and without compensation.'),
+    what: t('機器人邊開邊射，算出要怎麼補償。', 'Shoot while driving and work out the compensation.'),
     start: 'calc',
   },
 ] as const
@@ -166,9 +154,6 @@ function FlywheelStyleDialog({ onClose }: { onClose: () => void }) {
             </button>
           ))}
         </div>
-        <p className="small muted" style={{ margin: '10px 0 0' }}>
-          {t('三種用同一份機構和射球資料；要換的話，左邊導覽的「換機構」再選一次。', 'All three share the same mechanism and ball data. To switch, use “Switch mechanism” in the left navigation and choose again.')}
-        </p>
         <button type="button" className="btn small" onClick={onClose}>
           {t('回去選機構', 'Back to mechanisms')}
         </button>
@@ -187,16 +172,8 @@ export function Chooser({ fromSplash = false }: { fromSplash?: boolean }) {
     <div className="chooser">
       <Doors closing={closing} sign={fromSplash && !closing} />
       <div className="chooser-in">
-        <p className="small muted" style={{ margin: 0 }}>
-          {t('FRC 9427 前饋與 PID 學習', 'FRC 9427 feedforward & PID learning')}
-        </p>
         <h1>{t('你要調哪一種機構？', 'Which mechanism are you tuning?')}</h1>
-        <p className="lead">
-          {t(
-            '電梯和手臂是位置控制，調參流程一樣（理論值 → 模擬 → 上機錄日誌 → 調參），差在重力怎麼算。射球飛輪是速度控制，目前有計算和模擬。',
-            'The elevator and arm use position control and share the same tuning flow (theory → simulation → log on the robot → tune); they differ in how gravity is handled. The flywheel shooter uses velocity control and currently has calculation and simulation.',
-          )}
-        </p>
+        <p className="lead">{t('電梯、手臂是位置控制，射球飛輪是速度控制。', 'The elevator and arm use position control; the flywheel shooter uses velocity control.')}</p>
         <div className="chooser-cards">
           {CHOICES.map((c) => {
             const Icon = ICONS[c.id]
@@ -210,11 +187,6 @@ export function Chooser({ fromSplash = false }: { fromSplash?: boolean }) {
               <Icon />
               <b>{c.title}</b>
               <span className="small">{c.what}</span>
-              <ul className="small">
-                {c.points.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
               <span className="btn primary small" aria-hidden="true">
                 {t(`進入${c.title}`, `Open ${c.title}`)}
               </span>
@@ -223,12 +195,6 @@ export function Chooser({ fromSplash = false }: { fromSplash?: boolean }) {
           })}
         </div>
         {fwOpen && <FlywheelStyleDialog onClose={() => setFwOpen(false)} />}
-        <p className="small muted">
-          {t(
-            '每次打開網站都會先問；同一個分頁重新整理不用重選。進去之後，左邊導覽的「換機構」可以隨時切換，每個機構的資料分開存。',
-            'You’ll be asked every time you open the site; refreshing the same tab keeps your choice. Once inside, “Switch mechanism” in the left navigation switches at any time, and each mechanism’s data is saved separately.',
-          )}
-        </p>
         <SiteFooter track={null} page="chooser" />
       </div>
     </div>
