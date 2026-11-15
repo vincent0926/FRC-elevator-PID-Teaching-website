@@ -201,15 +201,18 @@ a { color: var(--blue); text-underline-offset: 3px; text-decoration-thickness: 1
 .app { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh }
 
 /* 井道導覽 */
+/* 樓層高度：螢幕矮（筆電、瀏覽器放大）時縮小，側欄底部的版本、配色、深色才不會被擠出畫面；再不夠就讓側欄自己捲 */
+.shaft { --floor-h: 58px; overflow-y: auto; overscroll-behavior: contain }
+@media (max-height: 860px) { .shaft { --floor-h: 48px } }
+@media (max-height: 720px) { .shaft { --floor-h: 40px } }
 .shaft { background: linear-gradient(180deg, var(--shaft) 0%, var(--shaft-2) 100%); color: var(--shaft-ink); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 22px 0 18px; box-shadow: inset -1px 0 0 var(--shaft-line) }
 .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--shaft-line) }
 .brand b { display: flex; align-items: center; gap: 10px; font-size: 16.5px; letter-spacing: .02em }
 .brand b::before { content: ""; flex: none; width: 10px; height: 22px; border-radius: 3px; background: linear-gradient(180deg, var(--yellow), var(--yellow-2)); box-shadow: 0 0 12px var(--accent-glow) }
-.brand span { display: block; margin-top: 2px; font-size: 12.5px; color: var(--shaft-ink-2) }
 .floors { position: relative; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 18px 0 6px }
 .rail { position: absolute; left: 25px; top: 18px; bottom: 6px; width: 20px; border-left: 1px solid var(--shaft-line); border-right: 1px solid var(--shaft-line); -webkit-mask-image: linear-gradient(to top, black 55%, transparent); mask-image: linear-gradient(to top, black 55%, transparent) }
-.car { position: absolute; left: 28px; width: 14px; height: 36px; border-radius: 4px; background: linear-gradient(90deg, transparent calc(50% - .5px), color-mix(in srgb, var(--yellow-ink) 35%, transparent) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)), linear-gradient(180deg, var(--yellow), var(--yellow-2)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--yellow) 45%, transparent), 0 0 16px var(--accent-glow); transition: transform .45s cubic-bezier(.45, .05, .25, 1); bottom: 17px; z-index: 1 }
-.floor { position: relative; display: flex; align-items: center; gap: 14px; width: calc(100% - 20px); margin-left: 10px; height: 58px; padding: 0 12px 0 50px; background: none; border: 0; border-radius: 10px; text-align: left; cursor: pointer; color: var(--shaft-ink-2) }
+.car { position: absolute; left: 28px; width: 14px; height: 36px; border-radius: 4px; background: linear-gradient(90deg, transparent calc(50% - .5px), color-mix(in srgb, var(--yellow-ink) 35%, transparent) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)), linear-gradient(180deg, var(--yellow), var(--yellow-2)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--yellow) 45%, transparent), 0 0 16px var(--accent-glow); transition: transform .45s cubic-bezier(.45, .05, .25, 1); bottom: calc(6px + (var(--floor-h) - 36px) / 2); z-index: 1 }
+.floor { position: relative; display: flex; align-items: center; gap: 14px; width: calc(100% - 20px); margin-left: 10px; height: var(--floor-h); padding: 0 12px 0 50px; background: none; border: 0; border-radius: 10px; text-align: left; cursor: pointer; color: var(--shaft-ink-2) }
 .floor { transition: color .15s ease, background-color .15s ease }
 .floor:hover { color: var(--shaft-ink-strong); background: var(--shaft-hover) }
 /* 樓層號碼像電梯裡的按鈕：圓框，目前樓層亮起來 */
@@ -263,7 +266,7 @@ p { margin: 0 0 10px }
 .path-card:hover { border-color: color-mix(in srgb, var(--blue) 45%, var(--line-2)); box-shadow: var(--lift-shadow); transform: translateY(-1px) }
 .path-card:hover::after { color: var(--blue); transform: translateX(3px) }
 .guide-card { margin-bottom: 22px; border-color: color-mix(in srgb, var(--yellow) 40%, var(--line-2)); background: radial-gradient(520px 160px at 0 0, color-mix(in srgb, var(--yellow) 16%, transparent), transparent 70%), var(--panel) }
-.guide-card h2 { margin: 0 0 6px }
+.guide-card h2 { margin: 0 }
 .help-link { margin-left: 8px; font-size: 13.5px; white-space: nowrap }
 .guide-body h3 { margin: 16px 0 6px; font-size: 14.5px; color: var(--ink-2) }
 .guide-steps, .guide-list { margin: 0; padding-left: 22px; display: grid; gap: 6px }
@@ -443,8 +446,8 @@ details.chart-note > span { display: block; margin-top: 2px }
 .quick-start { margin-bottom: 22px; background: radial-gradient(600px 180px at 0 0, color-mix(in srgb, var(--blue) 9%, transparent), transparent 70%), var(--panel) }
 .quick-start h2 { margin: 0 0 10px }
 .qs-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; list-style: none; margin: 0 0 14px; padding: 0; counter-reset: qs }
-.qs-steps li { counter-increment: qs; position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 14px 52px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--panel-2) }
-.qs-steps li::before { content: counter(qs); position: absolute; left: 14px; top: 13px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--blue); background: var(--blue-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 25%, transparent) }
+.qs-steps li { counter-increment: qs; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 12px 14px 12px 52px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--panel-2) }
+.qs-steps li::before { content: counter(qs); position: absolute; left: 14px; top: calc(50% - 13px); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--blue); background: var(--blue-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 25%, transparent) }
 @media (max-width: 720px) { .qs-steps { grid-template-columns: minmax(0, 1fr) } }
 
 /* 教學單元 */
@@ -477,7 +480,7 @@ details.chart-note > span { display: block; margin-top: 2px }
 }
 @media (max-width: 720px) {
   .app { grid-template-columns: minmax(0, 1fr) }
-  .shaft { position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; padding: 0 0 env(safe-area-inset-bottom, 0px); z-index: 5; flex-direction: row }
+  .shaft { overflow: visible; position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; padding: 0 0 env(safe-area-inset-bottom, 0px); z-index: 5; flex-direction: row }
   .brand, .shaft-foot, .rail, .car, .course-link { display: none }
   .floors { flex-direction: row-reverse; padding: 0; justify-content: space-around }
   .floor { flex-direction: column; gap: 0; height: auto; padding: 8px 4px; justify-content: center; text-align: center }

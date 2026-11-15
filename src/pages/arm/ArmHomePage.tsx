@@ -19,24 +19,14 @@ export function ArmHomePage() {
       <div className="head">
         <div>
           <h1 id="t-arm-home">{t('把手臂調好，而不是抄數字', 'Tune your arm, don’t just copy numbers')}</h1>
-          <p className="lead">
-            {t(
-              <>
-              單關節旋轉手臂。流程跟電梯一樣：從機構資料推出理論值，在模擬裡先跑一次，上機錄日誌，一次改一個參數。最大的差別是重力會跟著角度變。
-              </>,
-              <>
-                A single-joint rotating arm. The flow is the same as the elevator: derive theory values from mechanism data, try them in the sim, record a log on the robot, change one gain at a time. The big difference is that gravity changes with angle.
-              </>,
-            )}
-          </p>
+          <p className="lead">{t('流程跟電梯一樣，差在重力會跟著角度變。', 'Same flow as the elevator; the difference is that gravity changes with angle.')}</p>
         </div>
       </div>
 
-      <QuickStart what={t('手臂', 'arm')} />
+      <QuickStart />
 
       <button className="path-card guide-card" type="button" onClick={() => go('guide')}>
         <h2>{t('第一次來？先看使用說明', 'First time here? Read the guide')}</h2>
-        <p>{t('怎麼從機構資料走到看懂調參建議、每一層怎麼操作、卡住了怎麼辦。大約 30 分鐘走一遍。', 'How to go from mechanism data to understanding the tuning advice, how each floor works, and what to do when you’re stuck. About 30 minutes end to end.')}</p>
       </button>
 
       <div className="grid2">
