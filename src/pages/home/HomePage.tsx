@@ -26,24 +26,14 @@ export function HomePage() {
       <div className="head">
         <div>
           <h1 id="t-home">{t('把電梯調好，而不是抄數字', 'Tune your elevator, don’t just copy numbers')}</h1>
-          <p className="lead">
-            {t(
-              <>
-              從機構資料推出理論值，在模擬裡先跑一次，上機錄日誌，再讓網站告訴你問題出在哪。一次改一個參數，直到每個指標都達標。
-              </>,
-              <>
-                Derive theory values from your mechanism data, try them in the sim first, record a log on the robot, then let the site tell you where the problem is. Change one gain at a time until every metric passes.
-              </>,
-            )}
-          </p>
+          <p className="lead">{t('理論值 → 模擬 → 上機錄日誌 → 調參，一次改一個參數。', 'Theory → sim → log on the robot → tune, one gain at a time.')}</p>
         </div>
       </div>
 
-      <QuickStart what={t('電梯', 'elevator')} />
+      <QuickStart />
 
       <button className="path-card guide-card" type="button" onClick={() => go('guide')}>
         <h2>{t('第一次來？先看使用說明', 'First time here? Read the guide')}</h2>
-        <p>{t('怎麼從機構資料走到看懂調參建議、每一層怎麼操作、卡住了怎麼辦。大約 30 分鐘走一遍。', 'How to go from mechanism data to understanding the tuning advice, how each floor works, and what to do when you’re stuck. About 30 minutes end to end.')}</p>
       </button>
 
       <details className="unit">
@@ -97,15 +87,13 @@ export function HomePage() {
       <div className="paths">
         <button className="path-card" type="button" onClick={() => go('lessons')}>
           <h2>{t('第一次調電梯', 'Tuning an elevator for the first time')}</h2>
-          <p>{t('從五個教學關卡開始，一步一步推出 kG、kV、kA 和 PID 起始值，再到模擬裡試跑。', 'Start with the five lessons, working out kG, kV, kA and starting PID values step by step, then try them in the sim.')}</p>
-          <p className="small muted" style={{ marginTop: 10 }}>
+          <p className="small muted" style={{ margin: 0 }}>
             {t(`教學關卡 ${lessonCount} / ${LESSONS.length}`, `Lessons ${lessonCount} / ${LESSONS.length}`)}
           </p>
         </button>
         <button className="path-card" type="button" onClick={() => go('tune')}>
           <h2>{t('已經有日誌了', 'Already have a log')}</h2>
-          <p>{t('直接匯入 AdvantageKit 的 .wpilog，對應欄位、做資料檢查，看位置、電壓、電流有沒有異常。', 'Import an AdvantageKit .wpilog directly, map the fields, run the data checks, and see whether position, voltage and current look wrong.')}</p>
-          <p className="small muted" style={{ marginTop: 10 }}>
+          <p className="small muted" style={{ margin: 0 }}>
             {t(`上機前準備（單元零）${unit0Count} / ${UNIT0_ITEMS}`, `Prep before the robot (unit 0) ${unit0Count} / ${UNIT0_ITEMS}`)}
           </p>
         </button>

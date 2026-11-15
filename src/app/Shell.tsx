@@ -93,15 +93,14 @@ export function Shell({ children }: { children: ReactNode }) {
         <nav className="shaft" aria-label={t('主選單', 'Main menu')}>
           <div className="brand">
             <b>{t(`${trackName}調參工作站`, `${trackName} Tuning Station`)}</b>
-            <span>{t('FRC 9427 前饋與 PID 學習', 'FRC 9427 feedforward & PID learning')}</span>
             <button className="theme-btn" type="button" style={{ marginTop: 8, display: 'block' }} onClick={() => setTrack(null)}>
               {t(`換機構（目前：${trackName}）`, `Switch mechanism (now: ${trackName})`)}
             </button>
           </div>
           <div className="floors">
             <div className="rail" aria-hidden="true" />
-            {/* 樓層固定高 58px、靠下對齊，車廂從底部算第幾層就好，不必量 DOM */}
-            <div className="car" aria-hidden="true" style={{ transform: `translateY(${-(floors.length - 1 - (page === 'guide' ? -2 : page === 'lessons' ? -1 : floors.findIndex((f) => f.id === page))) * 58}px)` }} />
+            {/* 樓層固定高 var(--floor-h)（theme.css，矮螢幕會縮）、靠下對齊，車廂從底部算第幾層就好，不必量 DOM */}
+            <div className="car" aria-hidden="true" style={{ transform: `translateY(calc(var(--floor-h) * ${-(floors.length - 1 - (page === 'guide' ? -2 : page === 'lessons' ? -1 : floors.findIndex((f) => f.id === page)))}))` }} />
             {/* 使用說明、教學關卡放在最上面兩格：樓層是靠下對齊，加在上面不會動到原本的樓層位置；車廂從 G 往上數剛好停在這兩格 */}
             {!flywheel && (
               <button type="button" className="floor" data-floor="guide" aria-current={page === 'guide' ? 'page' : undefined} onClick={() => go('guide')}>
