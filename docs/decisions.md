@@ -435,3 +435,8 @@
 | 159 | 「後台」不自己架：反饋用 Google 表單（`TELEMETRY.formUrl`，自動帶入「網站資訊」= 版本、機構、樓層、語言），還沒設表單時改開 GitHub Issue（內文預先填好）；使用量用 GoatCounter 的儀表板。設定只在 `src/app/telemetry.ts` 的 `TELEMETRY`，說明在 `docs/feedback-and-stats.md`。入口是每一頁最下面的 `SiteFooter`（選機構畫面和每一層都有，射球飛輪沒有使用說明頁也看得到） | 網站是純前端 PWA（決策 8），自己做有登入的後台要另外架伺服器和資料庫；高中生很多沒有 GitHub 帳號，Google 表單不用帳號，回覆直接進試算表 |
 | 160 | 使用統計只送「虛擬路徑」：瀏覽是 `/<機構>/<樓層>`（`/splash`、`/chooser`），動作是 `<機構>/<動作>`（2F 讀範例或自己的檔案、第一次完成教學關卡、選射球用法、打開反饋、語言每個分頁一次）。路徑先過 `cleanPath()` 只留英數、`-`、`/`。自己用 `fetch` 送 GoatCounter 的 `GET /count`（`no-cors`、不帶 cookie、`no-referrer`），不載入外部 count.js。只在 `vincent0926.github.io` 送；自動化瀏覽器（`navigator.webdriver`）、使用者在頁尾關掉（localStorage `stats-off`）、Do Not Track／Global Privacy Control 都不送；送失敗直接忽略。GoatCounter 代號沒填就完全不送，頁尾也不顯示統計開關 | 使用者多數是未成年隊員：不用 cookie、不記內容、預設尊重瀏覽器的隱私設定、隨時可以關；不載入外部程式，離線、被擋都不影響網站；本機和影片擷取不會灌水 |
 
+## v0.54 實作時新增的決策
+
+| # | 決策 | 理由 |
+|---|---|---|
+| 161 | 介面精修（只動 `theme.css` 和 3F 側視圖的一個標籤位置）：側欄樓層號碼 `.floor .lv` 是 28px 圓框「電梯按鈕」，目前樓層框和字變強調色並發光，列底是往右淡出的漸層；車廂 14×36px、中間一條門縫；導軌是車廂兩側的兩條細線、往上用 mask 淡出（不再是虛線）。所有 `<select>` 用 `appearance: none` 加兩段漸層畫的箭頭（顏色用 `--ink-3`，側欄用 `--shaft-ink-2`），沒有包在 `.inp` 裡的下拉選單由 `:where(select)` 給框線和圓角。提示卡不用 4px 粗左邊框，改成左上角淡色光暈（`color-mix` 強調色）；可點的 `.path-card` 右上有箭頭，滑過浮起。`.head` 下面一條細線。手機底部導覽的樓層號碼維持純文字 | 使用者回報畫面看起來很廉價：瀏覽器預設的下拉箭頭、粗左邊框提示卡、帶框的小標籤、虛線導軌都是「預設模板」的感覺；電梯按鈕呼應網站的電梯主題，不加新元件或框架（決策 135） |

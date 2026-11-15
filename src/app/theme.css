@@ -189,6 +189,10 @@
 html { height: 100% }
 body { margin: 0; background: radial-gradient(1200px 520px at 70% -120px, var(--bg-glow), transparent 70%) no-repeat, var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; min-height: 100% }
 button, input, select, textarea { font: inherit; color: inherit }
+/* 下拉選單一律用自己的細箭頭（瀏覽器預設的箭頭各家不同，看起來很陽春） */
+select { -webkit-appearance: none; appearance: none; cursor: pointer; background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%); background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%; background-size: 5px 5px; background-repeat: no-repeat }
+:where(select) { border: 1px solid var(--line); border-radius: var(--radius-sm); background-color: var(--panel); padding: 6px 30px 6px 10px; line-height: 1.4 }
+:where(select):hover { border-color: var(--steel) }
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px }
 ::selection { background: var(--flash) }
 code, pre, .mono { font-family: var(--mono); font-size: .9em }
@@ -203,21 +207,25 @@ a { color: var(--blue); text-underline-offset: 3px; text-decoration-thickness: 1
 .brand b::before { content: ""; flex: none; width: 10px; height: 22px; border-radius: 3px; background: linear-gradient(180deg, var(--yellow), var(--yellow-2)); box-shadow: 0 0 12px var(--accent-glow) }
 .brand span { display: block; margin-top: 2px; font-size: 12.5px; color: var(--shaft-ink-2) }
 .floors { position: relative; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 18px 0 6px }
-.rail { position: absolute; left: 34px; top: 18px; bottom: 6px; width: 2px; background: repeating-linear-gradient(var(--shaft-line) 0 6px, transparent 6px 10px) }
-.car { position: absolute; left: 25px; width: 20px; height: 44px; border-radius: 5px; background: linear-gradient(180deg, var(--yellow), var(--yellow-2)); box-shadow: 0 0 0 3px var(--shaft-active), 0 0 18px var(--accent-glow); transition: transform .45s cubic-bezier(.45, .05, .25, 1); bottom: 13px; z-index: 1 }
+.rail { position: absolute; left: 25px; top: 18px; bottom: 6px; width: 20px; border-left: 1px solid var(--shaft-line); border-right: 1px solid var(--shaft-line); -webkit-mask-image: linear-gradient(to top, black 55%, transparent); mask-image: linear-gradient(to top, black 55%, transparent) }
+.car { position: absolute; left: 28px; width: 14px; height: 36px; border-radius: 4px; background: linear-gradient(90deg, transparent calc(50% - .5px), color-mix(in srgb, var(--yellow-ink) 35%, transparent) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)), linear-gradient(180deg, var(--yellow), var(--yellow-2)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--yellow) 45%, transparent), 0 0 16px var(--accent-glow); transition: transform .45s cubic-bezier(.45, .05, .25, 1); bottom: 17px; z-index: 1 }
 .floor { position: relative; display: flex; align-items: center; gap: 14px; width: calc(100% - 20px); margin-left: 10px; height: 58px; padding: 0 12px 0 50px; background: none; border: 0; border-radius: 10px; text-align: left; cursor: pointer; color: var(--shaft-ink-2) }
+.floor { transition: color .15s ease, background-color .15s ease }
 .floor:hover { color: var(--shaft-ink-strong); background: var(--shaft-hover) }
-.floor .lv { font-variant-numeric: tabular-nums; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: var(--shaft-ink-2); width: 22px }
+/* 樓層號碼像電梯裡的按鈕：圓框，目前樓層亮起來 */
+.floor .lv { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--shaft-line); background: var(--shaft-hover); font-variant-numeric: tabular-nums; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--shaft-ink-2); transition: border-color .15s ease, color .15s ease, box-shadow .15s ease }
+.floor:hover .lv { border-color: color-mix(in srgb, var(--shaft-ink) 30%, transparent); color: var(--shaft-ink) }
 .floor .nm { font-size: 14.5px }
-.floor[aria-current="page"] { color: var(--shaft-ink-strong); background: var(--shaft-active); font-weight: 600 }
-.floor[aria-current="page"] .lv { color: var(--yellow) }
+.floor[aria-current="page"] { color: var(--shaft-ink-strong); background: linear-gradient(90deg, var(--shaft-active), transparent 90%); font-weight: 600 }
+.floor[aria-current="page"] .lv { color: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 10px var(--accent-glow), inset 0 0 6px color-mix(in srgb, var(--yellow) 30%, transparent) }
 .shaft-foot { padding: 14px 20px 0; border-top: 1px solid var(--shaft-line); font-size: 12px; color: var(--shaft-ink-2); display: flex; justify-content: space-between; align-items: center; gap: 8px }
 .theme-btn { white-space: nowrap; background: var(--shaft-hover); border: 1px solid var(--shaft-line); color: var(--shaft-ink); border-radius: 8px; padding: 3px 11px; cursor: pointer; font-size: 12px; transition: background-color .15s ease, border-color .15s ease }
+.brand .theme-btn { white-space: normal; text-align: left; max-width: 100% }
 .theme-btn:hover { background: var(--shaft-line); border-color: rgba(255, 255, 255, .16) }
 
 /* 主內容 */
 main { padding: 32px clamp(16px, 4vw, 48px) 64px; max-width: 1200px; width: 100%; min-width: 0 }
-.head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 22px }
+.head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line-2) }
 h1 { font-size: 28px; line-height: 1.3; margin: 0; font-weight: 700; letter-spacing: -.005em }
 .lead { color: var(--ink-2); margin: 6px 0 0; max-width: 64ch }
 h2 { font-size: 17px; margin: 0 0 12px; font-weight: 600; letter-spacing: .005em }
@@ -231,7 +239,9 @@ p { margin: 0 0 10px }
 .stack > * + * { margin-top: 20px }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center }
 .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: var(--radius-sm); padding: 8px 15px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none; color: var(--ink); box-shadow: 0 1px 2px rgba(23, 32, 43, .05) }
+.btn { transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .1s ease }
 .btn:hover { border-color: var(--steel); background: var(--panel-2) }
+.btn:not(:disabled):active { transform: translateY(1px) }
 .btn.primary { background: linear-gradient(180deg, var(--yellow), var(--yellow-2)); border-color: var(--yellow-2); color: var(--yellow-ink); font-weight: 600; box-shadow: 0 1px 0 rgba(255, 255, 255, .35) inset, 0 2px 6px -1px var(--accent-glow) }
 .btn.primary:hover { background: linear-gradient(180deg, var(--yellow), var(--yellow)); border-color: var(--yellow-2) }
 .btn.small { padding: 4px 11px; font-size: 13px; border-radius: 7px }
@@ -248,8 +258,11 @@ p { margin: 0 0 10px }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; border: 1px solid var(--line); margin-right: 6px; vertical-align: -1px }
 .paths { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 22px }
 .path-card { background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--radius); padding: 22px; cursor: pointer; text-align: left; width: 100%; box-shadow: var(--shadow) }
-.path-card:hover { border-color: var(--blue) }
-.guide-card { margin-bottom: 22px; border-left: 4px solid var(--yellow); background: linear-gradient(90deg, var(--amber-soft), var(--panel) 55%) }
+.path-card { position: relative; padding-right: 52px; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease }
+.path-card::after { content: "→"; position: absolute; right: 22px; top: 22px; font-size: 18px; line-height: 1.3; color: var(--ink-3); transition: transform .15s ease, color .15s ease }
+.path-card:hover { border-color: color-mix(in srgb, var(--blue) 45%, var(--line-2)); box-shadow: var(--lift-shadow); transform: translateY(-1px) }
+.path-card:hover::after { color: var(--blue); transform: translateX(3px) }
+.guide-card { margin-bottom: 22px; border-color: color-mix(in srgb, var(--yellow) 40%, var(--line-2)); background: radial-gradient(520px 160px at 0 0, color-mix(in srgb, var(--yellow) 16%, transparent), transparent 70%), var(--panel) }
 .guide-card h2 { margin: 0 0 6px }
 .help-link { margin-left: 8px; font-size: 13.5px; white-space: nowrap }
 .guide-body h3 { margin: 16px 0 6px; font-size: 14.5px; color: var(--ink-2) }
@@ -274,7 +287,8 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .inp:hover { border-color: var(--steel) }
 .inp:focus-within { border-color: var(--blue); background: var(--panel); box-shadow: var(--ring) }
 .inp.bad { border-color: var(--red) }
-.inp input, .inp select { border: 0; background: none; padding: 8px 11px; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; outline: none }
+.inp input, .inp select { border: 0; background-color: transparent; padding: 8px 11px; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; outline: none }
+.inp select { padding-right: 32px }
 .inp select option { background: var(--panel); color: var(--ink) }
 .inp em { font-style: normal; color: var(--ink-3); font-size: 12.5px; padding-right: 11px; white-space: nowrap }
 .stages { width: 100%; border-collapse: collapse; font-size: 13px }
@@ -328,7 +342,7 @@ label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font
 .steps li { flex: 1; font-size: 13.5px; border-radius: var(--radius-sm); color: var(--ink-3) }
 .steps .step-btn { display: block; width: 100%; padding: 9px 14px; border: 0; border-radius: inherit; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: background-color .15s ease, color .15s ease }
 .steps .step-btn:hover { background: var(--panel-2); color: var(--ink) }
-.steps .cur { color: var(--ink); font-weight: 600; background: var(--amber-soft); box-shadow: inset 0 -3px 0 var(--yellow) }
+.steps .cur { color: var(--ink); font-weight: 600; background: color-mix(in srgb, var(--yellow) 12%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--yellow) 50%, transparent) }
 .drop { border: 1.5px dashed var(--line); border-radius: var(--radius); padding: 32px 26px; text-align: center; color: var(--ink-2); background: var(--panel) }
 .drop.over { border-color: var(--blue); background: var(--blue-soft) }
 .progress { height: 6px; background: var(--line-2); border-radius: 3px; overflow: hidden; margin-top: 12px }
@@ -426,11 +440,11 @@ details.chart-note > span { display: block; margin-top: 2px }
 .u-select { background: rgba(47, 111, 222, .12) }
 
 /* 總覽頁的快速開始 */
-.quick-start { margin-bottom: 22px; border-left: 4px solid var(--blue) }
+.quick-start { margin-bottom: 22px; background: radial-gradient(600px 180px at 0 0, color-mix(in srgb, var(--blue) 9%, transparent), transparent 70%), var(--panel) }
 .quick-start h2 { margin: 0 0 10px }
 .qs-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; list-style: none; margin: 0 0 14px; padding: 0; counter-reset: qs }
-.qs-steps li { counter-increment: qs; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--blue-soft) }
-.qs-steps li > b::before { content: counter(qs) "．"; color: var(--ink-3) }
+.qs-steps li { counter-increment: qs; position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 14px 52px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--panel-2) }
+.qs-steps li::before { content: counter(qs); position: absolute; left: 14px; top: 13px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--blue); background: var(--blue-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 25%, transparent) }
 @media (max-width: 720px) { .qs-steps { grid-template-columns: minmax(0, 1fr) } }
 
 /* 教學單元 */
@@ -468,7 +482,7 @@ details.chart-note > span { display: block; margin-top: 2px }
   .floors { flex-direction: row-reverse; padding: 0; justify-content: space-around }
   .floor { flex-direction: column; gap: 0; height: auto; padding: 8px 4px; justify-content: center; text-align: center }
   .floor .nm { font-size: 12px }
-  .floor .lv { width: auto }
+  .floor .lv, .floor[aria-current="page"] .lv { width: auto; height: auto; border: 0; background: none; box-shadow: none }
   main { padding-bottom: 110px }
   .fields, .fields.three { grid-template-columns: 1fr 1fr }
   .simwrap { grid-template-columns: minmax(0, 1fr) }
@@ -490,11 +504,11 @@ details.chart-note > span { display: block; margin-top: 2px }
 .ctrl { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-2) }
 .toggles code { font-size: 11.5px; color: var(--ink-3); margin-left: 4px; word-break: break-all }
 .src-tag { display: inline-block; font-size: 12px; border-radius: 999px; padding: 2px 10px; border: 1px solid; white-space: nowrap; font-weight: 500 }
-.src-mini { display: inline-block; font-size: 10.5px; border-radius: 3px; padding: 0 4px; margin-left: 6px; border: 1px solid; vertical-align: 2px; font-weight: 500 }
-.src-calc { color: var(--green); border-color: var(--green); background: var(--green-soft) }
-.src-calcThenMeasure { color: var(--blue); border-color: var(--blue); background: var(--blue-soft) }
-.src-measure { color: var(--amber); border-color: var(--amber); background: var(--amber-soft) }
-.src-tune { color: var(--violet); border-color: var(--violet); background: var(--panel-2) }
+.src-mini { display: inline-block; font-size: 10.5px; line-height: 1.5; border-radius: 5px; padding: 0 6px; margin-left: 8px; border: 1px solid; vertical-align: 2px; font-weight: 600; letter-spacing: .02em }
+.src-calc { color: var(--green); border-color: color-mix(in srgb, var(--green) 28%, transparent); background: var(--green-soft) }
+.src-calcThenMeasure { color: var(--blue); border-color: color-mix(in srgb, var(--blue) 28%, transparent); background: var(--blue-soft) }
+.src-measure { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 30%, transparent); background: var(--amber-soft) }
+.src-tune { color: var(--violet); border-color: color-mix(in srgb, var(--violet) 28%, transparent); background: color-mix(in srgb, var(--violet) 10%, var(--panel)) }
 .src-constraint { color: var(--ink-2); border-color: var(--line); background: var(--panel-2) }
 .src-kinds { list-style: none; padding: 0; margin: 0 0 12px; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 12px; align-items: baseline }
 .src-kinds li { display: contents }
@@ -514,6 +528,7 @@ details.chart-note > span { display: block; margin-top: 2px }
 .arm-view svg { flex: none; height: auto; aspect-ratio: 1 / 1 }
 .ev-frame { fill: none; stroke: var(--steel); stroke-width: 3; stroke-linecap: round }
 .ev-label { font-size: 11px; fill: var(--ink-3) }
+.ev-halo { paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round }
 .ev-on-carriage { fill: var(--mark-ink); font-weight: 600 }
 .ev-stage { fill: var(--panel); fill-opacity: .75; stroke: var(--ink-3); stroke-width: 1.5 }
 .ev-carriage { fill: var(--mark); stroke: var(--ink-2); stroke-width: 1 }
@@ -575,6 +590,7 @@ details.chart-note > span { display: block; margin-top: 2px }
 .ch-base { fill: var(--ink-3) }
 .ch-pivot { fill: var(--panel); stroke: var(--ink); stroke-width: 2 }
 .track-btn { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; color: inherit; padding: 2px 8px; font-size: 12px; cursor: pointer }
+select.track-btn { padding-right: 24px; background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%); background-position: calc(100% - 14px) 55%, calc(100% - 10px) 55%; background-size: 4px 4px; background-repeat: no-repeat }
 /* 進站畫面：隊伍照片當背景（決策 139）。字在照片上，不管哪種風格、深淺色都用白字加深色遮罩，所以變數只在這裡定義 */
 .splash { --photo-ink: #FFFFFF; --photo-ink-2: rgba(255, 255, 255, .88); --photo-scrim: rgba(8, 11, 15, .55); --photo-scrim-2: rgba(8, 11, 15, .82); --photo-shadow: rgba(0, 0, 0, .6); --photo-fallback: #2A3441; --photo-fallback-2: #0E1318; --splash-c1: #F2B705; --splash-c2: #2F6FDE; --splash-c3: #8E44D9; --splash-c4: #E2557A; --splash-c5: #14B8A6; --splash-base: #141B3A; --splash-scrim: rgba(8, 11, 15, .3) }
 .splash { position: relative; overflow: hidden; min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; text-align: center; color: var(--photo-ink); background: radial-gradient(900px 480px at 50% 30%, var(--photo-fallback), var(--photo-fallback-2)) }
@@ -615,7 +631,7 @@ details.chart-note > span { display: block; margin-top: 2px }
 /* 配色下拉選單（側欄底部、手機版上方）：外觀跟旁邊的按鈕一樣，展開的選項用面板色 */
 .palette-select { font-family: inherit; max-width: 100%; line-height: 1.4 }
 .palette-select option { background: var(--panel); color: var(--ink) }
-.shaft-foot .palette-select { margin-left: auto; width: 86px; padding-left: 6px; padding-right: 2px }
+.shaft-foot .palette-select { margin-left: auto; width: 86px; padding-left: 8px; padding-right: 20px; background-image: linear-gradient(45deg, transparent 50%, var(--shaft-ink-2) 50%), linear-gradient(135deg, var(--shaft-ink-2) 50%, transparent 50%); background-position: calc(100% - 12px) 55%, calc(100% - 8px) 55%; background-size: 4px 4px; background-repeat: no-repeat }
 /* 回課程網站：側欄一行、主內容上方一行（手機看不到側欄時也找得到） */
 .course-link { display: block; margin: 0 20px 12px; font-size: 12.5px; color: var(--shaft-ink-2); text-decoration: none }
 .course-link:hover { color: var(--shaft-ink); text-decoration: underline }
@@ -809,7 +825,7 @@ details[open] > :not(summary) { animation: drop-in .22s ease-out both }
 .fw-shots { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0 }
 .fw-derived { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 10px 0 0; font-size: 13.5px }
 .fw-derived dt { color: var(--ink-2) }
-.fw-derived dd { margin: 0; font-family: var(--mono) }
+.fw-derived dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--ink) }
 /* 射球飛輪側視圖 */
 .fw-view { background: var(--panel-2); border: 1px solid var(--line-2); border-radius: var(--radius); padding: 8px 10px 10px }
 .fw-view svg { display: block; height: auto }

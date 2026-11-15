@@ -54,7 +54,6 @@ export function ElevatorView({ result, mechanism, goal, idx }: { result: SimResu
                 <line x1={left} y1={y} x2={left} y2={H - BASE} className="ev-frame" />
                 <line x1={W - left} y1={y} x2={W - left} y2={H - BASE} className="ev-frame" />
                 <line x1={left} y1={y} x2={W - left} y2={y} className="ev-frame" />
-                <text x={left + 3} y={y + 10} className="ev-label">{t('固定架', 'Frame')}</text>
               </g>
             )
           }
@@ -68,6 +67,8 @@ export function ElevatorView({ result, mechanism, goal, idx }: { result: SimResu
             </g>
           )
         })}
+        {/* 固定架的名稱最後才畫、加底色描邊：先畫會被第 1 級的框蓋住 */}
+        <text x={11} y={py(clampH(xs * railK[0]) + railLen) + 10} className="ev-label ev-halo">{t('固定架', 'Frame')}</text>
         <rect x={inner} y={py(clampH(xr * kTop) + CARRIAGE)} width={cw} height={CARRIAGE * scale} rx={2} className="ev-target" />
         <rect x={inner} y={py(clampH(xs * kTop) + CARRIAGE)} width={cw} height={CARRIAGE * scale} rx={2} className="ev-carriage" />
         <text x={W / 2} y={py(clampH(xs * kTop)) - 3} textAnchor="middle" className="ev-label ev-on-carriage">{t('托架', 'Carriage')}</text>
