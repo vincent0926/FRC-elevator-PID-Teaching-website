@@ -582,7 +582,6 @@ details.chart-note > span { display: block; margin-top: 2px }
 .chooser-card:hover, .chooser-card:focus-visible { border-color: var(--blue); outline: none; box-shadow: var(--lift-shadow), var(--ring) }
 .chooser-card:hover::before, .chooser-card:focus-visible::before { opacity: 1 }
 .chooser-card b { font-size: 20px }
-.chooser-card ul { margin: 4px 0 8px; padding-left: 18px }
 .chooser-card .btn { margin-top: auto }
 .ch-frame { fill: none; stroke: var(--ink-3); stroke-width: 2 }
 .ch-stage { fill: var(--panel-2); stroke: var(--ink-2); stroke-width: 2 }
